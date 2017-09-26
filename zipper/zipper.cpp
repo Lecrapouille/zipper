@@ -97,7 +97,8 @@ namespace zipper {
 			int err = ZIP_OK;
 			unsigned long crcFile = 0;
 
-			zip_fileinfo zi = { 0 };
+			zip_fileinfo zi;
+			memset(&zi, 0, sizeof (zi));
 			size_t size_read;
 
 			std::vector<char> buff;
@@ -191,11 +192,11 @@ namespace zipper {
 	///////////////////////////////////////////////////////////////////////////////
 
 	Zipper::Zipper(const std::string& zipname)
-		: m_obuffer(*(new std::stringstream())) //not used but using local variable throws exception
+		: m_zipname(zipname)
+                , m_obuffer(*(new std::stringstream())) //not used but using local variable throws exception
 		, m_vecbuffer(*(new std::vector<unsigned char>())) //not used but using local variable throws exception
 		, m_usingMemoryVector(false)
 		, m_usingStream(false)
-		, m_zipname(zipname)
 		, m_impl(new Impl(*this))
 	{
 		if (!m_impl->initFile(zipname))
@@ -205,12 +206,12 @@ namespace zipper {
 	}
 
 	Zipper::Zipper(const std::string& zipname, const std::string& password)
-		: m_obuffer(*(new std::stringstream())) //not used but using local variable throws exception
+		: m_password(password)
+		, m_zipname(zipname)
+                , m_obuffer(*(new std::stringstream())) //not used but using local variable throws exception
 		, m_vecbuffer(*(new std::vector<unsigned char>())) //not used but using local variable throws exception
 		, m_usingMemoryVector(false)
 		, m_usingStream(false)
-		, m_zipname(zipname)
-		, m_password(password)
 		, m_impl(new Impl(*this))
 	{
 		if (!m_impl->initFile(zipname))
@@ -220,8 +221,8 @@ namespace zipper {
 	}
 
 	Zipper::Zipper(std::iostream& buffer)
-		: m_vecbuffer(*(new std::vector<unsigned char>())) //not used but using local variable throws exception
-		, m_obuffer(buffer)
+		: m_obuffer(buffer)
+                , m_vecbuffer(*(new std::vector<unsigned char>())) //not used but using local variable throws exception
 		, m_usingMemoryVector(false)
 		, m_usingStream(true)
 		, m_impl(new Impl(*this))
@@ -233,9 +234,9 @@ namespace zipper {
 	}
 
 	Zipper::Zipper(std::vector<unsigned char>& buffer)
-		: m_vecbuffer(buffer)
-		, m_obuffer(*(new std::stringstream())) //not used but using local variable throws exception
-		, m_usingMemoryVector(true)
+		: m_obuffer(*(new std::stringstream())) //not used but using local variable throws exception
+		, m_vecbuffer(buffer)
+                , m_usingMemoryVector(true)
 		, m_usingStream(false)
 		, m_impl(new Impl(*this))
 	{

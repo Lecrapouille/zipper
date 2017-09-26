@@ -94,7 +94,8 @@ namespace zipper {
   std::string currentPath()
   {
     char buffer[1024];
-    getcwd(buffer, 1024);
+    char *res = getcwd(buffer, 1024);
+    if (res == NULL) { /* TODO */ }
     std::string result(buffer);
     return result;
 

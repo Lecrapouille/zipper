@@ -6,6 +6,7 @@
 #include <exception>
 #include <fstream>
 #include <stdexcept>
+#include <cstring>
 
 namespace zipper {
 
@@ -31,7 +32,8 @@ namespace zipper {
 
     ZipEntry currentEntryInfo()
     {
-      unz_file_info64 file_info = { 0 };
+      unz_file_info64 file_info;
+      memset(&file_info, 0, sizeof (file_info));
       char filename_inzip[256] = { 0 };
 
       int err = unzGetCurrentFileInfo64(m_zf, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
@@ -189,7 +191,7 @@ namespace zipper {
       return UNZ_OK == err;
     }
 
-    void changeFileDate(const std::string& filename, uLong dosdate, tm_unz tmu_date)
+    void changeFileDate(const std::string& filename, uLong /*dosdate*/, tm_unz tmu_date)
     {
 #ifdef _WIN32
       HANDLE hFile;
@@ -276,7 +278,7 @@ namespace zipper {
       do
       {
         err = unzReadCurrentFile(m_zf, buffer.data(), (unsigned int)buffer.size());
-        if (err < 0 || err == 0)
+        if (((int) err) < 0 || err == 0)
           break;
 
         stream.write(buffer.data(), err);
@@ -315,7 +317,7 @@ namespace zipper {
       do
       {
         err = unzReadCurrentFile(m_zf, buffer.data(), (unsigned int)buffer.size());
-        if (err < 0 || err == 0)
+        if (((int) err) < 0 || err == 0)
           break;
 
         outvec.insert(outvec.end(), buffer.data(), buffer.data() + err);
@@ -484,9 +486,9 @@ namespace zipper {
   }
 
   Unzipper::Unzipper(const std::string& zipname)
-    : m_ibuffer(*(new std::stringstream())) //not used but using local variable throws exception
+    : m_zipname(zipname)
+    , m_ibuffer(*(new std::stringstream())) //not used but using local variable throws exception
     , m_vecbuffer(*(new std::vector<unsigned char>())) //not used but using local variable throws exception
-    , m_zipname(zipname)
     , m_usingMemoryVector(false)
     , m_usingStream(false)
     , m_impl(new Impl(*this))
@@ -498,10 +500,10 @@ namespace zipper {
   }
 
   Unzipper::Unzipper(const std::string& zipname, const std::string& password)
-    : m_ibuffer(*(new std::stringstream())) //not used but using local variable throws exception
-    , m_vecbuffer(*(new std::vector<unsigned char>())) //not used but using local variable throws exception
+    : m_password(password)
     , m_zipname(zipname)
-    , m_password(password)
+    , m_ibuffer(*(new std::stringstream())) //not used but using local variable throws exception
+    , m_vecbuffer(*(new std::vector<unsigned char>())) //not used but using local variable throws exception
     , m_usingMemoryVector(false)
     , m_usingStream(false)
     , m_impl(new Impl(*this))
