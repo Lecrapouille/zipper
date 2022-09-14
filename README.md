@@ -1,4 +1,4 @@
-# Zipper
+[![CI testing](https://github.com/Lecrapouille/zipper/actions/workflows/ci.yaml/badge.svg)](https://github.com/Lecrapouille/zipper/actions/workflows/ci.yaml)
 
 ![Zipper](doc/logo.png)
 
