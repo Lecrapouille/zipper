@@ -184,6 +184,8 @@ private:
                 else
                 {
                     err = UNZ_ERRNO;
+                    m_error_code = make_error_code(
+                        unzipper_error::INTERNAL_ERROR, strerror(errno));
                 }
             } while (UNZ_OK == err);
 
@@ -229,7 +231,6 @@ public:
                     std::stringstream str;
                     str << "Error opening internal file '" << entryinfo.name
                         << "' in zip";
-
                     m_error_code = make_error_code(
                         unzipper_error::INTERNAL_ERROR, str.str());
                     return false;
@@ -367,7 +368,7 @@ public:
         {
             std::stringstream str;
             str << "Security Error: '" << filename
-                << "' already exists and would have been replaced";
+                << "' already exists and would have been replaced!";
 
             m_error_code = make_error_code(unzipper_error::SECURITY_ERROR,
                                            str.str());
@@ -414,6 +415,7 @@ public:
     int extractToStream(std::ostream& stream, ZipEntry& /*info*/)
     {
         int err;
+        int bytes = 0;
 
         err = unzOpenCurrentFilePassword(m_zf, m_outer.m_password.c_str());
         if (UNZ_OK == err)
@@ -423,12 +425,22 @@ public:
 
             do
             {
-                err = unzReadCurrentFile(m_zf, buffer.data(),
-                                         static_cast<unsigned int>(buffer.size()));
-                if (err < 0 || err == 0)
+                bytes = unzReadCurrentFile(m_zf, buffer.data(),
+                                           static_cast<unsigned int>(buffer.size()));
+                if (bytes == 0)
+                {
+                    // If password was not valid we reach this case.
+                    stream.flush();
                     break;
-
-                stream.write(buffer.data(), std::streamsize(err));
+                }
+                else if (bytes < 0)
+                {
+                    m_error_code = make_error_code(
+                        unzipper_error::INTERNAL_ERROR, strerror(errno));
+                    stream.flush();
+                    return UNZ_ERRNO;
+                }
+                stream.write(buffer.data(), std::streamsize(bytes));
                 if (!stream.good())
                 {
                     m_error_code = make_error_code(
@@ -436,11 +448,10 @@ public:
                     stream.flush();
                     return UNZ_ERRNO;
                 }
-            } while (err > 0);
+            } while (bytes > 0);
             stream.flush();
         }
-
-        if (err != UNZ_OK)
+        else
         {
             m_error_code = make_error_code(unzipper_error::INTERNAL_ERROR);
         }
@@ -451,6 +462,7 @@ public:
     int extractToMemory(std::vector<unsigned char>& outvec, ZipEntry& info)
     {
         int err;
+        int bytes = 0;
 
         err = unzOpenCurrentFilePassword(m_zf, m_outer.m_password.c_str());
         if (UNZ_OK == err)
@@ -461,16 +473,21 @@ public:
 
             do
             {
-                err = unzReadCurrentFile(m_zf, buffer.data(),
-                                         static_cast<unsigned int>(buffer.size()));
-                if (err < 0 || err == 0)
+                bytes = unzReadCurrentFile(m_zf, buffer.data(),
+                                           static_cast<unsigned int>(buffer.size()));
+                if (bytes == 0)
                     break;
+                if (bytes < 0)
+                {
+                    m_error_code = make_error_code(
+                        unzipper_error::INTERNAL_ERROR, strerror(errno));
+                    return UNZ_ERRNO;
+                }
 
-                outvec.insert(outvec.end(), buffer.data(), buffer.data() + err);
-            } while (err > 0);
+                outvec.insert(outvec.end(), buffer.data(), buffer.data() + bytes);
+            } while (bytes > 0);
         }
-
-        if (err != UNZ_OK)
+        else
         {
             m_error_code = make_error_code(unzipper_error::INTERNAL_ERROR);
         }

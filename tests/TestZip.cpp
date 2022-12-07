@@ -289,8 +289,7 @@ TEST(FileZipTests, ZipfileFeedWithDifferentInputs1)
     // Failed extracting since test1.txt is already present.
     ASSERT_EQ(unzipper2.extractAll(), false);
     ASSERT_STREQ(unzipper2.error().message().c_str(),
-                 "Security Error: 'test1.txt' already exists and would have "
-                 "been replaced");
+                 "Security Error: 'test1.txt' already exists and would have been replaced!");
 
     // Extract the zip. Check the test2.dat entry creates a folder 'TestFolder'
     // with a file named 'test2.dat' with the text 'other data to compression
