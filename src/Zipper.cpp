@@ -78,7 +78,7 @@ static std::error_code make_error_code(zipper_error e)
 // -----------------------------------------------------------------------------
 static std::error_code make_error_code(zipper_error e, std::string const& message)
 {
-    std::cerr << message << std::endl;
+    // std::cerr << message << std::endl;
     theZipperErrorCategory.custom_message = message;
     return { static_cast<int>(e), theZipperErrorCategory };
 }
