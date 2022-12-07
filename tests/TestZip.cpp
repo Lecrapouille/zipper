@@ -1035,6 +1035,35 @@ TEST(MemoryZipTests, Issue118)
 }
 
 // -----------------------------------------------------------------------------
+TEST(FileZipTests, ExtractFileWithNameOfDir)
+{
+    Path::remove("ziptest.zip");
+    Zipper zipper("ziptest.zip");
+    ASSERT_EQ(zipEntry(zipper, "test1.txt", "test1 file compression",
+                       "test1.txt"), true);
+    zipper.close();
+
+    // Create a folder with a file name
+    Path::remove("/tmp/foo/test1.txt");
+    Path::createDir("/tmp/foo/test1.txt");
+    ASSERT_EQ(Path::exist("/tmp/foo/test1.txt"), true);
+    ASSERT_EQ(Path::isDir("/tmp/foo/test1.txt"), true);
+
+    // Check cannot extract the file because the folder with the same name
+    // exists
+    zipper::Unzipper unzipper("ziptest.zip");
+    ASSERT_EQ(unzipper.extractAll("/tmp/foo", false), false);
+    ASSERT_STREQ(unzipper.error().message().c_str(),
+                 "Security Error: '/tmp/foo/test1.txt' already exists and would have been replaced!");
+
+    ASSERT_EQ(unzipper.extractAll("/tmp/foo", true), false);
+    ASSERT_STREQ(unzipper.error().message().c_str(),
+                 "Failed creating '/tmp/foo/test1.txt' file because Is a directory");
+
+    Path::remove("/tmp/foo/test1.txt");
+}
+
+// -----------------------------------------------------------------------------
 // https://github.com/Lecrapouille/zipper/issues/5
 TEST(MemoryZipTests, Issue5)
 {

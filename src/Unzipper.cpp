@@ -406,8 +406,14 @@ public:
         }
         else
         {
+            // Possible error is a directory already exist. The errno message
+            // is not very explicit.
+            std::stringstream str;
+            str << "Failed creating '" << filename
+                << "' file because " << strerror(errno);
+
             m_error_code = make_error_code(
-                unzipper_error::INTERNAL_ERROR, strerror(errno));
+                unzipper_error::INTERNAL_ERROR, str.str());
             output_file.close();
             return UNZ_ERRNO;
         }
