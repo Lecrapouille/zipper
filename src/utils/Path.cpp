@@ -884,3 +884,9 @@ bool Path::isLargeFile(std::istream& input_stream)
 
     return pos >= 0xffffffff;
 }
+
+// -----------------------------------------------------------------------------
+bool Path::hasTrailingSlash(const std::string& path)
+{
+    return (path.size() >= 1u) && (path.back() == '\\' || path.back() == '/');
+}

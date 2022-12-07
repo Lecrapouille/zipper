@@ -183,6 +183,9 @@ public:
 
     static bool isLargeFile(std::istream& input_stream);
 
+    //! \biref Check if the file name ends with a backslash or slash char
+    static bool hasTrailingSlash(const std::string& path);
+
 private:
 
     //! \brief This private methods checks whether the active section matches the

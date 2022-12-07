@@ -209,7 +209,9 @@ public:
         if (!failIfInvalidEntry(entryinfo))
             return false;
 
-        if (!entryinfo.uncompressedSize)
+        // if (!entryinfo.uncompressedSize) was not a good method to distinguish
+        // dummy file from folder. See https://github.com/Lecrapouille/zipper/issues/5
+        if (Path::hasTrailingSlash(entryinfo.name))
         {
             if (!Path::createDir(fileName))
             {
