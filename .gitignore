@@ -41,6 +41,7 @@ doc/html
 doc/doxygen
 external/minizip
 external/zlib-ng
+doc/demos/*/VERSION*
 
 # apitrace traces (opengl)
 *.trace
