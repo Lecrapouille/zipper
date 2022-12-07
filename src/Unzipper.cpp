@@ -417,7 +417,8 @@ public:
         int err;
         int bytes = 0;
 
-        err = unzOpenCurrentFilePassword(m_zf, m_outer.m_password.c_str());
+        err = unzOpenCurrentFilePassword(m_zf, (m_outer.m_password != "")
+                  ? m_outer.m_password.c_str() : NULL);
         if (UNZ_OK == err)
         {
             std::vector<char> buffer;
@@ -464,7 +465,8 @@ public:
         int err;
         int bytes = 0;
 
-        err = unzOpenCurrentFilePassword(m_zf, m_outer.m_password.c_str());
+        err = unzOpenCurrentFilePassword(m_zf, (m_outer.m_password != "")
+                  ? m_outer.m_password.c_str() : NULL);
         if (UNZ_OK == err)
         {
             std::vector<unsigned char> buffer;
