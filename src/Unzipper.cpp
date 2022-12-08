@@ -763,10 +763,10 @@ Unzipper::Unzipper(std::string const& zipname, std::string const& password)
             release();
             throw exception;
         }
-        else
-        {
-            m_open = true;
-        }
+    }
+    else
+    {
+        m_open = true;
     }
 }
 
@@ -780,6 +780,8 @@ Unzipper::~Unzipper()
 // -----------------------------------------------------------------------------
 std::vector<ZipEntry> Unzipper::entries()
 {
+    if ((m_open == false) || (m_impl == nullptr))
+        return {};
     return m_impl->entries();
 }
 
@@ -788,6 +790,8 @@ bool Unzipper::extractEntry(std::string const& name,
                             std::string const& destination,
                             bool const replace)
 {
+    if ((m_open == false) || (m_impl == nullptr))
+        return false;
     return m_impl->extractEntry(name, destination, replace);
 }
 
@@ -795,6 +799,8 @@ bool Unzipper::extractEntry(std::string const& name,
 bool Unzipper::extractEntry(std::string const& name,
                             bool const replace)
 {
+    if ((m_open == false) || (m_impl == nullptr))
+        return false;
     return m_impl->extractEntry(name, std::string(), replace);
 }
 
@@ -802,6 +808,8 @@ bool Unzipper::extractEntry(std::string const& name,
 bool Unzipper::extractEntryToStream(std::string const& name,
                                     std::ostream& stream)
 {
+    if ((m_open == false) || (m_impl == nullptr))
+        return false;
     return m_impl->extractEntryToStream(name, stream);
 }
 
@@ -809,6 +817,8 @@ bool Unzipper::extractEntryToStream(std::string const& name,
 bool Unzipper::extractEntryToMemory(std::string const& name,
                                     std::vector<unsigned char>& vec)
 {
+    if ((m_open == false) || (m_impl == nullptr))
+        return false;
     return m_impl->extractEntryToMemory(name, vec);
 }
 
@@ -817,6 +827,8 @@ bool Unzipper::extractAll(std::string const& destination,
                           const std::map<std::string, std::string>& alternativeNames,
                           bool const replace)
 {
+    if ((m_open == false) || (m_impl == nullptr))
+        return false;
     return m_impl->extractAll(Path::canonicalPath(destination),
                               alternativeNames,
                               replace);
@@ -825,6 +837,8 @@ bool Unzipper::extractAll(std::string const& destination,
 // -----------------------------------------------------------------------------
 bool Unzipper::extractAll(bool replace)
 {
+    if ((m_open == false) || (m_impl == nullptr))
+        return false;
     return m_impl->extractAll(std::string(),
                               std::map<std::string, std::string>(),
                               replace);
@@ -833,6 +847,8 @@ bool Unzipper::extractAll(bool replace)
 // -----------------------------------------------------------------------------
 bool Unzipper::extractAll(std::string const& destination, bool const replace)
 {
+    if ((m_open == false) || (m_impl == nullptr))
+        return false;
     return m_impl->extractAll(Path::canonicalPath(destination),
                               std::map<std::string, std::string>(),
                               replace);
@@ -863,6 +879,7 @@ void Unzipper::close()
         m_impl->close();
     }
     m_open = false;
+    m_error_code.clear();
 }
 
 // -----------------------------------------------------------------------------

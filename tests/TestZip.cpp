@@ -1200,3 +1200,25 @@ TEST(ZipTests, FileFakingFolder)
     unzipper.close();
     Path::remove("ziptest.zip");
 }
+
+// -----------------------------------------------------------------------------
+// Close unzipper and try accessing to it
+TEST(ZipTests, UnzipperClosed)
+{
+    Path::remove("ziptest.zip");
+    Zipper zipper("ziptest.zip");
+    ASSERT_EQ(zipEntry(zipper, "test1.txt", "test1 file compression",
+                       "test1.txt"), true);
+    zipper.close();
+
+    zipper::Unzipper unzipper("ziptest.zip");
+    unzipper.close();
+
+    std::vector<zipper::ZipEntry> entries = unzipper.entries();
+    ASSERT_EQ(entries.size(), 0u);
+
+    ASSERT_EQ(unzipper.extractAll("/tmp", false), false);
+    ASSERT_EQ(unzipper.extractAll("/tmp", true), false);
+
+    Path::remove("ziptest.zip");
+}
