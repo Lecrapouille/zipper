@@ -1154,3 +1154,49 @@ TEST(MemoryZipTests, Issue5)
         Path::remove("/tmp/issue_05");
     }
 }
+
+// -----------------------------------------------------------------------------
+// Follow https://github.com/Lecrapouille/zipper/issues/5 try inserting files
+// with folder extension
+TEST(ZipTests, FileFakingFolder)
+{
+    Path::remove("ziptest.zip");
+    Path::remove("/tmp/test");
+    Path::remove("/tmp/test2");
+
+    // Try adding test1.txt with folder extension
+    Zipper zipper("ziptest.zip");
+    ASSERT_EQ(zipEntry(zipper, "test1.txt", "test1 file compression",
+                       "test1.txt/"), true);
+    ASSERT_EQ(zipEntry(zipper, "test2.txt", "test2 file compression",
+                       "test2.txt\\"), true);
+    ASSERT_EQ(zipEntry(zipper, "test3.txt", "test3 file compression",
+                       "test\\"), true);
+    ASSERT_EQ(zipEntry(zipper, "test4.txt", "test4 file compression",
+                       "test2\\bar"), true);
+    zipper.close();
+
+    // Check files exist without folder extension
+    zipper::Unzipper unzipper("ziptest.zip");
+    std::vector<zipper::ZipEntry> entries = unzipper.entries();
+
+    ASSERT_EQ(entries.size(), 4u);
+    ASSERT_STREQ(entries[0].name.c_str(), "test1.txt");
+    ASSERT_STREQ(entries[1].name.c_str(), "test2.txt");
+    ASSERT_STREQ(entries[2].name.c_str(), "test");
+    ASSERT_STREQ(entries[3].name.c_str(), "test2/bar");
+
+    // Extract
+    ASSERT_EQ(unzipper.extractAll("/tmp", true), true);
+    ASSERT_STREQ(readFileContent("/tmp/test1.txt").c_str(),
+                 "test1 file compression");
+    ASSERT_STREQ(readFileContent("/tmp/test2.txt").c_str(),
+                 "test2 file compression");
+    ASSERT_STREQ(readFileContent("/tmp/test").c_str(),
+                 "test3 file compression");
+    ASSERT_STREQ(readFileContent("/tmp/test2/bar").c_str(),
+                 "test4 file compression");
+
+    unzipper.close();
+    Path::remove("ziptest.zip");
+}
