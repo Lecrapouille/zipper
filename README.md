@@ -456,6 +456,10 @@ unzipper.extractEntry("Test1");
 - Zipper has security against [Zip Slip vulnerability](https://security.snyk.io/research/zip-slip-vulnerability): if an entry has a path outside the extraction folder (like `../foo.txt`) it
 will returns `false` even if the replace option is set.
 
+## Hello zip
+
+Basic unzipper standalone application given as demo in [doc/demos](doc/demos).
+
 ## For developers
 
 ### Non regression tests
