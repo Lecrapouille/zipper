@@ -17,12 +17,12 @@ include $(M)/Makefile.header
 ###################################################
 # Inform Makefile where to find *.cpp and *.o files
 #
-VPATH +=
+VPATH += $(P)/src $(P)/src/utils $(THIRDPART)
 
 ###################################################
 # Inform Makefile where to find header files
 #
-INCLUDES +=
+INCLUDES += -I. -I$(P)/include -I$(P)/src
 
 ###################################################
 # Compilation
@@ -43,7 +43,8 @@ OBJS += demo_unzip.o
 ###################################################
 # Libraries.
 #
-PKG_LIBS += zipper
+THIRDPART_LIBS += $(abspath $(P)/$(BUILD)/libzipper.a)
+#PKG_LIBS += zipper
 
 ###################################################
 # Compile static and shared libraries
