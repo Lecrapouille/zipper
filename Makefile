@@ -32,7 +32,7 @@ INCLUDES += -I. -I$(P)/include -I$(P)/src
 ###################################################
 # Compilation
 #
-CXXFLAGS += -Wno-undef
+#CXXFLAGS += -Wno-undef
 
 ###################################################
 # Project defines.

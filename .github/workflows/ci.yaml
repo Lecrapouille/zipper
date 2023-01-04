@@ -26,7 +26,7 @@ jobs:
       - name: Install system packages
         run: |
           sudo apt-get update
-          sudo apt-get install pkg-config lcov libdw-dev
+          sudo apt-get install pkg-config lcov libdw-dev ninja-build
       - name: Download, configure and install Google test
         run: |
           wget https://github.com/google/googletest/archive/release-1.11.0.tar.gz
@@ -61,7 +61,7 @@ jobs:
           submodules: true
       - name: Install system packages
         run: |
-          brew install pkg-config
+          brew install pkg-config ninja
       - name: Download, configure and install Google test
         run: |
           wget https://github.com/google/googletest/archive/release-1.11.0.tar.gz
@@ -99,7 +99,7 @@ jobs:
         run: |
           make download-external-libs
           make compile-external-libs
-          make -j`nproc --all`
+          make -j1
       - name: Non regression
         run: |
           cd build
