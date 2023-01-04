@@ -11,15 +11,19 @@ on:
       - master
 
 jobs:
+
+  #############################################################################
+  ### Linux
+  #############################################################################
   non_regression_linux:
     name: Non regression on Linux
     runs-on: ubuntu-20.04
     steps:
-      - name: Checkout
+      - name: Checkout Zipper
         uses: actions/checkout@v3
         with:
           submodules: true
-      - name: Install packages
+      - name: Install system packages
         run: |
           sudo apt-get update
           sudo apt-get install pkg-config lcov libdw-dev
@@ -30,7 +34,7 @@ jobs:
           cd googletest-release-1.11.0
           cmake -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON .
           sudo make install
-      - name: Build
+      - name: Build Zipper
         run: |
           make download-external-libs
           make compile-external-libs
@@ -44,15 +48,18 @@ jobs:
           make -j`nproc --all`
           ./build/Zipper-UnitTest
 
+  #############################################################################
+  ### MacOS X
+  #############################################################################
   non_regression_macos:
     name: Non regression on MacOS X
     runs-on: macos-latest
     steps:
-      - name: Checkout
+      - name: Checkout Zipper
         uses: actions/checkout@v3
         with:
           submodules: true
-      - name: Install packages
+      - name: Install system packages
         run: |
           brew install pkg-config
       - name: Download, configure and install Google test
@@ -62,7 +69,7 @@ jobs:
           cd googletest-release-1.11.0
           cmake -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON .
           sudo make install
-      - name: Build
+      - name: Build Zipper
         run: |
           make download-external-libs
           make compile-external-libs
