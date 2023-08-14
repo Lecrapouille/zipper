@@ -1,5 +1,4 @@
-#!/bin/bash -ex
-
+#!/bin/bash -e
 ###############################################################################
 ### This script is called by (cd .. && make compile-external-libs). It will
 ### compile thirdparts cloned previously with make download-external-libs.
@@ -22,29 +21,7 @@
 ### find them when you'll start your application.
 ###############################################################################
 
-### $1 is given by ../Makefile and refers to the current architecture.
-if [ "$1" == "" ]; then
-  echo "Expected one argument. Select the architecture: Linux, Darwin or Windows"
-  exit 1
-fi
-
-ARCHI="$1"
-TARGET="$2"
-CC="$3"
-CXX="$4"
-
-function print-compile
-{
-    echo -e "\033[35m*** Compiling:\033[00m \033[36m$TARGET\033[00m <= \033[33m$1\033[00m"
-}
-
-### Number of CPU cores
-NPROC=-j1
-if [[ "$ARCHI" == "Darwin" ]]; then
-    NPROC=-j`sysctl -n hw.logicalcpu`
-elif [[ "$ARCHI" == "Linux" ]]; then
-    NPROC=-j`nproc --all`
-fi
+source ../.makefile/compile-external-libs.sh
 
 ### Library zlib-ng
 print-compile zlib-ng
@@ -52,8 +29,8 @@ if [ -e zlib-ng ];
 then
     mkdir -p zlib-ng/build
     (cd zlib-ng/build
-     cmake -GNinja -DZLIB_COMPAT=ON -DZLIB_ENABLE_TESTS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON ..
-     VERBOSE=1 ninja $NPROC
+     call-cmake -DZLIB_COMPAT=ON -DZLIB_ENABLE_TESTS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON ..
+     call-make
     )
 else
     echo "Failed compiling external/zipper: directory does not exist"
@@ -65,8 +42,8 @@ if [ -e minizip ];
 then
     mkdir -p minizip/build
     (cd minizip/build
-     cmake -GNinja -DUSE_AES=ON ..
-     VERBOSE=1 ninja $NPROC
+     call-cmake -DUSE_AES=ON ..
+     call-make
     )
 else
     echo "Failed compiling external/zipper: directory does not exist"
