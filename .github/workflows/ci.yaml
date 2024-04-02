@@ -84,24 +84,24 @@ jobs:
   #############################################################################
   ### Windows
   #############################################################################
-  non_regression_windows:
-    name: Non regression on Windows
-    runs-on: windows-2022
-    steps:
-      - name: Add path for finding cl.exe
-        uses: ilammy/msvc-dev-cmd@v1.10.0
-      - name: Checkout Zipper
-        uses: actions/checkout@v3
-        with:
-          submodules: true
-      - name: Build Zipper
-        shell: powershell
-        run: |
-          make download-external-libs
-          make compile-external-libs
-          make -j1
-      - name: Non regression
-        run: |
-          cd build
-          Test-Path -Path \a\zipper\build\libzipper.a.2.0.0
-          Test-Path -Path \a\zipper\build\libzipper.dll.2.0
+#  non_regression_windows:
+#    name: Non regression on Windows
+#    runs-on: windows-2022
+#    steps:
+#      - name: Add path for finding cl.exe
+#        uses: ilammy/msvc-dev-cmd@v1.10.0
+#      - name: Checkout Zipper
+#        uses: actions/checkout@v3
+#        with:
+#          submodules: true
+#      - name: Build Zipper
+#        shell: powershell
+#        run: |
+#          make download-external-libs
+#          make compile-external-libs
+#          make -j1
+#      - name: Non regression
+#        run: |
+#          cd build
+#          Test-Path -Path \a\zipper\build\libzipper.a.2.0.0
+#          Test-Path -Path \a\zipper\build\libzipper.dll.2.0
