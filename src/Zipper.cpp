@@ -86,7 +86,7 @@ static std::error_code make_error_code(zipper_error e, std::string const& messag
 // -----------------------------------------------------------------------------
 // Calculate the CRC32 of a file because to encrypt a file, we need known the
 // CRC32 of the file before.
-static void getFileCrc(std::istream& input_stream, std::vector<char>& buff, unsigned long& result_crc)
+static void getFileCrc(std::istream& input_stream, std::vector<char>& buff, uint32_t& result_crc)
 {
     unsigned long calculate_crc = 0;
     unsigned int size_read = 0;
@@ -106,7 +106,7 @@ static void getFileCrc(std::istream& input_stream, std::vector<char>& buff, unsi
 
     input_stream.clear();
     input_stream.seekg(0, std::ios_base::beg);
-    result_crc = calculate_crc;
+    result_crc = static_cast<uint32_t>(calculate_crc); // FIXME
 }
 
 // *************************************************************************
@@ -226,7 +226,7 @@ struct Zipper::Impl
             }
             m_zipmem.base = reinterpret_cast<char*>(malloc(buffer.size() * sizeof(char)));
             memcpy(m_zipmem.base, reinterpret_cast<char*>(buffer.data()), buffer.size());
-            m_zipmem.size = static_cast<uLong>(buffer.size());
+            m_zipmem.size = static_cast<uint32_t>(buffer.size());
         }
 
         fill_memory_filefunc(&m_filefunc, &m_zipmem);
@@ -258,10 +258,10 @@ struct Zipper::Impl
         bool zip64;
         size_t size_buf = ZIPPER_WRITE_BUFFER_SIZE;
         int err = ZIP_OK;
-        unsigned long crcFile = 0;
+        uint32_t crcFile = 0;
 
         zip_fileinfo zi;
-        zi.dosDate = 0; // if dos_date == 0, tmz_date is used
+        zi.dos_date = 0; // if dos_date == 0, tmz_date is used
         zi.internal_fa = 0; // internal file attributes
         zi.external_fa = 0; // external file attributes
         zi.tmz_date.tm_sec = uInt(timestamp.tm_sec);

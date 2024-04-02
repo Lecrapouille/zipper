@@ -15,6 +15,7 @@
 #  endif
 
 #  include <string>
+#  include <time.h>
 
 namespace zipper {
 

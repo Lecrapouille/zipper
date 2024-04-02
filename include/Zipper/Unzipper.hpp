@@ -229,15 +229,15 @@ public:
 
     ZipEntry() = default;
     ZipEntry(std::string const& name_,
-             unsigned long long int compressed_size,
-             unsigned long long int uncompressed_size,
-             unsigned int year,
-             unsigned int month,
-             unsigned int day,
-             unsigned int hour,
-             unsigned int minute,
-             unsigned int second,
-             unsigned long dosdate_)
+             uint64_t compressed_size,
+             uint64_t uncompressed_size,
+             uint32_t year,
+             uint32_t month,
+             uint32_t day,
+             uint32_t hour,
+             uint32_t minute,
+             uint32_t second,
+             uint32_t dosdate_)
         : name(name_), compressedSize(compressed_size),
           uncompressedSize(uncompressed_size), dosdate(dosdate_)
     {
@@ -288,18 +288,18 @@ public:
 
     typedef struct
     {
-        unsigned int tm_sec;
-        unsigned int tm_min;
-        unsigned int tm_hour;
-        unsigned int tm_mday;
-        unsigned int tm_mon;
-        unsigned int tm_year;
+        uint32_t tm_sec;
+        uint32_t tm_min;
+        uint32_t tm_hour;
+        uint32_t tm_mday;
+        uint32_t tm_mon;
+        uint32_t tm_year;
     } tm_s;
 
     std::string name, timestamp;
-    unsigned long long int compressedSize;
-    unsigned long long int uncompressedSize;
-    unsigned long dosdate;
+    uint64_t compressedSize;
+    uint64_t uncompressedSize;
+    uint32_t dosdate;
     tm_s unixdate;
 };
 

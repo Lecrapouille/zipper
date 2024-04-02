@@ -9,6 +9,7 @@
 #include "external/minizip/zip.h"
 #include "external/minizip/unzip.h"
 #include "external/minizip/ioapi_mem.h"
+#include "external/minizip/minishared.h"
 #include "utils/Path.hpp"
 
 #include <functional>
@@ -163,7 +164,7 @@ private:
                          file_info.uncompressed_size, file_info.tmu_date.tm_year,
                          file_info.tmu_date.tm_mon, file_info.tmu_date.tm_mday,
                          file_info.tmu_date.tm_hour, file_info.tmu_date.tm_min,
-                         file_info.tmu_date.tm_sec, file_info.dosDate);
+                         file_info.tmu_date.tm_sec, file_info.dos_date);
         return true;
     }
 
@@ -296,7 +297,7 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    void changeFileDate(std::string const& filename, uLong dosdate, tm_unz tmu_date)
+    void changeFileDate(std::string const& filename, uLong dosdate, tm_zip const& tmu_date)
     {
 #if defined(USE_WINDOWS)
         (void) tmu_date;
@@ -398,10 +399,10 @@ public:
             output_file.close();
 
             /* Set the time of the file that has been unzipped */
-            tm_unz timeaux;
+            tm_zip timeaux;
             memcpy(&timeaux, &info.unixdate, sizeof(timeaux));
 
-            changeFileDate(filename, info.dosdate, timeaux);
+            changeFileDate(filename.c_str(), info.dosdate, timeaux);
             return err;
         }
         else
@@ -596,7 +597,7 @@ public:
         {
             size_t size = static_cast<size_t>(s);
             m_zipmem.base = new char[size];
-            m_zipmem.size = static_cast<uLong>(size);
+            m_zipmem.size = static_cast<uint32_t>(size);
             stream.read(m_zipmem.base, std::streamsize(size));
             if (!stream.good())
             {
@@ -617,7 +618,7 @@ public:
         {
             m_zipmem.base = reinterpret_cast<char*>(malloc(buffer.size() * sizeof(char)));
             memcpy(m_zipmem.base, reinterpret_cast<char*>(buffer.data()), buffer.size());
-            m_zipmem.size = static_cast<uLong>(buffer.size());
+            m_zipmem.size = static_cast<uint32_t>(buffer.size());
         }
         fill_memory_filefunc(&m_filefunc, &m_zipmem);
 
