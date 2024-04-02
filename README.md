@@ -21,7 +21,8 @@ This current fork repo has been made because the original project was no longer 
 
 **:warning: Security Notice**
 
-- Zipper currently follows an outdated (and probably vulnerable) version of the https://github.com/Lecrapouille/minizip library.
+- Zipper currently follows an outdated (and probably vulnerable) version of the https://github.com/Lecrapouille/minizip library:
+SHA1 0bb5afeb0d3f23149b086ccda7e4fee7d48f4fdf of https://github.com/zlib-ng/minizip-ng which dated of 2017).
 - While some fixes have been added this lib may be still vulnerable to ZipSlip attacks and mitigations should be put in place by Zipper's users.
 
 ## Getting Started
