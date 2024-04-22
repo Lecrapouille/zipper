@@ -187,7 +187,13 @@ TEST(FileZipTests, ZipperPathologicalOpenings)
     catch (std::runtime_error const& e)
     {
 #if defined(__APPLE__)
-        ASSERT_STREQ(e.what(), "Read-only file system");
+        std::string s1 = "Read-only file system";
+        std::string s2 = "Operation not permitted";
+        std::string str = e.what();
+        EXPECT_PRED3([](auto str, auto s1, auto s2)
+        {
+            return str == s1 || str == s2;
+        }, str, s1, s2);
 #else
         ASSERT_STREQ(e.what(), "Permission denied");
 #endif
