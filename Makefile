@@ -67,6 +67,13 @@ THIRDPART_LIBS += \
 all: $(STATIC_LIB_TARGET) $(SHARED_LIB_TARGET) $(PKG_FILE)
 
 ###################################################
+# Compile the demo as standalone application.
+.PHONY: demos
+demos: | $(STATIC_LIB_TARGET) $(SHARED_LIB_TARGET)
+	@$(call print-from,"Compiling demos",$(PROJECT),unzip)
+	$(MAKE) -C doc/demos/Unzipper all
+
+###################################################
 # Compile and launch unit tests and generate the code coverage html report.
 .PHONY: unit-tests
 .PHONY: check
