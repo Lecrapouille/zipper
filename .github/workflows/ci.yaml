@@ -39,6 +39,7 @@ jobs:
           make download-external-libs
           make compile-external-libs
           make -j`nproc --all`
+          make demos -j`nproc --all`
       - name: Installation
         run: |
           sudo make install
@@ -47,6 +48,11 @@ jobs:
           cd tests
           make -j`nproc --all`
           ./build/Zipper-UnitTest
+      - name: Check the demo
+        run: |
+          cd doc/demos/Unzipper
+          echo "1234" | ./build/demo_unzip -p -f -o /tmp ../../../tests/issues/issue_05_password.zip
+          ls /tmp/issue_05/foo/bar /tmp/issue_05/Nouveau\ dossier/ /tmp/issue_05/Nouveau\ fichier\ vide
 
   #############################################################################
   ### MacOS X
@@ -73,13 +79,20 @@ jobs:
         run: |
           make download-external-libs
           make compile-external-libs
-          make -j`nproc --all`
+          make -j`sysctl -n hw.logicalcpu`
+# FIXME https://github.com/Lecrapouille/zipper/issues/10
+#          make demos -j`sysctl -n hw.logicalcpu`
       - name: Non regression
         run: |
           cd tests
           make -j`nproc --all`
           ./build/Zipper-UnitTest
-
+# FIXME https://github.com/Lecrapouille/zipper/issues/10
+#      - name: Check the demo
+#        run: |
+#          cd doc/demos/Unzipper
+#          echo "1234" | ./build/demo_unzip -p -f -o /tmp ../../../tests/issues/issue_05_password.zip
+#          ls /tmp/issue_05/foo/bar /tmp/issue_05/Nouveau\ dossier/ /tmp/issue_05/Nouveau\ fichier\ vide
 
   #############################################################################
   ### Windows

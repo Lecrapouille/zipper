@@ -17,12 +17,12 @@ include $(M)/Makefile.header
 ###################################################
 # Inform Makefile where to find *.cpp and *.o files
 #
-VPATH += $(P)/src $(P)/src/utils $(THIRDPART)
+VPATH += $(P) src
 
 ###################################################
 # Inform Makefile where to find header files
 #
-INCLUDES += -I. -I$(P)/include -I$(P)/src
+INCLUDES += -I$(P)/include -Isrc
 
 ###################################################
 # Compilation
@@ -35,16 +35,14 @@ CXXFLAGS +=
 DEFINES +=
 
 ###################################################
-# Compiled files
+# Compile the demo as standalone application.
 #
-
 OBJS += demo_unzip.o
 
 ###################################################
-# Libraries.
+# Libraries: link against our newly compiled lib
 #
 THIRDPART_LIBS += $(abspath $(P)/$(BUILD)/libzipper.a)
-#PKG_LIBS += zipper
 
 ###################################################
 # Compile static and shared libraries
