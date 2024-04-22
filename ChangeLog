@@ -1,2 +1,17 @@
+Version 2.1.0:
+    * Update thridpart minizip-ng fixing issues to SHA1 0bb5afeb0d3f23149b086ccda7e4fee7d48f4fdf (2017).
+        - Fix https://github.com/Lecrapouille/zipper/issues/8
+        - Fix https://github.com/Lecrapouille/zipper/issues/9
+    * Currently I cannot track more recent SHA1 because the API is changing.
+
 Version 2.0.0:
-    * Fork from https://github.com/sebastiandev/zipper v2.x.y branch
+    * Forked from https://github.com/sebastiandev/zipper v2.x.y branch.
+    * Replace CMake by Makefile to simplify compilation build (lot of issues come from CMake).
+    * Replace Catch by Google test. Add lot of non regression tests.
+    * Fix all issues reported by users.
+    * Use by default EAS.
+    * Prevent against zip slip: this has broken the API from initial project.
+    * Track the HEAD of zlib-ng thirdpart and 2015 SHA1 of minizip-ng..
+
+Previous version:
+    * Original project https://github.com/sebastiandev/zipper (master branch)
