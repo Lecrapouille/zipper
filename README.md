@@ -34,15 +34,15 @@ To download the project and compile it:
 ```shell
 git clone https://github.com/lecrapouille/zipper.git --recursive
 cd zipper
-make download-external-libs
+# Optionally: make download-external-libs
 make compile-external-libs
 make -j`nproc --all`
 # make -j`sysctl -n hw.logicalcpu` for MacOS X
 ```
 
 Notes:
-- Git cloning needs the recursivity option to install the Makefile helper.
-- `make download-external-libs` will git clone zlib and minizip to the `external` folder. This replaces git submodules.
+- Git cloning needs the recursivity option to install the Makefile helper and third-part libs (`zlib` and `minizip`). They are based on fixed SHA1.
+- Optionaly `make download-external-libs` will git clone HEADs of zlib and minizip to the `external` folder. This replaces git submodules.
 - `make compile-external-libs` will compile zlib and minizip but not install them on your operating system. They are
 compiled as static libraries and merged into this library.
 
@@ -61,6 +61,14 @@ For Linux, you will see a message like:
 *** Installing: headers => /usr/include/Zipper-2.0.0
 *** Installing: Zipper => /usr/include/Zipper-2.0.0
 ```
+
+Optionally, you can compile demos present in the folder doc/demos:
+
+```shell
+make demos -j8
+```
+
+See their README files for their usage.
 
 ### Linking Zipper to your project
 
