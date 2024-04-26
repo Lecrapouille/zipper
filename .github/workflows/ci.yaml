@@ -36,23 +36,31 @@ jobs:
           sudo make install
       - name: Build Zipper
         run: |
-          make download-external-libs
-          make compile-external-libs
-          make -j`nproc --all`
-          make demos -j`nproc --all`
+          V=1 make download-external-libs
+          V=1 make compile-external-libs
+          V=1 make -j`nproc --all`
+          V=1 make demos -j`nproc --all`
       - name: Installation
         run: |
           sudo make install
       - name: Non regression
         run: |
           cd tests
-          make -j`nproc --all`
+          V=1 make -j`nproc --all`
           ./build/Zipper-UnitTest
       - name: Check the demo
         run: |
           cd doc/demos/Unzipper
           echo "1234" | ./build/demo_unzip -p -f -o /tmp ../../../tests/issues/issue_05_password.zip
           ls /tmp/issue_05/foo/bar /tmp/issue_05/Nouveau\ dossier/ /tmp/issue_05/Nouveau\ fichier\ vide
+      - name: Check if the library can be linked against a project
+        run: |
+          git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recurse-submodules --depth=1
+          cd LinkAgainstMyLibs/Zipper
+          V=1 make -j`nproc --all`
+          ./build/Zipper
+          ls ziptest.zip /tmp/somefile.txt
+          cat /tmp/somefile.txt
 
   #############################################################################
   ### MacOS X
@@ -77,15 +85,15 @@ jobs:
           sudo make install
       - name: Build Zipper
         run: |
-          make download-external-libs
-          make compile-external-libs
-          make -j`sysctl -n hw.logicalcpu`
+          V=1 make download-external-libs
+          V=1 make compile-external-libs
+          V=1 make -j`sysctl -n hw.logicalcpu`
 # FIXME https://github.com/Lecrapouille/zipper/issues/10
 #          make demos -j`sysctl -n hw.logicalcpu`
       - name: Non regression
         run: |
           cd tests
-          make -j`nproc --all`
+          V=1 make -j`nproc --all`
           ./build/Zipper-UnitTest
 # FIXME https://github.com/Lecrapouille/zipper/issues/10
 #      - name: Check the demo
@@ -93,6 +101,14 @@ jobs:
 #          cd doc/demos/Unzipper
 #          echo "1234" | ./build/demo_unzip -p -f -o /tmp ../../../tests/issues/issue_05_password.zip
 #          ls /tmp/issue_05/foo/bar /tmp/issue_05/Nouveau\ dossier/ /tmp/issue_05/Nouveau\ fichier\ vide
+#      - name: Check if the library can be linked against a project
+#        run: |
+#          git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recurse-submodules --depth=1
+#          cd LinkAgainstMyLibs/Zipper
+#          V=1 make -j`nproc --all`
+#          ./build/Zipper
+#          ls ziptest.zip /tmp/somefile.txt
+#          cat /tmp/somefile.txt
 
   #############################################################################
   ### Windows
