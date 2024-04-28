@@ -55,6 +55,8 @@ jobs:
           ls /tmp/issue_05/foo/bar /tmp/issue_05/Nouveau\ dossier/ /tmp/issue_05/Nouveau\ fichier\ vide
       - name: Check if the library can be linked against a project
         run: |
+          echo `pkg-config --cflags zipper`
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
           git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recurse-submodules --depth=1
           cd LinkAgainstMyLibs/Zipper
           V=1 make -j`nproc --all`
