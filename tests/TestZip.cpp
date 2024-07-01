@@ -215,11 +215,11 @@ TEST(FileUnzipTests, UnzipperPathologicalOpenings)
     }
 
     // Opening a non zip file
-    ASSERT_EQ(Path::exist("./build/Zipper-UnitTest"), true);
-    ASSERT_EQ(Path::isFile("./build/Zipper-UnitTest"), true);
+    ASSERT_EQ(Path::exist("../build/zipper-tests"), true);
+    ASSERT_EQ(Path::isFile("../build/zipper-tests"), true);
     try
     {
-        Unzipper unzipper("./build/Zipper-UnitTest");
+        Unzipper unzipper("../build/zipper-tests");
     }
     catch (std::runtime_error const& e)
     {

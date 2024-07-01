@@ -5,8 +5,6 @@
 ### It replaces git submodules that I dislike.
 ###############################################################################
 
-source ../.makefile/download-external-libs.sh
-
 ### zlib replacement with optimizations for "next generation" systems.
 ### License: zlib
 cloning zlib-ng/zlib-ng

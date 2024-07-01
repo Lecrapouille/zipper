@@ -1,103 +1,54 @@
 ###################################################
-# Project definition
-#
-PROJECT = Zipper
-TARGET = $(PROJECT)
-DESCRIPTION = C++ wrapper around minizip compression library
-STANDARD = --std=c++11
-BUILD_TYPE = release
-
-###################################################
-# Documentation
-#
-LOGO = logo.png
-
-###################################################
 # Location of the project directory and Makefiles
 #
 P := .
 M := $(P)/.makefile
-include $(M)/Makefile.header
 
 ###################################################
-# Inform Makefile where to find *.cpp and *.o files
+# Project definition
 #
-VPATH += $(P)/src $(P)/src/utils $(THIRDPART)
+include $(P)/Makefile.common
+TARGET_NAME := $(PROJECT_NAME)
+TARGET_DESCRIPTION := An open source implementation of the SimCity 2013 simulation engine GlassBox
+include $(M)/project/Makefile
 
 ###################################################
-# Inform Makefile where to find header files
+# Compile shared and static libraries
 #
-INCLUDES += -I. -I$(P)/include -I$(P)/src
-
-###################################################
-# Compilation
-#
-#CXXFLAGS += -Wno-undef
-
-###################################################
-# Project defines.
-#
-DEFINES += -DHAVE_AES
-ifeq ($(ARCHI),Windows)
-DEFINES += -DUSE_WINDOWS
+LIB_FILES := $(call rwildcard,src,*.cpp)
+INCLUDES := $(P)/include $(P)/src $(P)
+VPATH := $(P)/src $(P)/src/utils $(THIRDPART_DIR)
+ifeq ($(OS),Windows)
+    LIB_FILES += src/utils/dirent.c
+    DEFINES += -DUSE_WINDOWS -DHAVE_AES
 else
-DEFINES += -UUSE_WINDOWS
+    DEFINES += -UUSE_WINDOWS -DHAVE_AES
 endif
+THIRDPART_LIBS := $(abspath $(THIRDPART_DIR)/minizip/build/libminizip.a)
+THIRDPART_LIBS += $(abspath $(THIRDPART_DIR)/minizip/build/libaes.a)
+THIRDPART_LIBS += $(abspath $(THIRDPART_DIR)/zlib-ng/build/libz.a)
 
 ###################################################
-# Compiled files
+# Documentation
 #
-ifeq ($(ARCHI),Windows)
-LIB_OBJS += dirent.o
-endif
-LIB_OBJS += Timestamp.o Path.o Zipper.o Unzipper.o
+PATH_PROJECT_LOGO := $(PROJECT_DOC_DIR)/doxygen-logo.png
 
 ###################################################
-# Libraries.
+# Generic Makefile rules
 #
-PKG_LIBS +=
-LINKER_FLAGS +=
-THIRDPART_LIBS += \
-    $(abspath $(THIRDPART)/minizip/build/libminizip.a) \
-    $(abspath $(THIRDPART)/minizip/build/libaes.a) \
-    $(abspath $(THIRDPART)/zlib-ng/build/libz.a)
+include $(M)/rules/Makefile
 
 ###################################################
-# Compile static and shared libraries
-all: $(STATIC_LIB_TARGET) $(SHARED_LIB_TARGET) $(PKG_FILE)
+# Extra rules
+#
+all:: demos
 
-###################################################
-# Compile the demo as standalone application.
 .PHONY: demos
-demos: | $(STATIC_LIB_TARGET) $(SHARED_LIB_TARGET)
-	@$(call print-from,"Compiling demos",$(PROJECT),unzip)
-	$(MAKE) -C doc/demos/Unzipper all
+demos: $(TARGET_STATIC_LIB_NAME)
+	$(Q)$(MAKE) --no-print-directory --directory=doc/demos/Unzipper all
 
-###################################################
-# Compile and launch unit tests and generate the code coverage html report.
-.PHONY: unit-tests
-.PHONY: check
-unit-tests check:
-	@$(call print-simple,"Compiling unit tests")
-	@$(MAKE) -C tests coverage
+clean::
+	$(Q)$(MAKE) --no-print-directory --directory=doc/demos/Unzipper clean
 
-###################################################
-# Install project. You need to be root.
-.PHONY: install
-install: $(STATIC_LIB_TARGET) $(SHARED_LIB_TARGET) $(PKG_FILE)
-	@$(call INSTALL_DOCUMENTATION)
-	@$(call INSTALL_PROJECT_LIBRARIES)
-	@$(call INSTALL_PROJECT_HEADERS)
-
-###################################################
-# Clean the whole project.
-.PHONY: veryclean
-veryclean: clean
-	@rm -fr cov-int $(PROJECT).tgz *.log foo 2> /dev/null
-	@(cd tests && $(MAKE) -s clean)
-	@$(call print-simple,"Cleaning","$(THIRDPART)")
-	@rm -fr $(THIRDPART)/*/ doc/html 2> /dev/null
-
-###################################################
-# Sharable informations between all Makefiles
-include $(M)/Makefile.footer
+install::
+	$(Q)$(MAKE) --no-print-directory --directory=doc/demos/Unzipper install

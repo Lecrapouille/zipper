@@ -21,8 +21,6 @@
 ### find them when you'll start your application.
 ###############################################################################
 
-source ../.makefile/compile-external-libs.sh
-
 ### Library zlib-ng
 print-compile zlib-ng
 if [ -e zlib-ng ];

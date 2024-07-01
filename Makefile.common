@@ -1,0 +1,4 @@
+PROJECT_NAME := zipper
+PROJECT_VERSION := 2.1.0
+COMPILATION_MODE := release
+CXX_STANDARD := --std=c++14
