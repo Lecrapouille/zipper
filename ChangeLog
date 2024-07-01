@@ -1,3 +1,6 @@
+Version 2.1.1:
+    * Compiled with MyMakefile-v2
+
 Version 2.1.0:
     * Update thridpart minizip-ng fixing issues to SHA1 0bb5afeb0d3f23149b086ccda7e4fee7d48f4fdf (2017).
         - Fix https://github.com/Lecrapouille/zipper/issues/8
