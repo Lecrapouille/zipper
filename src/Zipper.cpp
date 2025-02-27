@@ -15,7 +15,7 @@
 #include <stdexcept>
 
 #ifndef ZIPPER_WRITE_BUFFER_SIZE
-#  define ZIPPER_WRITE_BUFFER_SIZE (8192u)
+#  define ZIPPER_WRITE_BUFFER_SIZE (65536u)
 #endif
 
 namespace zipper {
@@ -92,21 +92,49 @@ static void getFileCrc(std::istream& input_stream, std::vector<char>& buff, uint
     unsigned int size_read = 0;
     unsigned long total_read = 0;
 
-    do
+    // Determine the size of the file to preallocate the buffer
+    input_stream.seekg(0, std::ios::end);
+    std::streampos file_size = input_stream.tellg();
+    input_stream.seekg(0, std::ios::beg);
+
+    // If the file is of reasonable size, use a single buffer to avoid multiple reads
+    if (file_size > 0 && file_size < 100 * 1024 * 1024) // Limit to 100 Mo to avoid exhausting memory
     {
-        input_stream.read(buff.data(), std::streamsize(buff.size()));
+        // Resize the buffer to contain the whole file
+        buff.resize(static_cast<size_t>(file_size));
+
+        // Read the whole file in one go
+        input_stream.read(buff.data(), file_size);
         size_read = static_cast<unsigned int>(input_stream.gcount());
 
         if (size_read > 0)
             calculate_crc = crc32(calculate_crc, reinterpret_cast<const unsigned char*>(buff.data()), size_read);
 
-        total_read += static_cast<unsigned long>(size_read);
+        // Reset the stream position
+        input_stream.clear();
+        input_stream.seekg(0, std::ios_base::beg);
+    }
+    else
+    {
+        // For large files, use the original approach with chunked reads
+        do
+        {
+            input_stream.read(buff.data(), std::streamsize(buff.size()));
+            size_read = static_cast<unsigned int>(input_stream.gcount());
 
-    } while (size_read > 0);
+            if (size_read > 0)
+                calculate_crc = crc32(calculate_crc, reinterpret_cast<const unsigned char*>(buff.data()), size_read);
 
-    input_stream.clear();
-    input_stream.seekg(0, std::ios_base::beg);
-    result_crc = static_cast<uint32_t>(calculate_crc); // FIXME
+            total_read += static_cast<unsigned long>(size_read);
+
+        } while (size_read > 0);
+
+        // Reset the stream position
+        input_stream.clear();
+        input_stream.seekg(0, std::ios_base::beg);
+    }
+
+    result_crc = static_cast<uint32_t>(calculate_crc);
 }
 
 // *************************************************************************
@@ -119,11 +147,12 @@ struct Zipper::Impl
     ourmemory_t m_zipmem;
     zlib_filefunc_def m_filefunc;
     std::error_code& m_error_code;
+    std::vector<char> m_buffer; // Buffer pour les opérations de lecture/écriture
 
     // -------------------------------------------------------------------------
     Impl(Zipper& outer, std::error_code& error_code)
         : m_outer(outer), m_zipmem(), m_filefunc(),
-          m_error_code(error_code)
+          m_error_code(error_code), m_buffer(ZIPPER_WRITE_BUFFER_SIZE)
     {
         m_zf = nullptr;
         m_zipmem.base = nullptr;
@@ -188,6 +217,7 @@ struct Zipper::Impl
     {
         m_zipmem.grow = 1;
 
+        // Determine the size of the file to preallocate the buffer
         stream.seekg(0, std::ios::end);
         std::streampos s = stream.tellg();
         if (s < 0)
@@ -198,15 +228,53 @@ struct Zipper::Impl
         size_t size = static_cast<size_t>(s);
         stream.seekg(0);
 
-        if (size > 0)
+        if (m_zipmem.base != nullptr)
         {
-            if (m_zipmem.base != nullptr)
-            {
-                free(m_zipmem.base);
-            }
-            m_zipmem.base = reinterpret_cast<char*>(malloc(size * sizeof(char)));
-            stream.read(m_zipmem.base, std::streamsize(size));
+            free(m_zipmem.base);
         }
+
+        // Allocate memory directly
+        m_zipmem.base = reinterpret_cast<char*>(malloc(size));
+        if (m_zipmem.base == nullptr)
+        {
+            m_error_code = make_error_code(zipper_error::INTERNAL_ERROR, "Failed to allocate memory");
+            return false;
+        }
+
+        // Use the member buffer for reading
+        constexpr size_t CHUNK_SIZE = 1024 * 1024; // 1 Mo per chunk
+        if (m_buffer.size() < std::min(CHUNK_SIZE, size))
+        {
+            m_buffer.resize(std::min(CHUNK_SIZE, size));
+        }
+
+        char* dest = m_zipmem.base;
+        size_t remaining = size;
+
+        // Read by chunks to avoid memory issues with large files
+        while (remaining > 0 && stream.good())
+        {
+            size_t to_read = std::min(m_buffer.size(), remaining);
+            stream.read(m_buffer.data(), std::streamsize(to_read));
+            size_t actually_read = static_cast<size_t>(stream.gcount());
+
+            if (actually_read == 0)
+                break;
+
+            memcpy(dest, m_buffer.data(), actually_read);
+            dest += actually_read;
+            remaining -= actually_read;
+        }
+
+        // If we couldn't read all the content, adjust the size
+        if (remaining > 0) {
+            size_t actual_size = size - remaining;
+            // Reallocate to free unused memory
+            m_zipmem.base = reinterpret_cast<char*>(realloc(m_zipmem.base, actual_size));
+            size = actual_size;
+        }
+
+        m_zipmem.size = static_cast<uint32_t>(size);
 
         fill_memory_filefunc(&m_filefunc, &m_zipmem);
 
@@ -224,8 +292,16 @@ struct Zipper::Impl
             {
                 free(m_zipmem.base);
             }
-            m_zipmem.base = reinterpret_cast<char*>(malloc(buffer.size() * sizeof(char)));
-            memcpy(m_zipmem.base, reinterpret_cast<char*>(buffer.data()), buffer.size());
+
+            // Allocate memory directly with the correct size
+            m_zipmem.base = reinterpret_cast<char*>(malloc(buffer.size()));
+            if (m_zipmem.base == nullptr) {
+                m_error_code = make_error_code(zipper_error::INTERNAL_ERROR, "Failed to allocate memory");
+                return false;
+            }
+
+            // Use memcpy which is generally more optimized for large copies
+            memcpy(m_zipmem.base, buffer.data(), buffer.size());
             m_zipmem.size = static_cast<uint32_t>(buffer.size());
         }
 
@@ -273,8 +349,11 @@ struct Zipper::Impl
 
         size_t size_read;
 
-        std::vector<char> buff;
-        buff.resize(size_buf);
+        // Make sure the buffer has the correct size
+        if (m_buffer.size() != size_buf)
+        {
+            m_buffer.resize(size_buf);
+        }
 
         if (nameInZip.empty())
         {
@@ -284,7 +363,7 @@ struct Zipper::Impl
 
         std::string canonNameInZip = Path::canonicalPath(nameInZip);
 
-        /* Prevent Zip Slip attack (See ticket #33) */
+        // Prevent Zip Slip attack (See ticket #33)
         if (canonNameInZip.find_first_of("..") == 0u)
         {
             std::stringstream str;
@@ -328,7 +407,7 @@ struct Zipper::Impl
         }
         else
         {
-            getFileCrc(input_stream, buff, crcFile);
+            getFileCrc(input_stream, m_buffer, crcFile);
             err = zipOpenNewFileInZip3_64(
                 m_zf,
                 canonNameInZip.c_str(),
@@ -353,16 +432,16 @@ struct Zipper::Impl
             do
             {
                 err = ZIP_OK;
-                input_stream.read(buff.data(), std::streamsize(buff.size()));
+                input_stream.read(m_buffer.data(), std::streamsize(m_buffer.size()));
                 size_read = static_cast<size_t>(input_stream.gcount());
-                if (size_read < buff.size() && !input_stream.eof() && !input_stream.good())
+                if (size_read < m_buffer.size() && !input_stream.eof() && !input_stream.good())
                 {
                     err = ZIP_ERRNO;
                 }
 
                 if (size_read > 0)
                 {
-                    err = zipWriteInFileInZip(this->m_zf, buff.data(),
+                    err = zipWriteInFileInZip(this->m_zf, m_buffer.data(),
                                               static_cast<unsigned int>(size_read));
                 }
             } while ((err == ZIP_OK) && (size_read > 0));
@@ -416,6 +495,9 @@ struct Zipper::Impl
             free(m_zipmem.base);
             m_zipmem.base = nullptr;
         }
+
+        // Free the memory of the buffer by resizing it to 0
+        std::vector<char>().swap(m_buffer);
     }
 };
 
@@ -545,11 +627,14 @@ bool Zipper::add(const std::string& fileOrFolderPath, Zipper::zipFlags flags)
                                : fileOrFolderPath);
 
         std::vector<std::string> files = Path::filesFromDir(folderName, true);
-        for (auto& it: files)
+        const std::string folderWithSeparator = folderName + Path::Separator;
+
+        for (const auto& filePath: files)
         {
-            Timestamp time(it);
-            std::ifstream input(it.c_str(), std::ios::binary);
-            std::string nameInZip = it.substr(it.rfind(folderName + Path::Separator), it.size());
+            Timestamp time(filePath);
+            std::ifstream input(filePath.c_str(), std::ios::binary);
+            // Avoid the expensive search with rfind using the known length of the prefix
+            std::string nameInZip = filePath.substr(filePath.find(folderWithSeparator));
             res &= add(input, time.timestamp, nameInZip, flags);
             input.close();
         }
