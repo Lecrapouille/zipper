@@ -46,9 +46,12 @@ all:: demos
 .PHONY: demos
 demos: $(TARGET_STATIC_LIB_NAME)
 	$(Q)$(MAKE) --no-print-directory --directory=doc/demos/Unzipper all
+	$(Q)$(MAKE) --no-print-directory --directory=doc/demos/Zipper all
 
 clean::
 	$(Q)$(MAKE) --no-print-directory --directory=doc/demos/Unzipper clean
+	$(Q)$(MAKE) --no-print-directory --directory=doc/demos/Zipper clean
 
 install::
 	$(Q)$(MAKE) --no-print-directory --directory=doc/demos/Unzipper install
+	$(Q)$(MAKE) --no-print-directory --directory=doc/demos/Zipper install
