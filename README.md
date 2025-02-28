@@ -480,7 +480,7 @@ Depends on:
 Two ways of running them:
 - From the root folder:
 ```shell
-make check -j`nproc --all`
+make tests -j`nproc --all`
 ```
 
 - From the tests/ folder:
