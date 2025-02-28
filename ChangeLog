@@ -1,3 +1,8 @@
+Version 2.2.0:
+    * Optimized code by AI: same time for zipping/unzipping than Linux tool
+    * Fix some issues with big names (entry, fake extraction below folder).
+    * CI Ubuntu 22 and update MyMakefile.
+
 Version 2.1.1:
     * Compiled with MyMakefile-v2
 

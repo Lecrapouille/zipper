@@ -9,7 +9,7 @@ M := $(P)/.makefile
 #
 include $(P)/Makefile.common
 TARGET_NAME := $(PROJECT_NAME)
-TARGET_DESCRIPTION := An open source implementation of the SimCity 2013 simulation engine GlassBox
+TARGET_DESCRIPTION := Zipper is a C++ library for creating and reading zip archives.
 include $(M)/project/Makefile
 
 ###################################################
