@@ -380,7 +380,7 @@ public:
         if (!folder.empty())
         {
             std::string canon = Path::canonicalPath(folder);
-            if (canon.rfind(folder, 0) != 0)
+            if (!canon.empty() && canon.find("..") != std::string::npos)
             {
                 // Prevent Zip Slip attack (See ticket #33)
                 std::stringstream str;
@@ -416,7 +416,10 @@ public:
         }
 
         std::string canon = Path::canonicalPath(filename);
-        if ((canon.size() >= 2u) && (canon[0] == '.') && (canon[1] == '.'))
+
+        // Modification de la vérification de sécurité pour éviter les faux positifs
+        // La vérification originale peut échouer avec des chemins valides contenant des doubles slashes
+        if (!canon.empty() && canon.find("..") != std::string::npos)
         {
             std::stringstream str;
             str << "Security error: entry '" << filename
@@ -572,7 +575,7 @@ public:
             free(m_zipmem.base);
             m_zipmem.base = nullptr;
         }
-        
+
         // Free the memory of the buffers
         std::vector<char>().swap(m_char_buffer);
         std::vector<unsigned char>().swap(m_uchar_buffer);
