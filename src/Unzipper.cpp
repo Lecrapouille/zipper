@@ -100,6 +100,8 @@ struct Unzipper::Impl
     ourmemory_t m_zipmem;
     zlib_filefunc_def m_filefunc;
     std::error_code& m_error_code;
+    std::vector<char> m_char_buffer;
+    std::vector<unsigned char> m_uchar_buffer;
 
 private:
 
@@ -465,12 +467,10 @@ public:
                   ? NULL : m_outer.m_password.c_str());
         if (UNZ_OK == err)
         {
-            static thread_local std::array<char, ZIPPER_WRITE_BUFFER_SIZE> buffer;
-
             do
             {
-                bytes = unzReadCurrentFile(m_zf, buffer.data(),
-                                           static_cast<unsigned int>(buffer.size()));
+                bytes = unzReadCurrentFile(m_zf, m_char_buffer.data(),
+                                           static_cast<unsigned int>(m_char_buffer.size()));
                 if (bytes <= 0)
                 {
                     if (bytes == 0)
@@ -481,7 +481,7 @@ public:
                     return UNZ_ERRNO;
                 }
 
-                stream.write(buffer.data(), std::streamsize(bytes));
+                stream.write(m_char_buffer.data(), std::streamsize(bytes));
                 if (!stream.good())
                 {
                     m_error_code = make_error_code(
@@ -509,16 +509,14 @@ public:
                   ? NULL : m_outer.m_password.c_str());
         if (UNZ_OK == err)
         {
-            static thread_local std::array<unsigned char, ZIPPER_WRITE_BUFFER_SIZE> buffer;
-
             // Pre-allocation to avoid costly reallocations
             outvec.clear();
             outvec.reserve(static_cast<size_t>(info.uncompressedSize));
 
             do
             {
-                bytes = unzReadCurrentFile(m_zf, buffer.data(),
-                                           static_cast<unsigned int>(buffer.size()));
+                bytes = unzReadCurrentFile(m_zf, m_uchar_buffer.data(),
+                                           static_cast<unsigned int>(m_uchar_buffer.size()));
                 if (bytes <= 0)
                 {
                     if (bytes == 0)
@@ -530,7 +528,7 @@ public:
                 }
 
                 // Use of insert with iterators for better performance
-                outvec.insert(outvec.end(), buffer.data(), buffer.data() + bytes);
+                outvec.insert(outvec.end(), m_uchar_buffer.data(), m_uchar_buffer.data() + bytes);
             } while (bytes > 0);
         }
         else
@@ -546,7 +544,9 @@ public:
     // -------------------------------------------------------------------------
     Impl(Unzipper& outer, std::error_code& error_code)
         : m_outer(outer), m_zipmem(), m_filefunc(),
-          m_error_code(error_code)
+          m_error_code(error_code),
+          m_char_buffer(ZIPPER_WRITE_BUFFER_SIZE),
+          m_uchar_buffer(ZIPPER_WRITE_BUFFER_SIZE)
     {
         m_zipmem.base = nullptr;
         m_zf = nullptr;
@@ -572,6 +572,10 @@ public:
             free(m_zipmem.base);
             m_zipmem.base = nullptr;
         }
+        
+        // Free the memory of the buffers
+        std::vector<char>().swap(m_char_buffer);
+        std::vector<unsigned char>().swap(m_uchar_buffer);
     }
 
     // -------------------------------------------------------------------------
