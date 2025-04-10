@@ -143,7 +143,7 @@ bool Path::isRoot(const std::string& path)
 }
 
 // -----------------------------------------------------------------------------
-std::string Path::root()
+std::string Path::root(const std::string& path)
 {
 #ifdef _WIN32
     // Check if we have an absolute path with drive,
@@ -178,11 +178,11 @@ std::string Path::dirName(const std::string& path)
     {
         // Single = intended
         if (pos == 0) // /usr
-            return root();
+            return root(path);
 
 #ifdef _WIN32
         if ((pos == 1) && path[1] == ':') // X:/foo
-            return root();
+            return root(path);
 #endif
         // regular/path or /regular/path
         return path.substr(0, pos);

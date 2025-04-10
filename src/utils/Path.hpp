@@ -34,7 +34,7 @@ public:
     static const std::string Separator;
 
     //! \brief
-    static std::string root();
+    static std::string root(const std::string& path);
     static bool isRoot(const std::string& path);
 
     //! \brief
