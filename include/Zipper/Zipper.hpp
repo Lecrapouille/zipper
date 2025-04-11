@@ -26,13 +26,13 @@ class Zipper
 public:
 
     // -------------------------------------------------------------------------
-    //! \brief Archive flags.
+    //! \brief Archive opening flags.
     // -------------------------------------------------------------------------
     enum openFlags
     {
-        //! \brief Overwrite existing file.zip
+        //! \brief Overwrite existing zip file
         Overwrite,
-        //! \brief Append to existing file.zip
+        //! \brief Append to existing zip file
         Append
     };
 
@@ -41,15 +41,15 @@ public:
     // -------------------------------------------------------------------------
     enum zipFlags
     {
-        //! \brief Minizip options/params: -0  Store only
+        //! \brief Minizip option: -0 Store only (no compression).
         Store = 0x00,
-        //! \brief Minizip options/params: -1  Compress faster
+        //! \brief Minizip option: -1 Compress faster (less compression).
         Faster = 0x01,
-        //! \brief Minizip options/params: -5  Compress medium
+        //! \brief Minizip option: -5 Medium compression.
         Medium = 0x05,
-        //! \brief Minizip options/params: -9  Compress better
+        //! \brief Minizip option: -9 Better compression (slower).
         Better = 0x09,
-        //! \brief ???
+        //! \brief Preserve directory hierarchy when adding files.
         SaveHierarchy = 0x40
     };
 
@@ -57,10 +57,10 @@ public:
     //! \brief Regular zip compression (inside a disk zip archive file) with a
     //! password.
     //!
-    //! \param[in] zipname: the path where to create your zip file.
-    //! \param[in] password: optional password (set empty for not using password).
-    //! \param[in] flags: Overwrite (default) or append existing zip file (zipname).
-    //! \throw std::runtime_error if something odd happened.
+    //! \param[in] zipname Path where to create the zip file.   
+    //! \param[in] password Optional password (empty for no password protection).
+    //! \param[in] flags Overwrite (default) or append to existing zip file.
+    //! \throw std::runtime_error if an error occurs during initialization.
     // -------------------------------------------------------------------------
     Zipper(const std::string& zipname, const std::string& password,
            Zipper::openFlags flags = Zipper::openFlags::Overwrite);
@@ -69,9 +69,9 @@ public:
     //! \brief Regular zip compression (inside a disk zip archive file) without
     //! password.
     //!
-    //! \param[in] zipname: the path where to create your zip file.
-    //! \param[in] flags: Overwrite (default) or append existing zip file (zipname).
-    //! \throw std::runtime_error if something odd happened.
+    //! \param[in] zipname Path where to create the zip file.
+    //! \param[in] flags Overwrite (default) or append to existing zip file.
+    //! \throw std::runtime_error if an error occurs during initialization.
     // -------------------------------------------------------------------------
     Zipper(const std::string& zipname, Zipper::openFlags flags = Zipper::openFlags::Overwrite)
         : Zipper(zipname, std::string(), flags)
@@ -80,50 +80,50 @@ public:
     // -------------------------------------------------------------------------
     //! \brief In-memory zip compression (storage inside std::iostream).
     //!
-    //! \param[in] buffer: the stream in which to store zipped files.
-    //! \param[in] password: optional password (set empty for not using password).
-    //! \throw std::runtime_error if something odd happened.
+    //! \param[in,out] buffer Stream in which to store zipped files.
+    //! \param[in] password Optional password (empty for no password protection).
+    //! \throw std::runtime_error if an error occurs during initialization.
     // -------------------------------------------------------------------------
     Zipper(std::iostream& buffer, const std::string& password = std::string());
 
     // -------------------------------------------------------------------------
     //! \brief In-memory zip compression (storage inside std::vector).
     //!
-    //! \param[in] buffer: the vector in which to store zipped files.
-    //! \param[in] password: optional password (set empty for not using password).
-    //! \throw std::runtime_error if something odd happened.
+    //! \param[in,out] buffer Vector in which to store zipped files.
+    //! \param[in] password Optional password (empty for no password protection).
+    //! \throw std::runtime_error if an error occurs during initialization.
     // -------------------------------------------------------------------------
     Zipper(std::vector<unsigned char>& buffer,
            const std::string& password = std::string());
 
     // -------------------------------------------------------------------------
-    //! \brief Call close().
+    //! \brief Calls close() method.
     // -------------------------------------------------------------------------
     ~Zipper();
 
     // -------------------------------------------------------------------------
-    //! \brief Compress data \c source with a given timestamp in the archive
-    //! with the given name \c nameInZip.
+    //! \brief Compress data from source with a given timestamp in the archive
+    //! with the given name.
     //!
-    //! \param[in,out] source: data to compress.
-    //! \param[in] timestamp: the desired timestamp.
-    //! \param[in] nameInZip: the desired name for \c source inside the archive.
-    //! \param[in] flags: compression options (faster, better ...).
-    //! \return true on success, else return false.
-    //! \throw std::runtime_error if something odd happened.
+    //! \param[in,out] source Data stream to compress.
+    //! \param[in] timestamp Desired timestamp for the file.
+    //! \param[in] nameInZip Desired name for the file inside the archive.
+    //! \param[in] flags Compression options (faster, better, etc.).
+    //! \return true on success, false on failure.
+    //! \throw std::runtime_error if an error occurs during compression.
     // -------------------------------------------------------------------------
     bool add(std::istream& source, const std::tm& timestamp, const std::string& nameInZip,
              Zipper::zipFlags flags = Zipper::zipFlags::Better);
 
     // -------------------------------------------------------------------------
-    //! \brief Compress data \c source in the archive with the given name \c
-    //! nameInZip. No timestamp will be stored.
+    //! \brief Compress data from source in the archive with the given name.
+    //! No timestamp will be stored.
     //!
-    //! \param[in,out] source: data to compress.
-    //! \param[in] nameInZip: the desired name for \c source inside the archive.
-    //! \param[in] flags: compression options (faster, better ...).
-    //! \return true on success, else return false.
-    //! \throw std::runtime_error if something odd happened.
+    //! \param[in,out] source Data stream to compress.
+    //! \param[in] nameInZip Desired name for the file inside the archive.
+    //! \param[in] flags Compression options (faster, better, etc.).
+    //! \return true on success, false on failure.
+    //! \throw std::runtime_error if an error occurs during compression.
     // -------------------------------------------------------------------------
     bool add(std::istream& source, const std::string& nameInZip,
              Zipper::zipFlags flags = Zipper::zipFlags::Better);
@@ -137,10 +137,10 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Compress a folder or a file in the archive.
     //!
-    //! \param[in,out] fileOrFolderPath: file or folder to compress.
-    //! \param[in] flags: compression options (faster, better ...).
-    //! \return true on success, else return false.
-    //! \throw std::runtime_error if something odd happened.
+    //! \param[in] fileOrFolderPath Path to the file or folder to compress.
+    //! \param[in] flags Compression options (faster, better, etc.).
+    //! \return true on success, false on failure.
+    //! \throw std::runtime_error if an error occurs during compression.
     // -------------------------------------------------------------------------
     bool add(const std::string& fileOrFolderPath,
              Zipper::zipFlags flags = Zipper::zipFlags::Better);
@@ -153,24 +153,28 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Depending on your selection of constructor, this method will do
-    //! some actions such as closing the access to the zip file, flushing in the
-    //! stream, releasing memory ...
-    //! \note this method is called by the destructor.
+    //! \brief Closes the zip archive.
+    //! 
+    //! Depending on the constructor used, this method will close the access to
+    //! the zip file, flush the stream, or release memory.
+    //! \note This method is called by the destructor.
     // -------------------------------------------------------------------------
     void close();
 
     // -------------------------------------------------------------------------
-    //! \brief To be called after a close(). Depending on your selection of
-    //! constructor, this method will do some actions such as opening the zip
-    //! file, reserve buffers.
-    //! \param[in] flags: Overwrite or append (default) existing zip file (zipname).
-    //! \note this method is not called by the constructor.
+    //! \brief Opens or reopens the zip archive.
+    //!
+    //! To be called after a close(). Depending on the constructor used, this
+    //! method will open the zip file or reserve buffers.
+    //! \param[in] flags Overwrite or append (default) to existing zip file
+    //! \return true on success, false on failure
+    //! \note This method is not called by the constructor.
     // -------------------------------------------------------------------------
     bool open(Zipper::openFlags flags = Zipper::openFlags::Append);
 
     // -------------------------------------------------------------------------
     //! \brief Get the error information when a method returned false.
+    //! \return Reference to the error code.
     // -------------------------------------------------------------------------
     std::error_code const& error() const;
 

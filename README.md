@@ -2,17 +2,17 @@
 
 ![Zipper](doc/logo.png)
 
-[Zipper](https://github.com/lecrapouille/zipper) is a C++11 wrapper around minizip compression library. Its goal is to bring the power and simplicity of minizip to a more object-oriented/c++ user-friendly library. Note: We are currently using C++14 because the unit tests library needs it.
+[Zipper](https://github.com/lecrapouille/zipper) is a C++11 wrapper around the minizip compression library. Its goal is to bring the power and simplicity of minizip to a more object-oriented/C++ user-friendly library. Note: We are currently using C++14 because the unit tests library requires it.
 
-This project is the continuation of the original [project](https://github.com/sebastiandev/zipper/tree/v2.x.y). The original project was born out of the necessity of a compression library that would be reliable, simple, and flexible. By flexibility I mean supporting all kinds of inputs and outputs, but specifically being able to compress into memory instead of being restricted to file compression only, and using data from memory instead of just files as well.
+This project is the continuation of the original [project](https://github.com/sebastiandev/zipper/tree/v2.x.y). The original project was born out of the necessity for a compression library that would be reliable, simple, and flexible. By flexibility we mean supporting all kinds of inputs and outputs, but specifically being able to compress into memory instead of being restricted to file compression only, and using data from memory instead of just files as well.
 
-This current fork repo has been made because the original project was no longer maintained by the original authors and I, Lecrapouille, have some issues due to missing administration rights (needed for CI, branch management ...).
+This current fork repo has been made because the original project was no longer maintained by the original authors and I, Lecrapouille, have some issues due to missing administration rights (needed for CI, branch management, API breaking, etc.).
 
 ## Zipper Features
 
 - [x] Create zip in memory.
 - [x] Allow files, vectors, and generic streams as input to zip.
-- [x] File mappings for replacing strategies (overwrite if exists or use alternative names from mapping).
+- [x] File mappings for replacement strategies (overwrite if exists or use alternative names from mapping).
 - [x] Password-protected zip (EAS).
 - [x] Multi-platform.
 - [x] Project compiled as static and dynamic libraries.
@@ -22,8 +22,8 @@ This current fork repo has been made because the original project was no longer 
 **:warning: Security Notice**
 
 - Zipper currently follows an outdated (and probably vulnerable) version of the https://github.com/Lecrapouille/minizip library:
-SHA1 0bb5afeb0d3f23149b086ccda7e4fee7d48f4fdf of https://github.com/zlib-ng/minizip-ng which dated of 2017).
-- While some fixes have been added this lib may be still vulnerable to ZipSlip attacks and mitigations should be put in place by Zipper's users.
+SHA1 0bb5afeb0d3f23149b086ccda7e4fee7d48f4fdf of https://github.com/zlib-ng/minizip-ng which dated from 2017.
+- While some fixes have been added, this lib may still be vulnerable to ZipSlip attacks and mitigations should be put in place by Zipper's users.
 
 ## Getting Started
 
@@ -41,12 +41,13 @@ make -j`nproc --all`
 ```
 
 Notes:
-- Git cloning needs the recursivity option to install the Makefile helper and third-part libs (`zlib` and `minizip`). They are based on fixed SHA1.
-- Optionaly `make download-external-libs` will git clone HEADs of zlib and minizip to the `external` folder. This replaces git submodules.
+
+- Git cloning needs the recursivity option to install the Makefile helper and third-party libs (`zlib` and `minizip`). They are based on fixed SHA1.
+- Optionally `make download-external-libs` will git clone HEADs of zlib and minizip to the `external` folder. This replaces git submodules.
 - `make compile-external-libs` will compile zlib and minizip but not install them on your operating system. They are
 compiled as static libraries and merged into this library.
 
-Installing C++ header files and compiled libraries, type:
+To install C++ header files and compiled libraries, type:
 
 ```shell
 sudo make install
@@ -72,14 +73,14 @@ See their README files for their usage.
 
 ### Linking Zipper to your project
 
-- In your project add the needed headers in your c++ files:
+- In your project, add the needed headers in your C++ files:
 
 ```c++
 #include <Zipper/Unzipper.hpp>
 #include <Zipper/Zipper.hpp>
 ```
 
-- To compile your project against Zipper use pkg-config:
+- To compile your project against Zipper, use pkg-config:
 
 ```shell
 g++ -W -Wall --std=c++11 main.cpp -o prog `pkg-config zipper --cflags --libs`
@@ -90,14 +91,15 @@ g++ -W -Wall --std=c++11 main.cpp -o prog `pkg-config zipper --cflags --libs`
   - set `CPPFLAGS` to `pkg-config zipper --cflags`
 
 - For CMake:
-```
+
+```cmake
 include(FindPkgConfig)
 find_package(zipper)
 ```
 
 ## API
 
-There are two classes available `Zipper` and `Unzipper`. They behave in the same manner regarding constructors and storage parameters.
+There are two classes available: `Zipper` and `Unzipper`. They behave in the same manner regarding constructors and storage parameters.
 
 ### Zipping API
 
@@ -110,7 +112,7 @@ using namespace zipper;
 
 #### Constructor
 
-- Constructor without password and replace `ziptest.zip` if already present. The new zip archive is dummy.
+- Constructor without password and replace `ziptest.zip` if already present. The new zip archive is empty.
 
 ```c++
 Zipper zipper("ziptest.zip", Zipper::openFlags::Overwrite);
@@ -123,20 +125,20 @@ Zipper zipper("ziptest.zip", Zipper::openFlags::Overwrite);
 Zipper zipper("ziptest.zip", Zipper::openFlags::Append);
 ```
 
-- Constructor with password (using AES algorithm) and replace `ziptest.zip` if already present. The new zip archive is dummy.
+- Constructor with password (using AES algorithm) and replace `ziptest.zip` if already present. The new zip archive is empty.
 
 ```c++
-Zipper zipper("ziptest.zip", "mypassword", Zipper::openFlags::Overwrite);
+Zipper zipper("ziptest.zip", "my_password", Zipper::openFlags::Overwrite);
 // Or simply: zipper("ziptest.zip");
 ```
 
 - Constructor with a password and preserve `ziptest.zip` if already present.
 
 ```c++
-Zipper zipper("ziptest.zip", "mypassword", Zipper::openFlags::Append);
+Zipper zipper("ziptest.zip", "my_password", Zipper::openFlags::Append);
 ```
 
-- Note: all constructors will throw `std::run_time` exception in case of failure.
+- Note: all constructors will throw a `std::runtime_error` exception in case of failure.
 
 ```c++
 try
@@ -144,7 +146,7 @@ try
     Zipper zipper("ziptest.zip", ...);
     ...
 }
-catch (std::run_time const& e)
+catch (std::runtime_error const& e)
 {
     std::cerr << e.what() << std::endl;
 }
@@ -152,8 +154,8 @@ catch (std::run_time const& e)
 
 #### Destructor / closing / reopening
 
-Do not forget to call explicitly `close()` (called implicitly from its destructor) else
-the zip will not be well formed and `Unzipper` will fail to open it for example.
+Do not forget to call `close()` explicitly (it's called implicitly from the destructor) otherwise
+the zip will not be well-formed and `Unzipper` will fail to open it, for example.
 
 ```c++
 Zipper zipper("ziptest.zip", ...);
@@ -163,7 +165,7 @@ zipper.close(); // Now Unzipper unzipper("ziptest.zip") can work
 
 After `close()` you can reopen the zip archive with `open()`. The implicit option
 `Zipper::openFlags::Append` is to preserve the zip content. To replace the zip
-file is to use `Zipper::openFlags::Overwrite`.
+file, use `Zipper::openFlags::Overwrite`.
 
 ```c++
 Zipper zipper("ziptest.zip", ...);
@@ -177,8 +179,7 @@ zipper.open(); // equivalent to zipper.open(Zipper::openFlags::Append);
 zipper.close();
 ```
 
-In case of success the `open()` will return `true` else will return `false` and the
-`error()` should be used for getting the [std::error_code](https://akrzemi1.wordpress.com/2017/07/12/your-own-error-code/).
+In case of success, `open()` will return `true`; otherwise it will return `false` and `error()` should be used for getting the [std::error_code](https://akrzemi1.wordpress.com/2017/07/12/your-own-error-code/).
 
 ```c++
 if (!zipper.open())
@@ -189,13 +190,14 @@ if (!zipper.open())
 
 #### Appending files or folders inside the archive.
 
-The `add()` method allows appending files or folders. The `Zipper::zipFlags::Better` is set implicitly. Other options are (in the last option in the arguments):
+The `add()` method allows appending files or folders. The `Zipper::zipFlags::Better` is set implicitly. Other options are (as the last argument):
+
 - Store only: `Zipper::zipFlags::Store`.
 - Compress faster, less compressed: `Zipper::zipFlags::Faster`.
 - Compress intermediate time/compression: `Zipper::zipFlags::Medium`.
-- Compress faster better: `Zipper::zipFlags::Better`.
+- Compress better: `Zipper::zipFlags::Better`.
 
-In case of success the `open()` will return `true` else will return `false` and the `error()` should be used for getting the std::error_code.
+In case of success, the `add()` will return `true`; otherwise it will return `false` and `error()` should be used for getting the std::error_code.
 
 - Adding an entire folder to a zip:
 
@@ -239,13 +241,14 @@ zipper.close();
 zipper.add(input1, "../Test1");
 ```
 
-Will always return `false` because `Test1` will be extracted outside the destination folder. This prevents malicious attack from replacing your password files:
+Will always return `false` because `Test1` would be extracted outside the destination folder. This prevents malicious attacks from replacing your system files:
 
 ```c++
 zipper.add(malicious_passwd, "../../../../../../../../../../../../../../../etc/passwd");
 ```
 
-Becase in Unix try to go outside the root folder `/` will stay in the root folder. Example
+Because in Unix, trying to go outside the root folder `/` will stay in the root folder. Example:
+
 ```bash
 cd /
 pwd
@@ -253,13 +256,14 @@ cd ../../../../../../../../../../../../../../..
 pwd
 ```
 
-- The Zipper lib force canonical paths in the archive. The following code works (will return `true`):
+- The Zipper lib forces canonical paths in the archive. The following code works (will return `true`):
+
 ```c++
 zipper.add(input1, "foo/../Test1");
 ```
 
 because `foo/../Test1` is replaced by `Test1` (even if the folder `foo` is not present in the
-zip archive.
+zip archive).
 
 #### Vector and stream
 
@@ -334,28 +338,28 @@ using namespace zipper;
 - Constructor without password and opening `ziptest.zip` (shall be already present).
 
 ```c++
-Zipper unzipper("ziptest.zip");
+Unzipper unzipper("ziptest.zip");
 ...
-zipper.close();
+unzipper.close();
 ```
 
 - Constructor with a password and opening `ziptest.zip` (shall be already present).
 
 ```c++
-Zipper unzipper("ziptest.zip", "mypassword");
+Unzipper unzipper("ziptest.zip", "my_password");
 ...
-zipper.close();
+unzipper.close();
 ```
 
-- Note: all constructors will throw `std::run_time` exception in case of failure.
+- Note: all constructors will throw a `std::runtime_error` exception in case of failure.
 
 ```c++
 try
 {
-    Zipper zipper("ziptest.zip", ...);
+    Unzipper unzipper("ziptest.zip", ...);
     ...
 }
-catch (std::run_time const& e)
+catch (std::runtime_error const& e)
 {
     std::cerr << e.what() << std::endl;
 }
@@ -377,7 +381,7 @@ unzipper.close();
 
 #### Extracting all entries from the zip file
 
-Two methods `extract()` for the whole archive and `extractEntry()` for
+Two methods are available: `extract()` for the whole archive and `extractEntry()` for
 a single element in the archive. They return `true` in case of success
 or `false` in case of failure. In case of failure, use `unzipper.error();`
 to get the `std::error_code`.
@@ -391,7 +395,7 @@ unzipper.close();
 ```
 
 - If you care about replacing existing files or folders. The method will fail (return `false`)
-if a file is replaced.
+if a file would be replaced.
 
 ```c++
 Unzipper unzipper("zipfile.zip");
@@ -425,7 +429,7 @@ unzipper.extractEntry("entry name");
 unzipper.close();
 ```
 
-Return `true` in case of success or `false` in case of failure.
+Returns `true` in case of success or `false` in case of failure.
 In case of failure, use `unzipper.error();` to get the `std::error_code`.
 
 - Extracting a single entry from the zip file to destination:
@@ -437,7 +441,7 @@ unzipper.extractEntry("entry name", "/the/destination/path", true); // Replace e
 unzipper.close();
 ```
 
-Return `true` in case of success or `false` in case of failure.
+Returns `true` in case of success or `false` in case of failure.
 In case of failure, use `unzipper.error();` to get the `std::error_code`.
 
 - Extracting a single entry from the zip file to memory:
@@ -449,7 +453,7 @@ unzipper.extractEntryToMemory("entry name", unzipped_entry);
 unzipper.close();
 ```
 
-Return `true` in case of success or `false` in case of failure.
+Returns `true` in case of success or `false` in case of failure.
 In case of failure, use `unzipper.error();` to get the `std::error_code`.
 
 - Extracting from a vector:
@@ -463,7 +467,7 @@ unzipper.extractEntry("Test1");
 ```
 
 - Zipper has security against [Zip Slip vulnerability](https://security.snyk.io/research/zip-slip-vulnerability): if an entry has a path outside the extraction folder (like `../foo.txt`) it
-will returns `false` even if the replace option is set.
+will return `false` even if the replace option is set.
 
 ## Hello zip
 
@@ -474,22 +478,27 @@ Basic unzipper standalone application given as demo in [doc/demos](doc/demos).
 ### Non regression tests
 
 Depends on:
+
 - [googletest](https://github.com/google/googletest) framework
-- lcov for code coverage:
+- lcov for code coverage
 
 Two ways of running them:
+
 - From the root folder:
+
 ```shell
 make tests -j`nproc --all`
 ```
 
 - From the tests/ folder:
+
 ```shell
 cd tests
 make coverage -j`nproc --all`
 ```
 
-A coverage report has created an opening. If you do not desire to generate the report.
+A coverage report is created and opened. If you do not wish to generate the report:
+
 ```shell
 cd tests
 make -j`nproc --all`
@@ -498,9 +507,5 @@ make -j`nproc --all`
 
 ## FAQ
 
-- Q: I used a password when zipping with the Zipper lib, but now when I want to extract data with my operating system zip tool, I got an error.
-  A: By default, Zipper encrypts with the EAS algorithm which is not the default encryption algorithm for zip files. Your operating system zip tools seem
-  not to understand EAS. You can extract it with the 7-Zip tool: `7za e your.zip`. If you want the default zip encryption (at your own risk since the
-  password can be cracked) you can remove EAS option in the following files: [Make](Make) and [external/compile-external-libs.sh](external/compile-external-libs.sh)
-  and recompile the Zipper project.
-
+- Q: I used a password when zipping with the Zipper lib, but now when I want to extract data with my operating system's zip tool, I get an error.
+- A: By default, Zipper encrypts with the EAS algorithm which is not the default encryption algorithm for zip files. Your operating system's zip tools may not understand EAS. You can extract it with the 7-Zip tool: `7za e your.zip`. If you want the default zip encryption (at your own risk since the password can be cracked) you can remove the EAS option in the following files: [Make](Make) and [external/compile-external-libs.sh](external/compile-external-libs.sh) and recompile the Zipper project.

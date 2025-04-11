@@ -31,10 +31,9 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Regular zip decompressor (from zip archive file).
     //!
-    //! \param[in] zipname: the path of the zip file.
-    //! \param[in] password: the password used by the Zipper class (set empty
-    //!   if no password is needed).
-    //! \throw std::runtime_error if something odd happened.
+    //! \param[in] zipname Path of the zip file to extract.
+    //! \param[in] password Optional password used during compression (empty if no password).
+    //! \throw std::runtime_error if an error occurs during initialization.
     // -------------------------------------------------------------------------
     Unzipper(std::string const& zipname,
              std::string const& password = std::string());
@@ -42,10 +41,9 @@ public:
     // -------------------------------------------------------------------------
     //! \brief In-memory zip decompressor (from std::iostream).
     //!
-    //! \param[in,out] buffer: the stream in which zipped entries are stored.
-    //! \param[in] password: the password used by the Zipper class (set empty
-    //!   if no password is needed).
-    //! \throw std::runtime_error if something odd happened.
+    //! \param[in,out] buffer Stream containing zipped entries to extract.
+    //! \param[in] password Optional password used during compression (empty if no password).
+    //! \throw std::runtime_error if an error occurs during initialization.
     // -------------------------------------------------------------------------
     Unzipper(std::istream& buffer,
              std::string const& password = std::string());
@@ -53,21 +51,21 @@ public:
     // -------------------------------------------------------------------------
     //! \brief In-memory zip decompressor (from std::vector).
     //!
-    //! \param[in,out] buffer: the vector in which zipped entries are stored.
-    //! \param[in] password: the password used by the Zipper class (set empty
-    //!   if no password is needed).
-    //! \throw std::runtime_error if something odd happened.
+    //! \param[in,out] buffer Vector containing zipped entries to extract.
+    //! \param[in] password Optional password used during compression (empty if no password).
+    //! \throw std::runtime_error if an error occurs during initialization.
     // -------------------------------------------------------------------------
     Unzipper(std::vector<unsigned char>& buffer,
              std::string const& password = std::string());
 
     // -------------------------------------------------------------------------
-    //! \brief Call release() and close().
+    //! \brief Calls release() and close() methods.
     // -------------------------------------------------------------------------
     ~Unzipper();
 
     // -------------------------------------------------------------------------
-    //! \brief Return entries of the zip archive.
+    //! \brief Returns all entries contained in the zip archive.
+    //! \return Vector of ZipEntry objects.
     // -------------------------------------------------------------------------
     std::vector<ZipEntry> entries();
 
@@ -75,16 +73,12 @@ public:
     //! \brief Extract the whole zip archive using alternative destination names
     //! for existing files on the disk.
     //!
-    //! \param[in] destination: the full path of the file to be created that
-    //!   will hold uncompressed data. If no destination is given extract in the
-    //!   same folder than the zip file.
-    //! \param[in] alternativeNames: dictionary of alternative names for
-    //!   existing files on disk (dictionary key: zip entry name, dictionary
-    //!   data: newly desired path name on the disk).
-    //! \param[in] replace if set false (set by default) throw an exeception
-    //!   when a file already exist.
-    //!
-    //! \return true on success, else return false. Call error() for more info.
+    //! \param[in] destination Full path where files will be extracted (if empty, extracts
+    //!            to same folder as the zip file).
+    //! \param[in] alternativeNames Dictionary of alternative names for existing files
+    //!            (key: zip entry name, value: desired path name on disk).
+    //! \param[in] replace If false (default), throws an exception when a file already exists.
+    //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
     inline bool extractAll(const char* destination,
                            const std::map<std::string, std::string>& alternativeNames,
@@ -98,16 +92,12 @@ public:
                     bool const replace = false);
 
     // -------------------------------------------------------------------------
-    //! \brief Extract the whole archive to the desired disk destination. If no
-    //!   destination is given extract in the same folder than the zip file.
+    //! \brief Extract the whole archive to the desired disk destination.
     //!
-    //! \param[in] destination: the full path on the disk of the file to be
-    //!   created that will hold uncompressed data. If no destination is given
-    //!   extract in the same folder than the zip file.
-    //! \param[in] replace if set false (set by default) throw an exeception
-    //!   when a file already exist.
-    //!
-    //! \return true on success, else return false. Call error() for more info.
+    //! \param[in] destination Full path where files will be extracted (if empty, extracts
+    //!            to same folder as the zip file).
+    //! \param[in] replace If false (default), throws an exception when a file already exists.
+    //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
     bool extractAll(std::string const& destination, bool const replace = false);
     inline bool extractAll(const char* destination, bool const replace = false)
@@ -116,26 +106,20 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Extract the whole archive to the same folder than the zip file.
+    //! \brief Extract the whole archive to the same folder as the zip file.
     //!
-    //! \param[in] replace if set false (set by default) throw an exeception
-    //!   when a file already exist.
-    //!
-    //! \return true on success, else return false. Call error() for more info.
+    //! \param[in] replace If false (default), throws an exception when a file already exists.
+    //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
     bool extractAll(bool const replace = false);
 
     // -------------------------------------------------------------------------
     //! \brief Extract a single entry from the archive.
     //!
-    //! \param[in] name: the entry path inside the zip archive.
-    //! \param[in] destination: the full path on the disk of the file to be
-    //!   created that will hold uncompressed data. If no destination is given
-    //!   extract in the same folder than the zip file.
-    //! \param[in] replace if set false (set by default) throw an exeception
-    //!   when a file already exist.
-    //!
-    //! \return true on success, else return false. Call error() for more info.
+    //! \param[in] name Entry path inside the zip archive.
+    //! \param[in] destination Full path where the file will be extracted.
+    //! \param[in] replace If false (default), throws an exception when the file already exists.
+    //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
     bool extractEntry(std::string const& name,
                       std::string const& destination,
@@ -147,14 +131,11 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Extract a single entry from the archive in the same folder than
-    //! the zip file.
+    //! \brief Extract a single entry to the same folder as the zip file.
     //!
-    //! \param[in] name: the entry path inside the zip archive.
-    //! \param[in] replace if set false (set by default) throw an exeception
-    //!   when a file already exist.
-    //!
-    //! \return true on success, else return false. Call error() for more info.
+    //! \param[in] name Entry path inside the zip archive.
+    //! \param[in] replace If false (default), throws an exception when the file already exists.
+    //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
     bool extractEntry(std::string const& name, bool const replace = false);
     inline bool extractEntry(const char* name, bool const replace = false)
@@ -165,9 +146,9 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Extract a single entry from zip to memory (stream).
     //!
-    //! \param[in] name: the entry path inside the zip archive.
-    //! \param[out] stream: the stream that will hold the extracted entry.
-    //! \return true on success, else return false. Call error() for more info.
+    //! \param[in] name Entry path inside the zip archive.
+    //! \param[out] stream Stream that will receive the extracted entry data.
+    //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
     bool extractEntryToStream(std::string const& name, std::ostream& stream);
     inline bool extractEntryToStream(const char* name, std::ostream& stream)
@@ -178,9 +159,9 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Extract a single entry from zip to memory (vector).
     //!
-    //! \param[in] name: the entry path inside the zip archive.
-    //! \param[out] vec: the vector that will hold the extracted entry.
-    //! \return true on success, else return false. Call error() for more info.
+    //! \param[in] name Entry path inside the zip archive.
+    //! \param[out] vec Vector that will receive the extracted entry data.
+    //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
     bool extractEntryToMemory(std::string const& name,
                               std::vector<unsigned char>& vec);
@@ -191,18 +172,19 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    //! \brief Relese memory. Called by the destructor.
+    //! \brief Closes the archive. Called by the destructor.
     // -------------------------------------------------------------------------
     void close();
 
     // -------------------------------------------------------------------------
     //! \brief Get the error information when a method returned false.
+    //! \return Reference to the error code.
     // -------------------------------------------------------------------------
     std::error_code const& error() const;
 
 private:
 
-    //! \brief Relese memory
+    //! \brief Releases allocated resources.
     void release();
 
 private:
@@ -221,7 +203,7 @@ private:
 };
 
 // *************************************************************************
-//! \brief
+//! \brief Class representing an entry in a zip archive.
 // *************************************************************************
 class ZipEntry
 {
@@ -282,25 +264,29 @@ public:
         return *this;
     }
 
+    //! \brief Checks if the entry has a valid name
+    //! \return true if the entry name is not empty
     inline bool valid() const { return !name.empty(); }
 
 public:
 
+    //! \brief Structure representing a date and time
     typedef struct
     {
-        uint32_t tm_sec;
-        uint32_t tm_min;
-        uint32_t tm_hour;
-        uint32_t tm_mday;
-        uint32_t tm_mon;
-        uint32_t tm_year;
+        uint32_t tm_sec;   //!< Seconds (0-59)
+        uint32_t tm_min;   //!< Minutes (0-59)
+        uint32_t tm_hour;  //!< Hours (0-23)
+        uint32_t tm_mday;  //!< Day of month (1-31)
+        uint32_t tm_mon;   //!< Month (1-12)
+        uint32_t tm_year;  //!< Year (full year, e.g. 2022)
     } tm_s;
 
-    std::string name, timestamp;
-    uint64_t compressedSize;
-    uint64_t uncompressedSize;
-    uint32_t dosdate;
-    tm_s unixdate;
+    std::string name;      //!< Name of the entry in the zip archive
+    std::string timestamp; //!< Formatted timestamp string (YYYY-MM-DD HH:MM:SS)
+    uint64_t compressedSize;   //!< Size of the compressed data in bytes
+    uint64_t uncompressedSize; //!< Original size of the data in bytes
+    uint32_t dosdate;      //!< DOS-format date
+    tm_s unixdate;         //!< UNIX-format date and time
 };
 
 } // namespace zipper
