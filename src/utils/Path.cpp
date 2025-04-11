@@ -154,6 +154,7 @@ std::string Path::root(const std::string& path)
     else
         return DIRECTORY_SEPARATOR;
 #else
+    (void) path;
     return DIRECTORY_SEPARATOR;
 #endif
 }
