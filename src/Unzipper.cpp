@@ -17,7 +17,11 @@
 #include <fstream>
 #include <stdexcept>
 #include <iostream>
-#include <utime.h>
+#if defined(USE_WINDOWS)
+    #include "utils/OS.hpp"
+#else
+    #include <utime.h>
+#endif
 #include <array>
 
 #ifndef ZIPPER_WRITE_BUFFER_SIZE
@@ -28,7 +32,7 @@ namespace zipper {
 
 enum class unzipper_error
 {
-    NO_ERROR = 0,
+    NO_ERROR_UNZIPPER = 0,
     //! Error when accessing to a info entry
     NO_ENTRY,
     //! Error inside libraries
@@ -57,7 +61,7 @@ struct UnzipperErrorCategory : std::error_category
 
         switch (static_cast<unzipper_error>(ev))
         {
-        case unzipper_error::NO_ERROR:
+        case unzipper_error::NO_ERROR_UNZIPPER:
             return "There was no error";
         case unzipper_error::NO_ENTRY:
             return "Error, couldn't get the current entry info";

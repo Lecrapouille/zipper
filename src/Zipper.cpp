@@ -8,6 +8,7 @@
 #include "Zipper/Zipper.hpp"
 #include "external/minizip/zip.h"
 #include "external/minizip/ioapi_mem.h"
+#include "utils/OS.hpp"
 #include "utils/Path.hpp"
 #include "utils/Timestamp.hpp"
 
@@ -22,7 +23,7 @@ namespace zipper {
 
 enum class zipper_error
 {
-    NO_ERROR = 0,
+    NO_ERROR_ZIPPER = 0,
     OPENING_ERROR,
     INTERNAL_ERROR,
     NO_ENTRY,
@@ -48,7 +49,7 @@ struct ZipperErrorCategory : std::error_category
 
         switch (static_cast<zipper_error>(ev))
         {
-        case zipper_error::NO_ERROR:
+        case zipper_error::NO_ERROR_ZIPPER:
             return "There was no error";
         case zipper_error::OPENING_ERROR:
             return "Opening error";
