@@ -18,8 +18,7 @@
 #include <stdexcept>
 #include <iostream>
 #if defined(USE_WINDOWS)
-    #include "external/minizip/ioapi.h"
-    #include "external/minizip/iowin32.h"
+    #include "utils/OS.hpp"
 #else
     #include <utime.h>
 #endif

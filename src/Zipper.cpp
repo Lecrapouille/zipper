@@ -8,10 +8,7 @@
 #include "Zipper/Zipper.hpp"
 #include "external/minizip/zip.h"
 #include "external/minizip/ioapi_mem.h"
-#if defined(USE_WINDOWS)
-    #include "external/minizip/ioapi.h"
-    #include "external/minizip/iowin32.h"
-#endif
+#include "utils/OS.hpp"
 #include "utils/Path.hpp"
 #include "utils/Timestamp.hpp"
 
