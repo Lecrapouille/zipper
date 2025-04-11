@@ -9,13 +9,11 @@
 #  define ZIPPER_UNZIPPER_HPP
 
 #include <vector>
-#include <istream>
-#include <ostream>
-#include <sstream>
 #include <string>
-#include <memory>
 #include <map>
 #include <system_error>
+#include <iostream>
+#include <sstream>
 
 namespace zipper {
 

@@ -21,19 +21,11 @@
 
 #include "utils/OS.hpp"
 #include "utils/Path.hpp"
+
 #include <fstream>
 #include <iterator>
 #include <sstream>
 #include <numeric>
-
-#if defined(USE_WINDOWS)
-#  include "utils/dirent.h"
-#  include "utils/dirent.c"
-#else
-#  include <sys/types.h>
-#  include <dirent.h>
-#  include <unistd.h>
-#endif /* WINDOWS */
 
 using namespace zipper;
 

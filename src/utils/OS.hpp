@@ -37,26 +37,20 @@ extern "C"
 #    define mkdir _mkdir
 #    define rmdir _rmdir
 #  else
+#    include <sys/types.h>
 #    include <dirent.h>
 #    include <unistd.h>
 #    include <utime.h>
 typedef struct stat STAT;
 #  endif
 
-    //#  define CASESENSITIVITY (0)
-    //#  define MAXFILENAME (256)
-
 #  if defined(USE_WINDOWS)
 #    define USEWIN32IOAPI
-#    include "ioapi.h"
-#    include "iowin32.h"
+#    include "external/minizip/ioapi.h"
+#    include "external/minizip/iowin32.h"
 #  endif
 
 } // extern C
-
-#  if defined(USE_WINDOWS)
-#    include <filesystem>
-#  endif
 
 #  if defined(_WIN64) && (!defined(__APPLE__))
 #    ifndef __USE_FILE_OFFSET64

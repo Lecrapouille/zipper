@@ -5,12 +5,12 @@
 // MIT License. Copyright (c) 2015 -- 2022 Sebastian <devsebas@gmail.com>
 //-----------------------------------------------------------------------------
 
-#ifndef TIMESTAMP_HPP
-#  define TIMESTAMP_HPP
+#ifndef ZIPPER_UTILS_TIMESTAMP_HPP
+#  define ZIPPER_UTILS_TIMESTAMP_HPP
 
 #  if defined(USE_WINDOWS)
 #    include <Windows.h>
-#  elif __linux__
+#  elif defined(__linux__)
 #    include <sys/stat.h>
 #  endif
 
@@ -38,4 +38,4 @@ struct Timestamp
 
 } // namespace
 
-#endif // TIMESTAMP_HPP
+#endif // ZIPPER_UTILS_TIMESTAMP_HPP

@@ -6,11 +6,12 @@
 //-----------------------------------------------------------------------------
 
 #include "Zipper/Zipper.hpp"
-#include "external/minizip/zip.h"
-#include "external/minizip/ioapi_mem.h"
 #include "utils/OS.hpp"
 #include "utils/Path.hpp"
 #include "utils/Timestamp.hpp"
+
+#include "external/minizip/zip.h"
+#include "external/minizip/ioapi_mem.h"
 
 #include <fstream>
 #include <stdexcept>

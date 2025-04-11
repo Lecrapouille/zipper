@@ -6,22 +6,19 @@
 //-----------------------------------------------------------------------------
 
 #include "Zipper/Unzipper.hpp"
+#include "utils/Path.hpp"
+#include "utils/OS.hpp"
+
 #include "external/minizip/zip.h"
 #include "external/minizip/unzip.h"
 #include "external/minizip/ioapi_mem.h"
 #include "external/minizip/minishared.h"
-#include "utils/Path.hpp"
 
 #include <functional>
 #include <exception>
 #include <fstream>
 #include <stdexcept>
 #include <iostream>
-#if defined(USE_WINDOWS)
-    #include "utils/OS.hpp"
-#else
-    #include <utime.h>
-#endif
 #include <array>
 
 #ifndef ZIPPER_WRITE_BUFFER_SIZE
