@@ -71,6 +71,19 @@ make demos -j8
 
 See their README files for their usage.
 
+### Alternative: Building with CMake
+
+You can also build the project using CMake:
+
+```shell
+git clone https://github.com/lecrapouille/zipper.git --recursive
+cd zipper
+mkdir build
+cd build
+cmake .. -DZIPPER_BUILD_DEMOS=ON -DZIPPER_BUILD_TESTS=ON
+cmake --build . --config Release
+```
+
 ### Linking Zipper to your project
 
 - In your project, add the needed headers in your C++ files:
