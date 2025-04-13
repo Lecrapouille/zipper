@@ -35,7 +35,7 @@ const std::string Path::Separator(DIRECTORY_SEPARATOR);
 std::string Path::currentPath()
 {
     char buffer[1024u];
-    return (getcwd(buffer, sizeof(buffer)) ? std::string(buffer) : std::string(""));
+    return (OS_GETCWD(buffer, sizeof(buffer)) ? std::string(buffer) : std::string(""));
 }
 
 // -----------------------------------------------------------------------------
@@ -245,11 +245,7 @@ bool Path::createDir(const std::string& dir, const std::string& parent)
         createDir(actualParent);
     }
 
-#if defined(USE_WINDOWS)
-    return (mkdir(Dir.c_str()) == 0);
-#else
-    return (mkdir(Dir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO) == 0);
-#endif
+    return (OS_MKDIR(Dir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO) == 0);
 }
 
 // -----------------------------------------------------------------------------
@@ -282,12 +278,12 @@ bool Path::removeFiles(const std::string& pattern,
         {
             if (Entry.attrib | _A_NORMAL)
             {
-                if (::remove((path + Separator + Utf8).c_str()) != 0)
+                if (OS_REMOVE((path + Separator + Utf8).c_str()) != 0)
                     success = false;
             }
             else
             {
-                if (rmdir((path + Separator + Utf8).c_str()) != 0)
+                if (OS_RMDIR((path + Separator + Utf8).c_str()) != 0)
                     success = false;
             }
         }
@@ -311,12 +307,12 @@ bool Path::removeFiles(const std::string& pattern,
         {
             if (isDir(Utf8))
             {
-                if (::rmdir((path + Separator + Utf8).c_str()) != 0)
+                if (OS_RMDIR((path + Separator + Utf8).c_str()) != 0)
                     success = false;
             }
             else
             {
-                if (::remove((path + Separator + Utf8).c_str()) != 0)
+                if (OS_REMOVE((path + Separator + Utf8).c_str()) != 0)
                     success = false;
             }
         }
@@ -330,13 +326,13 @@ bool Path::removeFiles(const std::string& pattern,
 }
 
 // -----------------------------------------------------------------------------
-static bool _remove(const std::string& path)
+static bool private_remove(const std::string& path)
 {
     if (Path::isDir(path))
-        return ::rmdir(path.c_str()) == 0;
+        return OS_RMDIR(path.c_str()) == 0;
 
     if (Path::isFile(path))
-        return ::unlink(path.c_str()) == 0;
+        return OS_UNLINK(path.c_str()) == 0;
 
     return false;
 }
@@ -344,7 +340,7 @@ static bool _remove(const std::string& path)
 // -----------------------------------------------------------------------------
 void Path::removeDir(const std::string& foldername)
 {
-    if (!_remove(foldername))
+    if (!private_remove(foldername))
     {
         std::vector<std::string> files = Path::filesFromDir(foldername, false);
         std::vector<std::string>::iterator it = files.begin();
@@ -356,11 +352,11 @@ void Path::removeDir(const std::string& foldername)
             }
             else
             {
-                _remove(it->c_str());
+                private_remove(it->c_str());
             }
         }
 
-        _remove(foldername);
+        private_remove(foldername);
     }
 }
 
@@ -374,7 +370,7 @@ bool Path::remove(const std::string& path)
     }
 
     if (Path::isFile(path))
-        return ::unlink(path.c_str()) == 0;
+        return OS_UNLINK(path.c_str()) == 0;
 
     return false;
 }
@@ -485,7 +481,7 @@ bool Path::move(const std::string& from, const std::string& to)
             success = out.good();
         }
 
-        remove(from);
+        OS_REMOVE(from.c_str());
     }
 
     return success;

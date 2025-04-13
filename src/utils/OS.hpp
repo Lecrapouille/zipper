@@ -67,12 +67,22 @@ typedef struct stat STAT;
 #    endif
 #  endif
 
-#  if defined(USE_WINDOWS)
-#    define MKDIR(d) _mkdir(d)
-#    define CHDIR(d) _chdir(d)
+#  if defined(_WIN32)
+#    define OS_MKDIR(d, v) ::_mkdir(d)
+#    define OS_CHDIR(d)    ::_chdir(d)
+#    define OS_GETCWD(b,s) ::_getcwd(b,s)
+#    define OS_UNLINK(f)   ::_unlink(f)
+#    define OS_RMDIR(d)    ::_rmdir(d)
+#    define OS_REMOVE(f)   ::remove(f)
+#    define OS_RENAME(o,n) ::rename(o,n)
 #  else
-#    define MKDIR(d) mkdir(d, 0775)
-#    define CHDIR(d) chdir(d)
+#    define OS_MKDIR(d, v) ::mkdir(d, v)
+#    define OS_CHDIR(d)    ::chdir(d)
+#    define OS_GETCWD(b,s) ::getcwd(b,s)
+#    define OS_UNLINK(f)   ::unlink(f)
+#    define OS_RMDIR(d)    ::rmdir(d)
+#    define OS_REMOVE(f)   ::remove(f)
+#    define OS_RENAME(o,n) ::rename(o,n)
 #  endif
 
 #endif // ZIPPER_UTILS_OS_HPP
