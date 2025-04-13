@@ -4,7 +4,7 @@
 ##############################################################################
 
 cmake_minimum_required(VERSION 3.12)
-project(zipper)
+project(zipper VERSION 2.2.0)
 
 ##############################################################################
 # Global compiler settings
@@ -124,3 +124,26 @@ if(ZIPPER_BUILD_TESTS)
     add_subdirectory(tests)
     enable_testing()
 endif()
+
+##############################################################################
+# pkg-config support
+##############################################################################
+# Configure and install pkg-config file
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/zipper.pc.in
+    ${CMAKE_CURRENT_BINARY_DIR}/zipper.pc
+    @ONLY
+)
+
+# Installation rules
+include(GNUInstallDirs)
+install(TARGETS zipper zipper_shared
+    EXPORT zipperTargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zipper.pc
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+)
