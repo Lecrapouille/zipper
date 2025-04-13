@@ -5,6 +5,9 @@
 # Needed for GoogleTest
 set(CMAKE_CXX_STANDARD 14)
 
+# Force Google Test to use shared CRT on Windows (/MD or /MDd)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
 # Download and configure GoogleTest
 include(FetchContent)
 FetchContent_Declare(
