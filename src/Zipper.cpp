@@ -91,7 +91,6 @@ static void getFileCrc(std::istream& input_stream, std::vector<char>& buff, uint
 {
     unsigned long calculate_crc = 0;
     unsigned int size_read = 0;
-    unsigned long total_read = 0;
 
     // Determine the size of the file to preallocate the buffer
     input_stream.seekg(0, std::ios::end);
@@ -125,8 +124,6 @@ static void getFileCrc(std::istream& input_stream, std::vector<char>& buff, uint
 
             if (size_read > 0)
                 calculate_crc = crc32(calculate_crc, reinterpret_cast<const unsigned char*>(buff.data()), size_read);
-
-            total_read += static_cast<unsigned long>(size_read);
 
         } while (size_read > 0);
 
