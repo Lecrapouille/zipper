@@ -1,8 +1,6 @@
 name: Non regression tests for Zipper
 on:
   workflow_dispatch:
-    branches:
-      - master
   push:
     branches:
       - master
@@ -48,14 +46,12 @@ jobs:
           cd tests
           V=1 make -j`nproc --all`
           ../build/zipper-tests
-      - name: Check the demo
+      - name: Check the unzipper demo
         run: |
           echo "1234" | ./build/unzipper-demo -p -f -o /tmp ./tests/issues/issue_05_password.zip
           ls /tmp/issue_05/foo/bar /tmp/issue_05/Nouveau\ dossier/ /tmp/issue_05/Nouveau\ fichier\ vide
       - name: Check if the library can be linked against a project
         run: |
-          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
-          echo `pkg-config --cflags zipper`
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
           git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recurse-submodules --depth=1
           cd LinkAgainstMyLibs/Zipper
@@ -90,19 +86,16 @@ jobs:
           V=1 make download-external-libs
           V=1 make compile-external-libs
           V=1 make -j`sysctl -n hw.logicalcpu`
-# FIXME https://github.com/Lecrapouille/zipper/issues/10
-#          make demos -j`sysctl -n hw.logicalcpu`
+          make demos -j`sysctl -n hw.logicalcpu`
       - name: Non regression
         run: |
           cd tests
           V=1 make -j`nproc --all`
           ../build/zipper-tests
-# FIXME https://github.com/Lecrapouille/zipper/issues/10
-#      - name: Check the demo
-#        run: |
-#          cd doc/demos/Unzipper
-#          echo "1234" | ./build/unzipper-demo -p -f -o /tmp ./tests/issues/issue_05_password.zip
-#          ls /tmp/issue_05/foo/bar /tmp/issue_05/Nouveau\ dossier/ /tmp/issue_05/Nouveau\ fichier\ vide
+      - name: Check the unzipper demo
+        run: |
+          echo "1234" | ./build/unzipper-demo -p -f -o /tmp ./tests/issues/issue_05_password.zip
+          ls /tmp/issue_05/foo/bar /tmp/issue_05/Nouveau\ dossier/ /tmp/issue_05/Nouveau\ fichier\ vide
 #      - name: Check if the library can be linked against a project
 #        run: |
 #          git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recurse-submodules --depth=1
@@ -115,24 +108,27 @@ jobs:
   #############################################################################
   ### Windows
   #############################################################################
-#  non_regression_windows:
-#    name: Non regression on Windows
-#    runs-on: windows-2022
-#    steps:
-#      - name: Add path for finding cl.exe
-#        uses: ilammy/msvc-dev-cmd@v1.10.0
-#      - name: Checkout Zipper
-#        uses: actions/checkout@v3
-#        with:
-#          submodules: true
-#      - name: Build Zipper
+  non_regression_windows:
+    name: Non regression on Windows
+    runs-on: windows-2022
+    steps:
+      - name: Add path for finding cl.exe
+        uses: ilammy/msvc-dev-cmd@v1.10.0
+      - name: Checkout Zipper
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Build Zipper with CMake
+        shell: powershell
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DZIPPER_BUILD_DEMOS=ON -DZIPPER_BUILD_TESTS=ON
+          cmake --build . --config Release
+          Test-Path -Path .\Release\zipper.lib
+          Test-Path -Path .\Release\zipper.dll
+#      - name: Non regression
 #        shell: powershell
 #        run: |
-#          make download-external-libs
-#          make compile-external-libs
-#          make -j1
-#      - name: Non regression
-#        run: |
 #          cd build
-#          Test-Path -Path \a\zipper\build\libzipper.a.2.0.0
-#          Test-Path -Path \a\zipper\build\libzipper.dll.2.0
+#          .\Release\zipper-tests.exe
