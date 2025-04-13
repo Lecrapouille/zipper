@@ -62,7 +62,6 @@ function(configure_zipper_target target)
         )
 
         target_compile_definitions(${target} PRIVATE
-            USE_WINDOWS=ON
             # Prevent Windows' min/max macros from conflicting with std::min/max
             NOMINMAX=ON
         )

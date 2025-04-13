@@ -25,9 +25,6 @@ DEFINES += -DPWD=\"$(shell pwd)\"
 DEFINES += -DHAVE_AES
 ifeq ($(ARCHI),Windows)
     LIB_FILES += $(P)/src/utils/dirent.c
-    DEFINES += -DUSE_WINDOWS
-else
-    DEFINES += -UUSE_WINDOWS
 endif
 THIRDPART_LIBS := $(abspath $(THIRDPART_DIR)/minizip/build/libminizip.a)
 THIRDPART_LIBS += $(abspath $(THIRDPART_DIR)/minizip/build/libaes.a)

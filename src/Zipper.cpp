@@ -167,7 +167,7 @@ struct Zipper::Impl
     // -------------------------------------------------------------------------
     bool initFile(const std::string& filename, Zipper::openFlags flags)
     {
-#if defined(USE_WINDOWS)
+#if defined(_WIN32)
         zlib_filefunc64_def ffunc = { 0 };
 #endif
 
@@ -197,7 +197,7 @@ struct Zipper::Impl
             mode = APPEND_STATUS_CREATE;
         }
 
-#if defined(USE_WINDOWS)
+#if defined(_WIN32)
         fill_win32_filefunc64A(&ffunc);
         m_zf = zipOpen2_64(filename.c_str(), mode, nullptr, &ffunc);
 #else

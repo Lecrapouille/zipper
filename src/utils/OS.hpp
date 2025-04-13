@@ -18,7 +18,7 @@ extern "C"
 #  include <fcntl.h>
 #  include <sys/stat.h>
 
-#  if defined(USE_WINDOWS)
+#  if defined(_WIN32)
 #    define DIRECTORY_SEPARATOR "\\"
 #    define DIRECTORY_SEPARATOR_CHAR '\\'
 #  else
@@ -26,7 +26,7 @@ extern "C"
 #    define DIRECTORY_SEPARATOR_CHAR '/'
 #  endif
 
-#  if defined(USE_WINDOWS)
+#  if defined(_WIN32)
 #    include <direct.h>
 #    include <io.h>
     typedef struct _stat STAT;
@@ -44,7 +44,7 @@ extern "C"
 typedef struct stat STAT;
 #  endif
 
-#  if defined(USE_WINDOWS)
+#  if defined(_WIN32)
 #    define USEWIN32IOAPI
 #    include "external/minizip/ioapi.h"
 #    include "external/minizip/iowin32.h"

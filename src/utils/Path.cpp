@@ -46,7 +46,7 @@ bool Path::isFile(const std::string& path)
     if (stat(path.c_str(), &st) == -1)
         return false;
 
-#if defined(USE_WINDOWS)
+#if defined(_WIN32)
     return ((st.st_mode & S_IFREG) == S_IFREG);
 #else
     return S_ISREG(st.st_mode);
@@ -61,7 +61,7 @@ bool Path::isDir(const std::string& path)
     if (stat(path.c_str(), &st) == -1)
         return false;
 
-#if defined(USE_WINDOWS)
+#if defined(_WIN32)
     return ((st.st_mode & S_IFDIR) == S_IFDIR);
 #else
     return S_ISDIR(st.st_mode);
@@ -76,7 +76,7 @@ bool Path::exist(const std::string& path)
     if (stat(path.c_str(), &st) == -1)
         return false;
 
-#if defined(USE_WINDOWS)
+#if defined(_WIN32)
     return ((st.st_mode & S_IFREG) == S_IFREG || (st.st_mode & S_IFDIR) == S_IFDIR);
 #else
     return (S_ISREG(st.st_mode) || S_ISDIR(st.st_mode));
@@ -100,7 +100,7 @@ std::string Path::fileName(const std::string& path)
 {
     std::string::size_type start = path.find_last_of(Separator);
 
-#if defined(USE_WINDOWS) // WIN32 also understands '/' as the separator.
+#if defined(_WIN32) // WIN32 also understands '/' as the separator.
     if (start == std::string::npos)
     {
         start = path.find_last_of(DIRECTORY_SEPARATOR);
@@ -191,7 +191,7 @@ std::string Path::suffix(const std::string& path)
 {
     std::string::size_type start = path.find_last_of(Separator);
 
-#if defined(USE_WINDOWS)
+#if defined(_WIN32)
     if (start == std::string::npos)
     {
         start = path.find_last_of(DIRECTORY_SEPARATOR);
@@ -257,7 +257,7 @@ bool Path::removeFiles(const std::string& pattern,
 
     PatternList = compilePattern(pattern);
 
-#if defined(USE_WINDOWS)
+#if defined(_WIN32)
 
     // We want the same pattern matching behaviour for all platforms.
     // Therefore, we do not use the MS provided one and list all files instead.
@@ -291,7 +291,7 @@ bool Path::removeFiles(const std::string& pattern,
 
     _findclose(hList);
 
-#else //! USE_WINDOWS
+#else //! _WIN32
 
     DIR* pDir = opendir(path.c_str());
 
@@ -320,7 +320,7 @@ bool Path::removeFiles(const std::string& pattern,
 
     closedir(pDir);
 
-#endif // USE_WINDOWS
+#endif // _WIN32
 
     return success;
 }
@@ -380,6 +380,40 @@ std::vector<std::string> Path::filesFromDir(const std::string& path,
                                             const bool recurse)
 {
     std::vector<std::string> files;
+
+#if defined(_WIN32)
+    // Pour Windows, utiliser l'API FindFirst/FindNext
+    std::string FilePattern = path + "\\*";
+    struct _finddata_t Entry;
+    intptr_t hList = _findfirst(FilePattern.c_str(), &Entry);
+
+    if (hList == -1)
+        return files;
+
+    do
+    {
+        std::string filename(Entry.name);
+
+        if (filename == "." || filename == "..")
+            continue;
+
+        if (recurse)
+        {
+            if (Path::isDir(path + Path::Separator + filename))
+            {
+                std::vector<std::string> moreFiles =
+                        Path::filesFromDir(path + Path::Separator + filename, recurse);
+                std::copy(moreFiles.begin(), moreFiles.end(),
+                          std::back_inserter(files));
+                continue;
+            }
+        }
+        files.push_back(path + Path::Separator + filename);
+    } while (_findnext(hList, &Entry) == 0);
+
+    _findclose(hList);
+#else
+    // Code existant pour les systèmes POSIX
     DIR* dir;
     struct dirent* entry;
 
@@ -410,6 +444,7 @@ std::vector<std::string> Path::filesFromDir(const std::string& path,
     }
 
     closedir(dir);
+#endif
 
     return files;
 }
@@ -460,7 +495,7 @@ bool Path::move(const std::string& from, const std::string& to)
     if (isDir(To))
         return false;
 
-#if defined(USE_WINDOWS)
+#if defined(_WIN32)
 
     // The target must not exist under WIN32 for rename to succeed.
     if (exist(To) && !remove(To))
@@ -538,7 +573,7 @@ bool Path::match(const std::string& name,
 // -----------------------------------------------------------------------------
 bool Path::isRelativePath(const std::string& path)
 {
-#if defined(USE_WINDOWS)
+#if defined(_WIN32)
 
     std::string Path = normalize(path);
 
@@ -553,11 +588,11 @@ bool Path::isRelativePath(const std::string& path)
 
     return true;
 
-#else //! USE_WINDOWS
+#else //! _WIN32
 
     return (path.length() < 1 || path[0] != '/');
 
-#endif // USE_WINDOWS
+#endif // _WIN32
 }
 
 // -----------------------------------------------------------------------------
@@ -590,14 +625,14 @@ bool Path::makePathRelative(std::string& absolutePath, const std::string& relati
         i = absolutePath.find_last_of('/', i) + 1;
     }
 
-#if defined(USE_WINDOWS)
+#if defined(_WIN32)
 
     if (i == 0)
     {
         return false; // A different drive letter we cannot do anything
     }
 
-#endif // USE_WINDOWS
+#endif // _WIN32
 
     RelativeTo = RelativeTo.substr(i);
 
@@ -702,7 +737,7 @@ std::string Path::normalize(const std::string& path)
 {
     std::string clean_path = path;
 
-#if defined(USE_WINDOWS)
+#if defined(_WIN32)
     // converts all '\' to '/' (only on WIN32)
     size_t i, imax;
 

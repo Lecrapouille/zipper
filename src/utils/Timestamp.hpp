@@ -8,7 +8,7 @@
 #ifndef ZIPPER_UTILS_TIMESTAMP_HPP
 #  define ZIPPER_UTILS_TIMESTAMP_HPP
 
-#  if defined(USE_WINDOWS)
+#  if defined(_WIN32)
 #    include <Windows.h>
 #  elif defined(__linux__)
 #    include <sys/stat.h>

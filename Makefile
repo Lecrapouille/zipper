@@ -20,9 +20,9 @@ INCLUDES := $(P)/include $(P)/src $(P)
 VPATH := $(P)/src $(P)/src/utils $(THIRDPART_DIR)
 ifeq ($(OS),Windows)
     LIB_FILES += src/utils/dirent.c
-    DEFINES += -DUSE_WINDOWS -DHAVE_AES
+    DEFINES += -DHAVE_AES
 else
-    DEFINES += -UUSE_WINDOWS -DHAVE_AES
+    DEFINES += -DHAVE_AES
 endif
 THIRDPART_LIBS := $(abspath $(THIRDPART_DIR)/minizip/build/libminizip.a)
 THIRDPART_LIBS += $(abspath $(THIRDPART_DIR)/minizip/build/libaes.a)
