@@ -15,10 +15,42 @@
 using namespace zipper;
 
 // -----------------------------------------------------------------------------
+// Helper function for safe localtime access across platforms
+// -----------------------------------------------------------------------------
+static inline tm* safe_localtime(const time_t* time, tm* result)
+{
+#if defined(USE_WINDOWS)
+    // Use localtime_s on Windows which is thread-safe
+    if (localtime_s(result, time) != 0) {
+        return nullptr;
+    }
+    return result;
+#else
+    // On Unix-like systems
+    #if defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 1 || defined(_XOPEN_SOURCE) || defined(_BSD_SOURCE) || defined(_SVID_SOURCE) || defined(_POSIX_SOURCE)
+        // Use localtime_r if available (thread-safe)
+        return localtime_r(time, result);
+    #else
+        // Fallback to localtime on platforms without localtime_r
+        // Note: This is not thread-safe
+        const tm* tmp = std::localtime(time);
+        if (tmp == nullptr) {
+            return nullptr;
+        }
+        *result = *tmp;
+        return result;
+    #endif
+#endif
+}
+
+// -----------------------------------------------------------------------------
 Timestamp::Timestamp()
 {
     std::time_t now = std::time(nullptr);
-    timestamp = *std::localtime(&now);
+    tm temp_tm;
+    if (safe_localtime(&now, &temp_tm) != nullptr) {
+        timestamp = temp_tm;
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -26,7 +58,10 @@ Timestamp::Timestamp(const std::string& filepath)
 {
     // Set default
     std::time_t now = std::time(nullptr);
-    timestamp = *std::localtime(&now);
+    tm temp_tm;
+    if (safe_localtime(&now, &temp_tm) != nullptr) {
+        timestamp = temp_tm;
+    }
 
 #if defined(USE_WINDOWS)
 
@@ -59,7 +94,7 @@ Timestamp::Timestamp(const std::string& filepath)
     //Convert ticks since 1/1/1970 into seconds
     time_t time_s = (li.QuadPart - UNIX_TIME_START) / TICKS_PER_SECOND;
 
-    timestamp = *std::localtime(&time_s);
+    safe_localtime(&time_s, &timestamp);
     CloseHandle(hFile1);
 
 #else // !USE_WINDOWS
@@ -76,7 +111,7 @@ Timestamp::Timestamp(const std::string& filepath)
     auto timet = static_cast<time_t>(buf.st_mtim.tv_sec);
 #  endif
 
-    timestamp = *std::localtime(&timet);
+    safe_localtime(&timet, &timestamp);
 
 #endif // USE_WINDOWS
 }
