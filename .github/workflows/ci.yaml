@@ -38,9 +38,24 @@ jobs:
           V=1 make compile-external-libs
           V=1 make -j`nproc --all`
           V=1 make demos -j`nproc --all`
-      - name: Installation
+      - name: Verify installed files
         run: |
           sudo make install
+          # Read version from VERSION.txt
+          VERSION=$(make get-version)
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          PATCH=$(echo $VERSION | cut -d. -f3)
+          # Check static and shared libraries
+          test -f /usr/local/lib/libzipper.a
+          test -f /usr/local/lib/libzipper.so
+          test -f /usr/local/lib/libzipper.so.$MAJOR
+          test -f /usr/local/lib/libzipper.so.$MAJOR.$MINOR.$PATCH
+          # Check pkg-config file
+          test -f /usr/local/lib/pkgconfig/zipper.pc
+          # Check headers
+          test -f /usr/local/include/zipper/$VERSION/Zipper/Zipper.hpp
+          test -f /usr/local/include/zipper/$VERSION/Zipper/Unzipper.hpp
       - name: Non regression
         run: |
           cd tests
@@ -86,7 +101,19 @@ jobs:
           V=1 make download-external-libs
           V=1 make compile-external-libs
           V=1 make -j`sysctl -n hw.logicalcpu`
-          make demos -j`sysctl -n hw.logicalcpu`
+      - name: Verify installed files
+        run: |
+          sudo make install
+          # Read version from VERSION.txt
+          VERSION=$(make get-version)
+          # Check static and shared libraries
+          test -f /usr/local/lib/libzipper.a
+          test -f /usr/local/lib/libzipper.dylib
+          # Check pkg-config file
+          test -f /usr/local/lib/pkgconfig/zipper.pc
+          # Check headers
+          test -f /usr/local/include/zipper/$VERSION/Zipper/Zipper.hpp
+          test -f /usr/local/include/zipper/$VERSION/Zipper/Unzipper.hpp
       - name: Non regression
         run: |
           cd tests
@@ -127,6 +154,18 @@ jobs:
           cmake --build . --config Release
           Test-Path -Path .\Release\zipper.lib
           Test-Path -Path .\Release\zipper.dll
+      - name: Install and verify files
+        shell: powershell
+        run: |
+          cmake --install . --config Release
+          # Check static and shared libraries
+          Test-Path -Path "C:\Program Files\zipper\lib\zipper.lib"
+          Test-Path -Path "C:\Program Files\zipper\bin\zipper.dll"
+          # Check pkg-config file
+          Test-Path -Path "C:\Program Files\zipper\lib\pkgconfig\zipper.pc"
+          # Check headers
+          Test-Path -Path "C:\Program Files\zipper\include\Zipper\Zipper.hpp"
+          Test-Path -Path "C:\Program Files\zipper\include\Zipper\Unzipper.hpp"
 #      - name: Non regression
 #        shell: powershell
 #        run: |
