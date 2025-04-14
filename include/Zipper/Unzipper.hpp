@@ -15,6 +15,16 @@
 #include <iostream>
 #include <sstream>
 
+#  if defined(_WIN32)
+#    if defined(ZIPPER_EXPORTS)
+#      define CLASS_IMPORT_EXPORT __declspec(dllexport)
+#    else
+#      define CLASS_IMPORT_EXPORT __declspec(dllimport)
+#    endif
+#  else
+#    define CLASS_IMPORT_EXPORT
+#  endif
+
 namespace zipper {
 
 class ZipEntry;
@@ -22,7 +32,7 @@ class ZipEntry;
 // *****************************************************************************
 //! \brief Zip archive extractor/decompressor.
 // *****************************************************************************
-class Unzipper
+class CLASS_IMPORT_EXPORT Unzipper
 {
 public:
 
@@ -203,7 +213,7 @@ private:
 // *************************************************************************
 //! \brief Class representing an entry in a zip archive.
 // *************************************************************************
-class ZipEntry
+class CLASS_IMPORT_EXPORT ZipEntry
 {
 public:
 
@@ -235,32 +245,9 @@ public:
         unixdate.tm_sec = second;
     }
 
-    ZipEntry(ZipEntry const& other)
-        : ZipEntry(other.name,
-                   other.compressedSize,
-                   other.uncompressedSize,
-                   other.unixdate.tm_year,
-                   other.unixdate.tm_mon,
-                   other.unixdate.tm_mday,
-                   other.unixdate.tm_hour,
-                   other.unixdate.tm_min,
-                   other.unixdate.tm_sec,
-                   other.dosdate)
-    {}
-
-    ZipEntry& operator=(ZipEntry const& other)
-    {
-        this->~ZipEntry(); // destroy
-        new (this) ZipEntry(other); // copy construct in place
-        return *this;
-    }
-
-    ZipEntry& operator=(ZipEntry && other)
-    {
-        this->~ZipEntry(); // destroy
-        new (this) ZipEntry(other); // copy construct in place
-        return *this;
-    }
+    ZipEntry(ZipEntry const& other) = default;
+    ZipEntry& operator=(ZipEntry const& other) = default;
+    ZipEntry& operator=(ZipEntry&& other) = default;
 
     //! \brief Checks if the entry has a valid name
     //! \return true if the entry name is not empty
@@ -269,7 +256,7 @@ public:
 public:
 
     //! \brief Structure representing a date and time
-    typedef struct
+    struct tm_s
     {
         uint32_t tm_sec;   //!< Seconds (0-59)
         uint32_t tm_min;   //!< Minutes (0-59)
@@ -277,7 +264,7 @@ public:
         uint32_t tm_mday;  //!< Day of month (1-31)
         uint32_t tm_mon;   //!< Month (1-12)
         uint32_t tm_year;  //!< Year (full year, e.g. 2022)
-    } tm_s;
+    };
 
     std::string name;      //!< Name of the entry in the zip archive
     std::string timestamp; //!< Formatted timestamp string (YYYY-MM-DD HH:MM:SS)

@@ -15,12 +15,22 @@
 #include <ctime>
 #include <system_error>
 
+#  if defined(_WIN32)
+#    if defined(ZIPPER_EXPORTS)
+#      define CLASS_IMPORT_EXPORT __declspec(dllexport)
+#    else
+#      define CLASS_IMPORT_EXPORT __declspec(dllimport)
+#    endif
+#  else
+#    define CLASS_IMPORT_EXPORT
+#  endif
+
 namespace zipper {
 
 // *************************************************************************
 //! \brief Zip archive compressor.
 // *************************************************************************
-class Zipper
+class CLASS_IMPORT_EXPORT Zipper
 {
 public:
 

@@ -11,8 +11,6 @@ project(zipper VERSION 2.2.0)
 ##############################################################################
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_VISIBILITY_PRESET hidden)
-set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 ##############################################################################
@@ -97,6 +95,9 @@ set_target_properties(zipper_shared PROPERTIES
     VERSION 2.0.0
     SOVERSION 2
 )
+if(WIN32)
+    target_compile_definitions(zipper_shared PRIVATE ZIPPER_EXPORTS)
+endif()
 configure_zipper_target(zipper_shared)
 
 ##############################################################################
