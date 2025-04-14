@@ -11,6 +11,7 @@ include $(P)/Makefile.common
 TARGET_NAME := $(PROJECT_NAME)-tests
 TARGET_DESCRIPTION := Unit tests for $(PROJECT_NAME)
 COMPILATION_MODE := test
+CXX_STANDARD := --std=c++14
 include $(M)/project/Makefile
 
 ###################################################

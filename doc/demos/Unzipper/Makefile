@@ -10,6 +10,7 @@ M := $(P)/.makefile
 include $(P)/Makefile.common
 TARGET_NAME := unzipper-demo
 TARGET_DESCRIPTION := A demo for unzipping using $(PROJECT_NAME)
+CXX_STANDARD := --std=c++11
 include $(M)/project/Makefile
 
 ###################################################
