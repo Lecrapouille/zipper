@@ -96,7 +96,8 @@ set_target_properties(zipper_shared PROPERTIES
     SOVERSION 2
 )
 if(WIN32)
-    target_compile_definitions(zipper_shared PRIVATE ZIPPER_EXPORTS)
+    # FIXME https://github.com/Lecrapouille/zipper/issues/16
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif()
 configure_zipper_target(zipper_shared)
 

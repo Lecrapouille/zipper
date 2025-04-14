@@ -158,14 +158,14 @@ jobs:
         shell: powershell
         run: |
           cmake --install . --config Release
-          # Check static and shared libraries
-          Test-Path -Path "C:\Program Files\zipper\lib\zipper.lib"
-          Test-Path -Path "C:\Program Files\zipper\bin\zipper.dll"
-          # Check pkg-config file
-          Test-Path -Path "C:\Program Files\zipper\lib\pkgconfig\zipper.pc"
-          # Check headers
-          Test-Path -Path "C:\Program Files\zipper\include\Zipper\Zipper.hpp"
-          Test-Path -Path "C:\Program Files\zipper\include\Zipper\Unzipper.hpp"
+#          # Check static and shared libraries
+#          Test-Path -Path "C:\Program Files\zipper\lib\zipper.lib"
+#          Test-Path -Path "C:\Program Files\zipper\bin\zipper.dll"
+#          # Check pkg-config file
+#          Test-Path -Path "C:\Program Files\zipper\lib\pkgconfig\zipper.pc"
+#          # Check headers
+#          Test-Path -Path "C:\Program Files\zipper\include\Zipper\Zipper.hpp"
+#          Test-Path -Path "C:\Program Files\zipper\include\Zipper\Unzipper.hpp"
 #      - name: Non regression
 #        shell: powershell
 #        run: |

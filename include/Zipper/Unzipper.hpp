@@ -15,16 +15,6 @@
 #include <iostream>
 #include <sstream>
 
-#  if defined(_WIN32)
-#    if defined(ZIPPER_EXPORTS)
-#      define CLASS_IMPORT_EXPORT __declspec(dllexport)
-#    else
-#      define CLASS_IMPORT_EXPORT __declspec(dllimport)
-#    endif
-#  else
-#    define CLASS_IMPORT_EXPORT
-#  endif
-
 namespace zipper {
 
 class ZipEntry;
@@ -32,7 +22,7 @@ class ZipEntry;
 // *****************************************************************************
 //! \brief Zip archive extractor/decompressor.
 // *****************************************************************************
-class CLASS_IMPORT_EXPORT Unzipper
+class Unzipper
 {
 public:
 
@@ -213,7 +203,7 @@ private:
 // *************************************************************************
 //! \brief Class representing an entry in a zip archive.
 // *************************************************************************
-class CLASS_IMPORT_EXPORT ZipEntry
+class ZipEntry
 {
 public:
 
