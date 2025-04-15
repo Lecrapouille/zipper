@@ -37,7 +37,6 @@ endif()
 option(USE_AES "Enable AES encryption" ON)
 add_subdirectory(external/minizip)
 target_include_directories(minizip PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/external/zlib-ng>
 )
 
@@ -74,10 +73,11 @@ function(configure_zipper_target target)
         src
         external/minizip
     )
-
+        
     # Public include directories
     target_include_directories(${target} PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     )
 
     # Library dependencies
