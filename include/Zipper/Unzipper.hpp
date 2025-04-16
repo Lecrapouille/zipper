@@ -15,6 +15,8 @@
 #include <iostream>
 #include <sstream>
 
+#include "zipper_export.h"
+
 namespace zipper {
 
 class ZipEntry;
@@ -22,7 +24,7 @@ class ZipEntry;
 // *****************************************************************************
 //! \brief Zip archive extractor/decompressor.
 // *****************************************************************************
-class Unzipper
+class ZIPPER_EXPORT Unzipper
 {
 public:
 

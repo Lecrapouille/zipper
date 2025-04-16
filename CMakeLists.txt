@@ -6,11 +6,15 @@
 cmake_minimum_required(VERSION 3.12)
 project(zipper VERSION 2.2.0)
 
+include(GenerateExportHeader)
+
 ##############################################################################
 # Global compiler settings
 ##############################################################################
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 ##############################################################################
@@ -18,7 +22,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 ##############################################################################
 option(ZIPPER_BUILD_DEMOS "Build the demo applications" OFF)
 option(ZIPPER_BUILD_TESTS "Build the test applications" OFF)
-
+option(ZIPPER_SHARED_LIB "Build zipper as a shared library" OFF)
 ##############################################################################
 # External dependencies
 ##############################################################################
@@ -71,10 +75,11 @@ function(configure_zipper_target target)
         src
         external/minizip
     )
-
+        
     # Public include directories
     target_include_directories(${target} PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     )
 
     # Library dependencies
@@ -84,22 +89,19 @@ function(configure_zipper_target target)
     )
 endfunction()
 
-# Static library
-add_library(zipper STATIC ${ZIPPER_SOURCES})
+if(ZIPPER_SHARED_LIB)
+    set(LIBRARY_TYPE SHARED)
+else()
+    set(LIBRARY_TYPE STATIC)
+endif()
+
+# Static or shared library
+add_library(zipper ${LIBRARY_TYPE} ${ZIPPER_SOURCES})
 configure_zipper_target(zipper)
 
-# Shared library
-add_library(zipper_shared SHARED ${ZIPPER_SOURCES})
-set_target_properties(zipper_shared PROPERTIES
-    OUTPUT_NAME zipper
-    VERSION 2.0.0
-    SOVERSION 2
-)
-if(WIN32)
-    # FIXME https://github.com/Lecrapouille/zipper/issues/16
-    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-endif()
-configure_zipper_target(zipper_shared)
+generate_export_header(zipper)
+target_compile_definitions(zipper PRIVATE zipper_EXPORTS)
+
 
 ##############################################################################
 # Demo applications
@@ -138,11 +140,14 @@ configure_file(
 
 # Installation rules
 include(GNUInstallDirs)
-install(TARGETS zipper zipper_shared
+install(TARGETS zipper
     EXPORT zipperTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zipper_export.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zipper.pc

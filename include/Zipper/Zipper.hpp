@@ -15,12 +15,14 @@
 #include <ctime>
 #include <system_error>
 
+#include "zipper_export.h"
+
 namespace zipper {
 
 // *************************************************************************
 //! \brief Zip archive compressor.
 // *************************************************************************
-class Zipper
+class ZIPPER_EXPORT Zipper
 {
 public:
 

@@ -152,20 +152,19 @@ jobs:
           cd build
           cmake .. -DZIPPER_BUILD_DEMOS=ON -DZIPPER_BUILD_TESTS=ON
           cmake --build . --config Release
-          Test-Path -Path .\Release\zipper.lib
-          Test-Path -Path .\Release\zipper.dll
+          Test-Path -Path ".\Release\zipper.lib"
       - name: Install and verify files
         shell: powershell
         run: |
-          cmake --install . --config Release
-#          # Check static and shared libraries
-#          Test-Path -Path "C:\Program Files\zipper\lib\zipper.lib"
-#          Test-Path -Path "C:\Program Files\zipper\bin\zipper.dll"
-#          # Check pkg-config file
-#          Test-Path -Path "C:\Program Files\zipper\lib\pkgconfig\zipper.pc"
-#          # Check headers
-#          Test-Path -Path "C:\Program Files\zipper\include\Zipper\Zipper.hpp"
-#          Test-Path -Path "C:\Program Files\zipper\include\Zipper\Unzipper.hpp"
+          cmake --install build --prefix "C:\Program Files\zipper"
+          # Check static and shared libraries
+          Test-Path -Path "C:\Program Files\zipper\lib\zipper.lib"
+          # Check pkg-config file
+          Test-Path -Path "C:\Program Files\zipper\lib\pkgconfig\zipper.pc"
+          # Check headers
+          Test-Path -Path "C:\Program Files\zipper\include\Zipper\Zipper.hpp"
+          Test-Path -Path "C:\Program Files\zipper\include\Zipper\Unzipper.hpp"
+          Test-Path -Path "C:\Program Files\zipper\include\zipper_export.h"
 #      - name: Non regression
 #        shell: powershell
 #        run: |
