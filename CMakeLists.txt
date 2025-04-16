@@ -6,7 +6,10 @@
 cmake_minimum_required(VERSION 3.12)
 project(zipper VERSION 2.2.0)
 
-include(GenerateExportHeader)
+if(WIN32)
+    # Generate code for exporting symbols for Windows DLL
+    include(GenerateExportHeader)
+endif()
 
 ##############################################################################
 # Global compiler settings
@@ -23,6 +26,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 option(ZIPPER_BUILD_DEMOS "Build the demo applications" OFF)
 option(ZIPPER_BUILD_TESTS "Build the test applications" OFF)
 option(ZIPPER_SHARED_LIB "Build zipper as a shared library" OFF)
+
 ##############################################################################
 # External dependencies
 ##############################################################################
@@ -53,60 +57,53 @@ set(ZIPPER_SOURCES
     src/Unzipper.cpp
 )
 
-##############################################################################
-# Utility function to apply common configuration
-##############################################################################
-function(configure_zipper_target target)
-    # Add platform-specific dependencies
-    if(WIN32)
-        target_sources(${target} PRIVATE
-            src/utils/dirent.c
-        )
-
-        target_compile_definitions(${target} PRIVATE
-            # Prevent Windows' min/max macros from conflicting with std::min/max
-            NOMINMAX=ON
-        )
-    endif()
-
-    # Include directories configuration
-    target_include_directories(${target} PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        src
-        external/minizip
-    )
-        
-    # Public include directories
-    target_include_directories(${target} PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-    )
-
-    # Library dependencies
-    target_link_libraries(${target} PRIVATE
-        minizip
-        zlibstatic
-    )
-endfunction()
-
+# Compile as static or as shared library
 if(ZIPPER_SHARED_LIB)
-    set(LIBRARY_TYPE SHARED)
+    add_library(zipper SHARED ${ZIPPER_SOURCES})
 else()
-    set(LIBRARY_TYPE STATIC)
+    add_library(zipper STATIC ${ZIPPER_SOURCES})
 endif()
 
-# Static or shared library
-add_library(zipper ${LIBRARY_TYPE} ${ZIPPER_SOURCES})
-configure_zipper_target(zipper)
+# Add platform-specific dependencies
+if(WIN32)
+    target_sources(zipper PRIVATE
+        src/utils/dirent.c
+    )
 
-generate_export_header(zipper)
-target_compile_definitions(zipper PRIVATE zipper_EXPORTS)
+    target_compile_definitions(zipper PRIVATE
+        # Prevent Windows' min/max macros from conflicting with std::min/max
+        NOMINMAX=ON
+    )
+endif()
 
+# Include directories configuration
+target_include_directories(zipper PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    src
+    external/minizip
+)
+
+# Public include directories
+target_include_directories(zipper PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+)
+
+# Library dependencies
+target_link_libraries(zipper PRIVATE
+    minizip
+    zlibstatic
+)
+
+# Generate code for exporting symbols for Windows DLL
+if(WIN32)
+    generate_export_header(zipper)
+    target_compile_definitions(zipper PRIVATE zipper_EXPORTS)
+endif()
 
 ##############################################################################
-# Demo applications
+# Build demos if CMake option is enabled
 ##############################################################################
-# Build demos if option is enabled
 if(ZIPPER_BUILD_DEMOS)
     message(STATUS "Building demo applications")
 
@@ -119,9 +116,8 @@ if(ZIPPER_BUILD_DEMOS)
 endif()
 
 ##############################################################################
-# Tests with Google Test
+# Build tests if CMake option is enabled (use Google Test)
 ##############################################################################
-# Build tests if option is enabled
 if(ZIPPER_BUILD_TESTS)
     message(STATUS "Building test applications")
     add_subdirectory(tests)
@@ -129,16 +125,17 @@ if(ZIPPER_BUILD_TESTS)
 endif()
 
 ##############################################################################
-# pkg-config support
-##############################################################################
 # Configure and install pkg-config file
+##############################################################################
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/zipper.pc.in
     ${CMAKE_CURRENT_BINARY_DIR}/zipper.pc
     @ONLY
 )
 
+##############################################################################
 # Installation rules
+##############################################################################
 include(GNUInstallDirs)
 install(TARGETS zipper
     EXPORT zipperTargets
@@ -146,10 +143,13 @@ install(TARGETS zipper
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zipper_export.h
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zipper.pc
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
-)
+if(WIN32)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zipper_export.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+else()
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zipper.pc
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+    )
+endif()

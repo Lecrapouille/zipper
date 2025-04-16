@@ -11,11 +11,11 @@ on:
 jobs:
 
   #############################################################################
-  ### Linux
+  ### Linux Makefile
   #############################################################################
   non_regression_linux:
-    name: Non regression on Linux
-    runs-on: ubuntu-22.04
+    name: Non regression on Linux Makefile
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Zipper
         uses: actions/checkout@v3
@@ -56,6 +56,7 @@ jobs:
           # Check headers
           test -f /usr/local/include/zipper/$VERSION/Zipper/Zipper.hpp
           test -f /usr/local/include/zipper/$VERSION/Zipper/Unzipper.hpp
+          test ! -f /usr/local/include/zipper/$VERSION/zipper_export.h
       - name: Non regression
         run: |
           cd tests
@@ -76,10 +77,10 @@ jobs:
           cat /tmp/somefile.txt
 
   #############################################################################
-  ### MacOS X
+  ### MacOS X Makefile
   #############################################################################
   non_regression_macos:
-    name: Non regression on MacOS X
+    name: Non regression on MacOS X Makefile
     runs-on: macos-latest
     steps:
       - name: Checkout Zipper
@@ -114,6 +115,7 @@ jobs:
           # Check headers
           test -f /usr/local/include/zipper/$VERSION/Zipper/Zipper.hpp
           test -f /usr/local/include/zipper/$VERSION/Zipper/Unzipper.hpp
+          test ! -f /usr/local/include/zipper/$VERSION/zipper_export.h
       - name: Non regression
         run: |
           cd tests
@@ -133,10 +135,10 @@ jobs:
 #          cat /tmp/somefile.txt
 
   #############################################################################
-  ### Windows
+  ### Windows CMake
   #############################################################################
   non_regression_windows:
-    name: Non regression on Windows
+    name: Non regression on Windows CMake
     runs-on: windows-2022
     steps:
       - name: Add path for finding cl.exe
@@ -150,15 +152,15 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DZIPPER_BUILD_DEMOS=ON -DZIPPER_BUILD_TESTS=ON
+          cmake .. -DZIPPER_SHARED_LIB=ON -DZIPPER_BUILD_DEMOS=ON -DZIPPER_BUILD_TESTS=ON
           cmake --build . --config Release
-          Test-Path -Path ".\Release\zipper.lib"
+          Test-Path -Path ".\Release\zipper.dll"
       - name: Install and verify files
         shell: powershell
         run: |
           cmake --install build --prefix "C:\Program Files\zipper"
           # Check static and shared libraries
-          Test-Path -Path "C:\Program Files\zipper\lib\zipper.lib"
+          Test-Path -Path "C:\Program Files\zipper\lib\zipper.dll"
           # Check pkg-config file
           Test-Path -Path "C:\Program Files\zipper\lib\pkgconfig\zipper.pc"
           # Check headers
