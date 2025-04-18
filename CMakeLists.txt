@@ -69,22 +69,19 @@ if(WIN32)
         # Prevent Windows' min/max macros from conflicting with std::min/max
         NOMINMAX=ON
     )
-
-    # Windows-specific configurations for DLL support
-    if(ZIPPER_SHARED_LIB)
-        # Include and setup for exporting symbols
-        include(GenerateExportHeader)
-
-        # Generate export header for DLL symbols
-        generate_export_header(zipper
-            BASE_NAME zipper
-            EXPORT_MACRO_NAME ZIPPER_EXPORT
-            EXPORT_FILE_NAME zipper_export.h
-        )
-        target_compile_definitions(zipper PRIVATE zipper_EXPORTS)
-        target_compile_definitions(zipper PUBLIC ZIPPER_EXPORT_DEFINED)
-    endif()
 endif()
+
+# Include and setup for exporting symbols
+include(GenerateExportHeader)
+
+# Generate export header for shared library symbols
+generate_export_header(zipper
+    BASE_NAME zipper
+    EXPORT_MACRO_NAME ZIPPER_EXPORT
+    EXPORT_FILE_NAME zipper_export.h
+)
+target_compile_definitions(zipper PRIVATE zipper_EXPORTS)
+target_compile_definitions(zipper PUBLIC ZIPPER_EXPORT_DEFINED)
 
 # Include directories configuration
 target_include_directories(zipper PRIVATE
@@ -148,14 +145,9 @@ install(TARGETS zipper
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-if(WIN32)
-    #if(ZIPPER_SHARED_LIB)
-        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zipper_export.h
-            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-        )
-    #endif()
-else()
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zipper.pc
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
-    )
-endif()
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zipper_export.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zipper.pc
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+)
