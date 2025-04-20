@@ -27,7 +27,7 @@ SHA1 0bb5afeb0d3f23149b086ccda7e4fee7d48f4fdf of https://github.com/zlib-ng/mini
 
 ## Getting Started
 
-### Compiling / Installing
+### Compiling / Installing (Linux, MacOs, not working for Windows)
 
 To download the project and compile it:
 
@@ -71,7 +71,7 @@ make demos -j8
 
 See their README files for their usage.
 
-### Alternative: Building with CMake
+### Alternative: Building with CMake (Windows ...)
 
 You can also build the project using CMake:
 
@@ -80,9 +80,15 @@ git clone https://github.com/lecrapouille/zipper.git --recursive
 cd zipper
 mkdir build
 cd build
-cmake .. -DZIPPER_BUILD_DEMOS=ON -DZIPPER_BUILD_TESTS=ON
+cmake .. -DZIPPER_SHARED_LIB=ON -DZIPPER_BUILD_DEMOS=ON -DZIPPER_BUILD_TESTS=ON
 cmake --build . --config Release
 ```
+
+Optional options:
+
+- `-DZIPPER_SHARED_LIB=ON` allows to create a shared lib instead of static lib.
+- `-DZIPPER_BUILD_DEMOS=ON` allows to compile zipper and unzipper "hello world" demos.
+- **WIP** `-DZIPPER_BUILD_TESTS=ON` allows to compile unit tests (if you are a developer).
 
 ### Linking Zipper to your project
 

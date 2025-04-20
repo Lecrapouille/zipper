@@ -11,8 +11,6 @@ project(zipper VERSION 2.2.0)
 ##############################################################################
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_VISIBILITY_PRESET hidden)
-set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 ##############################################################################
@@ -71,17 +69,26 @@ if(WIN32)
     )
 endif()
 
-# Include and setup for exporting symbols
-include(GenerateExportHeader)
+# Export symbols for Windows and DLLs.
+if(WIN32 AND ZIPPER_SHARED_LIB)
+    set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+    set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
-# Generate export header for shared library symbols
-generate_export_header(zipper
-    BASE_NAME zipper
-    EXPORT_MACRO_NAME ZIPPER_EXPORT
-    EXPORT_FILE_NAME zipper_export.h
-)
-target_compile_definitions(zipper PRIVATE zipper_EXPORTS)
-target_compile_definitions(zipper PUBLIC ZIPPER_EXPORT_DEFINED)
+    # Include and setup for exporting symbols
+    include(GenerateExportHeader)
+
+    # Generate export header for shared library symbols
+    generate_export_header(zipper
+        BASE_NAME zipper
+        EXPORT_MACRO_NAME ZIPPER_EXPORT
+        EXPORT_FILE_NAME zipper_export.h
+    )
+    target_compile_definitions(zipper PRIVATE zipper_EXPORTS)
+    target_compile_definitions(zipper PUBLIC ZIPPER_EXPORT_DEFINED)
+else()
+    # For all other cases, undefine the macro
+    target_compile_options(zipper PRIVATE -UZIPPER_EXPORT_DEFINED)
+endif()
 
 # Include directories configuration
 target_include_directories(zipper PRIVATE
