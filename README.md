@@ -88,7 +88,7 @@ Optional options:
 
 - `-DZIPPER_SHARED_LIB=ON` allows to create a shared lib instead of static lib.
 - `-DZIPPER_BUILD_DEMOS=ON` allows to compile zipper and unzipper "hello world" demos.
-- **WIP** `-DZIPPER_BUILD_TESTS=ON` allows to compile unit tests (if you are a developer).
+- `-DZIPPER_BUILD_TESTS=ON` allows to compile unit tests (if you are a developer).
 
 ### Linking Zipper to your project
 
