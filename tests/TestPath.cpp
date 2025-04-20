@@ -6,6 +6,10 @@
 
 #include "utils/Path.hpp"
 
+#ifndef PWD
+#  error "PWD is not defined"
+#endif
+
 using namespace zipper;
 
 TEST(TestDir, exist)
