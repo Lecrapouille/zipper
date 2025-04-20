@@ -21,18 +21,8 @@
 // on Windows.
 // *****************************************************************************
 #if defined(ZIPPER_EXPORT_DEFINED)
-#  if defined(_WIN32)
-#    pragma message("Unzipper: ZIPPER_EXPORT_DEFINED is defined")
-#  else
-#    warning "Unzipper: ZIPPER_EXPORT_DEFINED is not defined"
-#  endif
 #  include "zipper_export.h"
 #else
-#  if defined(_WIN32)
-#    pragma message("Unzipper: ZIPPER_EXPORT_DEFINED is not defined")
-#  else
-#    warning "Unzipper: ZIPPER_EXPORT_DEFINED is not defined"
-#  endif
 #  define ZIPPER_EXPORT
 #endif
 
