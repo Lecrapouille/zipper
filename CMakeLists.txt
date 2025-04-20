@@ -23,9 +23,13 @@ option(ZIPPER_SHARED_LIB "Build zipper as a shared library" OFF)
 ##############################################################################
 # External dependencies
 ##############################################################################
+# Force static libraries for dependencies
+set(BUILD_SHARED_LIBS OFF)
+
 # Configure zlib-ng
-set(ZLIB_COMPAT ON CACHE BOOL "Enable zlib compatibility")
-set(ZLIB_ENABLE_TESTS OFF CACHE BOOL "Disable zlib tests")
+set(ZLIB_COMPAT ON CACHE BOOL "Enable zlib-ng compatibility")
+set(ZLIB_ENABLE_TESTS OFF CACHE BOOL "Disable zlib-ng tests")
+set(SKIP_INSTALL_ALL ON CACHE BOOL "Skip installation of zlib-ng")
 add_subdirectory(external/zlib-ng)
 
 # Configure minizip with AES encryption support
