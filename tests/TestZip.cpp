@@ -14,10 +14,8 @@
 
 #define protected public
 #define private public
-//namespace TestZip {
 #include "Zipper/Zipper.hpp"
 #include "Zipper/Unzipper.hpp"
-//}
 #undef protected
 #undef private
 
@@ -170,6 +168,7 @@ TEST(FileZipTests, ZipperNominalOpenings)
 // -----------------------------------------------------------------------------
 TEST(FileZipTests, ZipperPathologicalOpenings)
 {
+#if ! defined(_WIN32)
     // Opening a folder
     ASSERT_EQ(Path::exist("/usr/bin"), true);
     ASSERT_EQ(Path::isDir("/usr/bin"), true);
@@ -181,6 +180,19 @@ TEST(FileZipTests, ZipperPathologicalOpenings)
     {
         ASSERT_STREQ(e.what(), "Is a directory");
     }
+#else
+    // Opening a folder
+    ASSERT_EQ(Path::exist("C:\\Windows"), true);
+    ASSERT_EQ(Path::isDir("C:\\Windows"), true);
+    try
+    {
+        Zipper zipper("C:\\Windows");
+    }
+    catch (std::runtime_error const& e)
+    {
+        ASSERT_STREQ(e.what(), "Is a directory");
+    }
+#endif
 
     // Permission denied
     ASSERT_EQ(Path::exist("/usr/bin/ziptest.zip"), false);
@@ -235,11 +247,17 @@ TEST(FileUnzipTests, UnzipperPathologicalOpenings)
 #endif
 
     // Opening a non zip file
-    ASSERT_EQ(Path::exist("/usr/bin/make"), true);
-    ASSERT_EQ(Path::isFile("/usr/bin/make"), true);
+#if ! defined(_WIN32)
+#  define NON_ZIP_FILE "/usr/bin/make"
+#else
+#  define NON_ZIP_FILE "C:\\Windows\\System32\\cmd.exe"
+#endif
+
+    ASSERT_EQ(Path::exist(NON_ZIP_FILE), true);
+    ASSERT_EQ(Path::isFile(NON_ZIP_FILE), true);
     try
     {
-        Unzipper unzipper("/usr/bin/make");
+        Unzipper unzipper(NON_ZIP_FILE);
     }
     catch (std::runtime_error const& e)
     {
@@ -247,11 +265,17 @@ TEST(FileUnzipTests, UnzipperPathologicalOpenings)
     }
 
     // Opening a folder
-    ASSERT_EQ(Path::exist("/usr/bin"), true);
-    ASSERT_EQ(Path::isDir("/usr/bin"), true);
+#if ! defined(_WIN32)
+#  define FOLDER "/usr/bin"
+#else
+#  define FOLDER "C:\\Windows"
+#endif
+
+    ASSERT_EQ(Path::exist(FOLDER), true);
+    ASSERT_EQ(Path::isDir(FOLDER), true);
     try
     {
-        Unzipper unzipper("/usr/bin");
+        Unzipper unzipper(FOLDER);
     }
     catch (std::runtime_error const& e)
     {

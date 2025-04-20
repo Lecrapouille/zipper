@@ -618,21 +618,12 @@ bool Zipper::add(const std::string& fileOrFolderPath, Zipper::zipFlags flags)
 
     if (Path::isDir(fileOrFolderPath))
     {
-        // Do not use dirName()
-        // https://github.com/sebastiandev/zipper/issues/21
-        char c = fileOrFolderPath.back();
-        bool end_by_slash = (c == '/') || (c == '\\');
-        std::string folderName(end_by_slash ? std::string(fileOrFolderPath.begin(), --fileOrFolderPath.end())
-                               : fileOrFolderPath);
-
-        std::vector<std::string> files = Path::filesFromDir(folderName, true);
-        const std::string folderWithSeparator = folderName + Path::Separator;
-
+        std::string folderWithSeparator = Path::folderNameWithSeparator(fileOrFolderPath);
+        std::vector<std::string> files = Path::filesFromDir(fileOrFolderPath, true);
         for (const auto& filePath: files)
         {
             Timestamp time(filePath);
             std::ifstream input(filePath.c_str(), std::ios::binary);
-            // Avoid the expensive search with rfind using the known length of the prefix
             std::string nameInZip = filePath.substr(filePath.find(folderWithSeparator));
             res &= add(input, time.timestamp, nameInZip, flags);
             input.close();

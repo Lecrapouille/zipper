@@ -255,7 +255,7 @@ public:
             if (!Path::createDir(fileName))
             {
                 std::stringstream str;
-                str << "Error cannot create folder '" << fileName << "'";
+                str << "Error cannot create the folder '" << fileName << "'";
                 m_error_code = make_error_code(
                     unzipper_error::INTERNAL_ERROR, str.str());
                 err = UNZ_ERRNO;
@@ -416,10 +416,8 @@ public:
             return UNZ_ERRNO;
         }
 
+        // Check if the filename is valid
         std::string canon = Path::canonicalPath(filename);
-
-        // Modification de la vérification de sécurité pour éviter les faux positifs
-        // La vérification originale peut échouer avec des chemins valides contenant des doubles slashes
         if (!canon.empty() && canon.find("..") != std::string::npos)
         {
             std::stringstream str;
@@ -682,10 +680,6 @@ public:
     {
         bool res = true;
 
-        // Preparation of the destination prefix once
-        std::string destPrefix = destination.empty() ? "" :
-                                (destination + Path::Separator);
-
         // Traverse the zip file sequentially in a single pass
         int err = unzGoToFirstFile(m_zf);
         if (err != UNZ_OK)
@@ -694,6 +688,9 @@ public:
                 unzipper_error::INTERNAL_ERROR, "Failed to go to first file");
             return false;
         }
+
+        // Preparation of the destination prefix once
+        std::string destPrefix = destination.empty() ? "" : Path::folderNameWithSeparator(destination);
 
         do
         {
@@ -736,8 +733,8 @@ public:
     {
         ZipEntry entry;
         std::string outputFile = destination.empty()
-                                 ? name
-                                 : destination + Path::Separator + name;
+            ? name
+            : Path::folderNameWithSeparator(destination) + name;
         std::string canonOutputFile = Path::canonicalPath(outputFile);
 
         return locateEntry(name) && currentEntryInfo(entry) &&

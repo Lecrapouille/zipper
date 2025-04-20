@@ -40,15 +40,49 @@ namespace zipper {
 class ZIPPER_EXPORT Path
 {
 public:
+    //! \brief Returns the preferred separator for the current OS
+    //! \param[in] path Path to get the preferred separator from
+    //! \return char Preferred separator
+    static char preferredSeparator(const std::string& path);
 
-    //! \brief The character used to separate directory entries.
-    static const std::string Separator;
+    //! \brief Convert any path separators to the native format for the current OS
+    //! \param[in] path Path with potentially mixed separators
+    //! \return std::string Path with consistent OS-specific separators
+    static std::string toNativeSeparators(const std::string& path);
 
-    //! \brief
+    //! \brief Convert all path separators to Unix format (forward slash)
+    //! \param[in] path Path to convert
+    //! \return std::string Path with Unix separators
+    static std::string toUnixSeparators(const std::string& path);
+
+    //! \brief Convert all path separators to Windows format (backslash)
+    //! \param[in] path Path to convert
+    //! \return std::string Path with Windows separators
+    static std::string toWindowsSeparators(const std::string& path);
+
+    //! \brief Standardize path separators for storage in ZIP archives
+    //! This method converts all separators to the format most commonly used in ZIP archives (forward slash)
+    //! \param[in] path Path to standardize
+    //! \return std::string Path with standardized separators for ZIP storage
+    static std::string toZipArchiveSeparators(const std::string& path);
+
+    //! \brief Detect if a path contains mixed separators
+    //! \param[in] path Path to check
+    //! \return bool True if path contains both Windows and Unix separators
+    static bool hasMixedSeparators(const std::string& path);
+
+    //! \brief Returns the root of the path.
+    //! \param[in] path Path to get the root of
+    //! \return std::string Root of the path
     static std::string root(const std::string& path);
+
+    //! \brief Checks if the path is a pure root.
+    //! \param[in] path Path to check
+    //! \return bool True if path is a pure root
     static bool isRoot(const std::string& path);
 
-    //! \brief
+    //! \brief Returns the current path.
+    //! \return std::string Current path
     static std::string currentPath();
 
     //! \brief Check whether the directory entry specified by 'path' is
@@ -62,6 +96,11 @@ public:
     //! \param[in] path: file path.
     //! \return bool isDir
     static bool isDir(const std::string& path);
+
+    //! \brief Returns the directory name with the preferred separator
+    //! \param[in] folder_path: folder path
+    //! \return std::string directory name with preferred separator
+    static std::string folderNameWithSeparator(const std::string& folder_path);
 
     //! \brief Check whether the directory entry specified by 'path' exists.
     //! \param[in] path: file path.
@@ -84,7 +123,7 @@ public:
     //! the suffix are removed from 'path'.
     //! \param[in] path: file path.
     //! \return std::string baseName
-    static std::string baseName(const std::string& path);
+    // static std::string baseName(const std::string& path);
 
     //! \brief Returns the file name, i.e., the directory path is removed from 'path'.
     //! \param[in] path: file path.
@@ -97,11 +136,11 @@ public:
     //! \return std::string dirName
     static std::string dirName(const std::string& path);
 
-    //! \brief Returns the suffix, i.e., the directory path and the
+    //! \brief Returns the extension, i.e., the directory path and the
     //! the base name are removed from 'path'.
     //! \param[in] path: file path.
-    //! \return std::string basename
-    static std::string suffix(const std::string& path);
+    //! \return std::string extension
+    static std::string extension(const std::string& path);
 
     //! \brief Create the directory 'dir' in the parent directory 'parent'.
     //! \param[in] dir: folder path.
@@ -117,13 +156,17 @@ public:
     static std::vector<std::string> filesFromDir(const std::string& path,
                                                  const bool recurse);
 
+    //! \brief Return the temporary directory for the current OS
+    //! \return std::string Temporary directory
+    static std::string getTempDirectory();
+
     //! \brief Create a name for a temporary directory entry. The directory entry
     //! will be located in the directory given
     //! \param[in] dir: folder path.
     //! \param[in] suffix: file extension.
     //! \return std::string tmpName
-    static std::string createTmpName(const std::string& dir,
-                                     const std::string& suffix);
+    static std::string createTempName(const std::string& dir,
+                                      const std::string& suffix);
 
     //! \brief Move a file from. If to is the directory the filename of from is
     //! appended.
@@ -168,6 +211,7 @@ public:
 
     static bool isRelativePath(const std::string& path);
 
+#if 0
     //! \brief Makes the absolute path relative to the path given in relativeTo
     //! \param[in] absolutePath
     //! \param[in] relativeTo
@@ -181,6 +225,7 @@ public:
     //! \return bool success
     static bool makePathAbsolute(std::string& relativePath,
                                  const std::string& absoluteTo);
+#endif
 
     //! \brief This method normalizes the path, i.e.,
     //! it converts all '\' to '/' (only on WIN32)

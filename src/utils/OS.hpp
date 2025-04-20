@@ -18,12 +18,12 @@ extern "C"
 #  include <fcntl.h>
 #  include <sys/stat.h>
 
+#  define WINDOWS_DIRECTORY_SEPARATOR '\\'
+#  define UNIX_DIRECTORY_SEPARATOR '/'
 #  if defined(_WIN32)
-#    define DIRECTORY_SEPARATOR "\\"
-#    define DIRECTORY_SEPARATOR_CHAR '\\'
+#    define DIRECTORY_SEPARATOR WINDOWS_DIRECTORY_SEPARATOR
 #  else
-#    define DIRECTORY_SEPARATOR "/"
-#    define DIRECTORY_SEPARATOR_CHAR '/'
+#    define DIRECTORY_SEPARATOR UNIX_DIRECTORY_SEPARATOR
 #  endif
 
 #  if defined(_WIN32)
