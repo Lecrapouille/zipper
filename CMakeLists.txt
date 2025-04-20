@@ -145,16 +145,37 @@ configure_file(
 # Installation rules
 ##############################################################################
 include(GNUInstallDirs)
+
+# Configure version information for shared libraries
+if(ZIPPER_SHARED_LIB)
+    set_target_properties(zipper PROPERTIES
+        VERSION ${PROJECT_VERSION}
+        SOVERSION ${PROJECT_VERSION_MAJOR}
+    )
+endif()
+
 install(TARGETS zipper
     EXPORT zipperTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        NAMELINK_SKIP
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+
+# For shared libraries, add NAMELINK installation
+if(ZIPPER_SHARED_LIB)
+    install(TARGETS zipper
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            NAMELINK_ONLY
+    )
+endif()
+
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zipper_export.h
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
+if(WIN32 AND ZIPPER_SHARED_LIB)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zipper_export.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+endif()
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zipper.pc
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
 )
