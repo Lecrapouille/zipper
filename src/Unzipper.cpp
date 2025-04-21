@@ -637,7 +637,12 @@ public:
         else
         {
             size_t size = static_cast<size_t>(s);
-            m_zipmem.base = new char[size];
+            m_zipmem.base = static_cast<char*>(malloc(size * sizeof(char)));
+            if (m_zipmem.base == nullptr) {
+                m_error_code = make_error_code(unzipper_error::INTERNAL_ERROR,
+                                               "Failed to allocate memory");
+                return false;
+            }
             m_zipmem.size = static_cast<uint32_t>(size);
             stream.read(m_zipmem.base, std::streamsize(size));
             if (!stream.good())
