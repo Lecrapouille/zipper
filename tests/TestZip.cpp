@@ -417,7 +417,7 @@ TEST(FileZipTests, ZipfileFeedWithDifferentInputs2)
 // -----------------------------------------------------------------------------
 TEST(MemoryZipTests, ZipVectorFeedWithDifferentInputs1)
 {
-    // A Zip outputed to a vector
+    // A Zip outputted to a vector
     std::vector<unsigned char> zipvec;
     zipper::Zipper zipper(zipvec);
 
@@ -522,7 +522,7 @@ TEST(MemoryZipTests, ZipVectorFeedWithDifferentInputs1)
 // -----------------------------------------------------------------------------
 TEST(MemoryZipTests, ZipVectorFeedWithDifferentInputs2)
 {
-    // A Zip outputed to a vector
+    // A Zip outputted to a vector
     std::vector<unsigned char> zipvec;
     zipper::Zipper zipper(zipvec);
 
@@ -582,7 +582,7 @@ TEST(MemoryZipTests, ZipVectorFeedWithDifferentInputs2)
     Path::remove("./subdirectory/test1.txt");
 
 #if 0
-    // A Zip outputed to a vector;
+    // A Zip outputted to a vector;
     zipper::Unzipper unzipper2(zipvec);
 
     // The zip vector has entry named './subdirectory/test1.txt'
