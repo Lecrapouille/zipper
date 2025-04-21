@@ -14,135 +14,135 @@ using namespace zipper;
 
 TEST(TestDir, exist)
 {
-   ASSERT_EQ(Path::exist(PWD), true);
-   ASSERT_EQ(Path::exist(PWD"/main.cpp"), true);
-   ASSERT_EQ(Path::exist(""), false);
-   ASSERT_EQ(Path::exist("fsdfqfz"), false);
+   EXPECT_EQ(Path::exist(PWD), true);
+   EXPECT_EQ(Path::exist(PWD"/main.cpp"), true);
+   EXPECT_EQ(Path::exist(""), false);
+   EXPECT_EQ(Path::exist("fsdfqfz"), false);
 }
 
 TEST(TestDir, isDir)
 {
-   ASSERT_EQ(Path::isDir(PWD), true);
-   ASSERT_EQ(Path::isDir(PWD"/main.cpp"), false);
-   ASSERT_EQ(Path::isDir(""), false);
-   ASSERT_EQ(Path::isDir("sdsdqsd"), false);
+   EXPECT_EQ(Path::isDir(PWD), true);
+   EXPECT_EQ(Path::isDir(PWD"/main.cpp"), false);
+   EXPECT_EQ(Path::isDir(""), false);
+   EXPECT_EQ(Path::isDir("sdsdqsd"), false);
 }
 
 TEST(TestDir, isFile)
 {
-   ASSERT_EQ(Path::isFile(PWD), false);
-   ASSERT_EQ(Path::isFile(PWD"/main.cpp"), true);
-   ASSERT_EQ(Path::isFile(""), false);
-   ASSERT_EQ(Path::isFile("aazaza"), false);
+   EXPECT_EQ(Path::isFile(PWD), false);
+   EXPECT_EQ(Path::isFile(PWD"/main.cpp"), true);
+   EXPECT_EQ(Path::isFile(""), false);
+   EXPECT_EQ(Path::isFile("aazaza"), false);
 }
 
 TEST(TestDir, isReadable)
 {
-   ASSERT_EQ(Path::isReadable(PWD), true);
-   ASSERT_EQ(Path::isReadable(PWD"/main.cpp"), true);
-   ASSERT_EQ(Path::isReadable(""), false);
-   ASSERT_EQ(Path::isReadable("qdqdqsdqdq"), false);
+   EXPECT_EQ(Path::isReadable(PWD), true);
+   EXPECT_EQ(Path::isReadable(PWD"/main.cpp"), true);
+   EXPECT_EQ(Path::isReadable(""), false);
+   EXPECT_EQ(Path::isReadable("qdqdqsdqdq"), false);
 #if ! defined(_WIN32)
-   ASSERT_EQ(Path::isReadable("/usr/bin"), true);
+   EXPECT_EQ(Path::isReadable("/usr/bin"), true);
 #endif
 }
 
 TEST(TestDir, isWritable)
 {
-   ASSERT_EQ(Path::isWritable(PWD), true);
-   ASSERT_EQ(Path::isWritable(PWD"/main.cpp"), true);
-   ASSERT_EQ(Path::isWritable(""), false);
-   ASSERT_EQ(Path::isWritable("qdqdqsdqdq"), false);
+   EXPECT_EQ(Path::isWritable(PWD), true);
+   EXPECT_EQ(Path::isWritable(PWD"/main.cpp"), true);
+   EXPECT_EQ(Path::isWritable(""), false);
+   EXPECT_EQ(Path::isWritable("qdqdqsdqdq"), false);
 #if ! defined(_WIN32)
-   ASSERT_EQ(Path::isWritable("/usr/bin"), false);
+   EXPECT_EQ(Path::isWritable("/usr/bin"), false);
 #endif
 }
 
 TEST(TestDir, fileName)
 {
-   ASSERT_STREQ(Path::fileName("/foo/bar/file.txt").c_str(), "file.txt");
-   ASSERT_STREQ(Path::fileName("/foo/bar/file.foo.txt").c_str(), "file.foo.txt");
-   ASSERT_STREQ(Path::fileName("/foo/bar").c_str(), "bar");
-   ASSERT_STREQ(Path::fileName("/foo/bar/").c_str(), "");
-   ASSERT_STREQ(Path::fileName("./foo/../bar/file.txt").c_str(), "file.txt");
-   ASSERT_STREQ(Path::fileName("./foo/../bar/../file.txt").c_str(), "file.txt");
-   ASSERT_STREQ(Path::fileName("").c_str(), "");
-   ASSERT_STREQ(Path::fileName("..").c_str(), "..");
-   ASSERT_STREQ(Path::fileName("/").c_str(), "");
-   ASSERT_STREQ(Path::fileName("//").c_str(), "");
-   ASSERT_STREQ(Path::fileName("//.").c_str(), ".");
+   EXPECT_STREQ(Path::fileName("/foo/bar/file.txt").c_str(), "file.txt");
+   EXPECT_STREQ(Path::fileName("/foo/bar/file.foo.txt").c_str(), "file.foo.txt");
+   EXPECT_STREQ(Path::fileName("/foo/bar").c_str(), "bar");
+   EXPECT_STREQ(Path::fileName("/foo/bar/").c_str(), "");
+   EXPECT_STREQ(Path::fileName("./foo/../bar/file.txt").c_str(), "file.txt");
+   EXPECT_STREQ(Path::fileName("./foo/../bar/../file.txt").c_str(), "file.txt");
+   EXPECT_STREQ(Path::fileName("").c_str(), "");
+   EXPECT_STREQ(Path::fileName("..").c_str(), "..");
+   EXPECT_STREQ(Path::fileName("/").c_str(), "");
+   EXPECT_STREQ(Path::fileName("//").c_str(), "");
+   EXPECT_STREQ(Path::fileName("//.").c_str(), ".");
 
-   ASSERT_STREQ(Path::fileName("/foo/bar.txt").c_str(), "bar.txt");
-   ASSERT_STREQ(Path::fileName("/foo/.bar").c_str(), ".bar");
-   ASSERT_STREQ(Path::fileName("/foo/bar/").c_str(), "");
-   ASSERT_STREQ(Path::fileName("/foo/.").c_str(), ".");
-   ASSERT_STREQ(Path::fileName("/foo/..").c_str(), "..");
-   ASSERT_STREQ(Path::fileName(".").c_str(), ".");
-   ASSERT_STREQ(Path::fileName("..").c_str(), "..");
-   ASSERT_STREQ(Path::fileName("/").c_str(), "");
-   ASSERT_STREQ(Path::fileName("//host").c_str(), "host");
+   EXPECT_STREQ(Path::fileName("/foo/bar.txt").c_str(), "bar.txt");
+   EXPECT_STREQ(Path::fileName("/foo/.bar").c_str(), ".bar");
+   EXPECT_STREQ(Path::fileName("/foo/bar/").c_str(), "");
+   EXPECT_STREQ(Path::fileName("/foo/.").c_str(), ".");
+   EXPECT_STREQ(Path::fileName("/foo/..").c_str(), "..");
+   EXPECT_STREQ(Path::fileName(".").c_str(), ".");
+   EXPECT_STREQ(Path::fileName("..").c_str(), "..");
+   EXPECT_STREQ(Path::fileName("/").c_str(), "");
+   EXPECT_STREQ(Path::fileName("//host").c_str(), "host");
 }
 
 TEST(TestDir, dirName)
 {
-   ASSERT_STREQ(Path::dirName("/foo/bar/file.txt").c_str(), "/foo/bar");
-   ASSERT_STREQ(Path::dirName("/foo/bar/file.foo.txt").c_str(), "/foo/bar");
-   ASSERT_STREQ(Path::dirName("/foo/bar").c_str(), "/foo");
-   ASSERT_STREQ(Path::dirName("/foo/bar/").c_str(), "/foo/bar");
-   ASSERT_STREQ(Path::dirName("./foo/../bar/file.txt").c_str(), "./foo/../bar");
-   ASSERT_STREQ(Path::dirName("./foo/../bar/../file.txt").c_str(), "./foo/../bar/..");
-   ASSERT_STREQ(Path::dirName("/var/tmp/.").c_str(), "/var/tmp");;
-   ASSERT_STREQ(Path::dirName("/usr/lib").c_str(), "/usr");
-   ASSERT_STREQ(Path::dirName("/usr/").c_str(), "/usr");
-   ASSERT_STREQ(Path::dirName("/usr").c_str(), "/");
-   ASSERT_STREQ(Path::dirName("usr").c_str(), "");
-   ASSERT_STREQ(Path::dirName("/").c_str(), "/");
-   ASSERT_STREQ(Path::dirName(".").c_str(), "");
-   ASSERT_STREQ(Path::dirName("..").c_str(), "");
-   ASSERT_STREQ(Path::dirName("//").c_str(), "/");
-   ASSERT_STREQ(Path::dirName("//.").c_str(), "/");
+   EXPECT_STREQ(Path::dirName("/foo/bar/file.txt").c_str(), "/foo/bar");
+   EXPECT_STREQ(Path::dirName("/foo/bar/file.foo.txt").c_str(), "/foo/bar");
+   EXPECT_STREQ(Path::dirName("/foo/bar").c_str(), "/foo");
+   EXPECT_STREQ(Path::dirName("/foo/bar/").c_str(), "/foo/bar");
+   EXPECT_STREQ(Path::dirName("./foo/../bar/file.txt").c_str(), "./foo/../bar");
+   EXPECT_STREQ(Path::dirName("./foo/../bar/../file.txt").c_str(), "./foo/../bar/..");
+   EXPECT_STREQ(Path::dirName("/var/tmp/.").c_str(), "/var/tmp");;
+   EXPECT_STREQ(Path::dirName("/usr/lib").c_str(), "/usr");
+   EXPECT_STREQ(Path::dirName("/usr/").c_str(), "/usr");
+   EXPECT_STREQ(Path::dirName("/usr").c_str(), "/");
+   EXPECT_STREQ(Path::dirName("usr").c_str(), "");
+   EXPECT_STREQ(Path::dirName("/").c_str(), "/");
+   EXPECT_STREQ(Path::dirName(".").c_str(), "");
+   EXPECT_STREQ(Path::dirName("..").c_str(), "");
+   EXPECT_STREQ(Path::dirName("//").c_str(), "/");
+   EXPECT_STREQ(Path::dirName("//.").c_str(), "/");
 }
 
 TEST(TestDir, extension)
 {
-   ASSERT_STREQ(Path::extension("/foo/bar/file.txt").c_str(), "txt");
-   ASSERT_STREQ(Path::extension("/foo/bar/file.foo.txt").c_str(), "foo.txt");
-   ASSERT_STREQ(Path::extension(".txt").c_str(), "txt");
-   ASSERT_STREQ(Path::extension("/a/b.c/d").c_str(), "");
-   ASSERT_STREQ(Path::extension("").c_str(), "");
-   ASSERT_STREQ(Path::extension("txt").c_str(), "");
-   ASSERT_STREQ(Path::extension("foo.bar.baz").c_str(), "bar.baz");
-   ASSERT_STREQ(Path::extension(".bar.baz.txt").c_str(), "bar.baz.txt");
-   ASSERT_STREQ(Path::extension(".").c_str(), "");
+   EXPECT_STREQ(Path::extension("/foo/bar/file.txt").c_str(), "txt");
+   EXPECT_STREQ(Path::extension("/foo/bar/file.foo.txt").c_str(), "foo.txt");
+   EXPECT_STREQ(Path::extension(".txt").c_str(), "txt");
+   EXPECT_STREQ(Path::extension("/a/b.c/d").c_str(), "");
+   EXPECT_STREQ(Path::extension("").c_str(), "");
+   EXPECT_STREQ(Path::extension("txt").c_str(), "");
+   EXPECT_STREQ(Path::extension("foo.bar.baz").c_str(), "bar.baz");
+   EXPECT_STREQ(Path::extension(".bar.baz.txt").c_str(), "bar.baz.txt");
+   EXPECT_STREQ(Path::extension(".").c_str(), "");
 }
 
 TEST(TestDir, createDir)
 {
    std::string const c_fooBar(Path::getTempDirectory() + "/foo/bar");
 
-   ASSERT_EQ(Path::exist(Path::getTempDirectory()), true);
+   EXPECT_EQ(Path::exist(Path::getTempDirectory()), true);
    std::remove(c_fooBar.c_str());
 
-   ASSERT_EQ(Path::createDir("foo/bar", Path::getTempDirectory()), true);
-   ASSERT_EQ(Path::exist(c_fooBar), true);
-   ASSERT_EQ(Path::isDir(c_fooBar), true);
-   ASSERT_EQ(Path::isWritable(c_fooBar), true);
-   ASSERT_EQ(Path::isReadable(c_fooBar), true);
+   EXPECT_EQ(Path::createDir("foo/bar", Path::getTempDirectory()), true);
+   EXPECT_EQ(Path::exist(c_fooBar), true);
+   EXPECT_EQ(Path::isDir(c_fooBar), true);
+   EXPECT_EQ(Path::isWritable(c_fooBar), true);
+   EXPECT_EQ(Path::isReadable(c_fooBar), true);
 
-   ASSERT_EQ(Path::createDir("foo/bar", "doesnotexist"), false);
-   ASSERT_EQ(Path::exist("doesnotexist/foo/bar"), false);
+   EXPECT_EQ(Path::createDir("foo/bar", "doesnotexist"), false);
+   EXPECT_EQ(Path::exist("doesnotexist/foo/bar"), false);
 
-   ASSERT_EQ(Path::createDir("foo", "/usr/bin"), false);
-   ASSERT_EQ(Path::exist("/usr/bin/foo"), false);
+   EXPECT_EQ(Path::createDir("foo", "/usr/bin"), false);
+   EXPECT_EQ(Path::exist("/usr/bin/foo"), false);
 
-   ASSERT_EQ(Path::createDir("", Path::getTempDirectory()), true);
-   ASSERT_EQ(Path::exist(Path::getTempDirectory()), true);
+   EXPECT_EQ(Path::createDir("", Path::getTempDirectory()), true);
+   EXPECT_EQ(Path::exist(Path::getTempDirectory()), true);
 
-   ASSERT_EQ(Path::createDir("tmp", ""), true);
-   ASSERT_EQ(Path::exist("tmp"), true);
+   EXPECT_EQ(Path::createDir("tmp", ""), true);
+   EXPECT_EQ(Path::exist("tmp"), true);
    std::remove("tmp");
 
-   ASSERT_EQ(Path::createDir("", ""), false);
+   EXPECT_EQ(Path::createDir("", ""), false);
 }
 
 TEST(TestDir, createTempName)
@@ -150,56 +150,56 @@ TEST(TestDir, createTempName)
    std::string dir = Path::createTempName("", "foo");
    std::cout << "dir: " << dir << std::endl;
 
-   ASSERT_EQ(dir.empty(), false);
-   ASSERT_EQ(dir[0] == '/', false);
-   ASSERT_EQ(dir[0] == '\\', false);
-   ASSERT_EQ(dir[1] == ':', false);
+   EXPECT_EQ(dir.empty(), false);
+   EXPECT_EQ(dir[0] == '/', false);
+   EXPECT_EQ(dir[0] == '\\', false);
+   EXPECT_EQ(dir[1] == ':', false);
 
    dir = Path::createTempName(Path::getTempDirectory(), "foo");
    std::cout << "dir: " << dir << std::endl;
 
-   ASSERT_EQ(Path::exist(dir), false);
-   ASSERT_EQ(Path::isDir(dir), false);
-   ASSERT_EQ(Path::isWritable(dir), false);
-   ASSERT_EQ(Path::isReadable(dir), false);
+   EXPECT_EQ(Path::exist(dir), false);
+   EXPECT_EQ(Path::isDir(dir), false);
+   EXPECT_EQ(Path::isWritable(dir), false);
+   EXPECT_EQ(Path::isReadable(dir), false);
 
-   ASSERT_EQ(Path::createDir(dir, ""), true);
-   ASSERT_EQ(Path::exist(dir), true);
-   ASSERT_EQ(Path::isDir(dir), true);
-   ASSERT_EQ(Path::isWritable(dir), true);
-   ASSERT_EQ(Path::isReadable(dir), true);
+   EXPECT_EQ(Path::createDir(dir, ""), true);
+   EXPECT_EQ(Path::exist(dir), true);
+   EXPECT_EQ(Path::isDir(dir), true);
+   EXPECT_EQ(Path::isWritable(dir), true);
+   EXPECT_EQ(Path::isReadable(dir), true);
 }
 
 TEST(TestDir, canonicalPath)
 {
-   ASSERT_STREQ(Path::canonicalPath("/foo/bar/file.txt").c_str(), "/foo/bar/file.txt");
-   ASSERT_STREQ(Path::canonicalPath("./foo/bar/file.txt").c_str(), "./foo/bar/file.txt");
-   ASSERT_STREQ(Path::canonicalPath("/foo/../bar/file.txt").c_str(), "/bar/file.txt");
-   ASSERT_STREQ(Path::canonicalPath("./foo/../bar/file.txt").c_str(), "./bar/file.txt");
-   ASSERT_STREQ(Path::canonicalPath("").c_str(), "");
-   ASSERT_STREQ(Path::canonicalPath("..").c_str(), "..");
-   ASSERT_STREQ(Path::canonicalPath("/").c_str(), "/");
-   ASSERT_STREQ(Path::canonicalPath("//").c_str(), "/");
-   ASSERT_STREQ(Path::canonicalPath("////").c_str(), "/");
-   ASSERT_STREQ(Path::canonicalPath("///.///").c_str(), "/");
-   ASSERT_STREQ(Path::canonicalPath("//.").c_str(), "/");
-   ASSERT_STREQ(Path::canonicalPath("/..").c_str(), "/");
-   ASSERT_STREQ(Path::canonicalPath("/out").c_str(), "/out");
-   ASSERT_STREQ(Path::canonicalPath("./out").c_str(), "./out");
-   ASSERT_STREQ(Path::canonicalPath("./././out").c_str(), "./out");
-   ASSERT_STREQ(Path::canonicalPath("./out/./bin").c_str(), "./out/bin");
-   ASSERT_STREQ(Path::canonicalPath("./out/./././bin").c_str(), "./out/bin");
-   ASSERT_STREQ(Path::canonicalPath("out/../../bin").c_str(), "../bin");
-   ASSERT_STREQ(Path::canonicalPath("../../bin").c_str(), "../../bin");
-   ASSERT_STREQ(Path::canonicalPath("../..//bin").c_str(), "../../bin");
-   ASSERT_STREQ(Path::canonicalPath("../.././bin").c_str(), "../../bin");
-   ASSERT_STREQ(Path::canonicalPath("/../out/../in").c_str(), "/in");
-   ASSERT_STREQ(Path::canonicalPath("/../out/../in/").c_str(), "/in");
-   ASSERT_STREQ(Path::canonicalPath("/does/not/exist//data/somefolder").c_str(),
+   EXPECT_STREQ(Path::canonicalPath("/foo/bar/file.txt").c_str(), "/foo/bar/file.txt");
+   EXPECT_STREQ(Path::canonicalPath("./foo/bar/file.txt").c_str(), "./foo/bar/file.txt");
+   EXPECT_STREQ(Path::canonicalPath("/foo/../bar/file.txt").c_str(), "/bar/file.txt");
+   EXPECT_STREQ(Path::canonicalPath("./foo/../bar/file.txt").c_str(), "./bar/file.txt");
+   EXPECT_STREQ(Path::canonicalPath("").c_str(), "");
+   EXPECT_STREQ(Path::canonicalPath("..").c_str(), "..");
+   EXPECT_STREQ(Path::canonicalPath("/").c_str(), "/");
+   EXPECT_STREQ(Path::canonicalPath("//").c_str(), "/");
+   EXPECT_STREQ(Path::canonicalPath("////").c_str(), "/");
+   EXPECT_STREQ(Path::canonicalPath("///.///").c_str(), "/");
+   EXPECT_STREQ(Path::canonicalPath("//.").c_str(), "/");
+   EXPECT_STREQ(Path::canonicalPath("/..").c_str(), "/");
+   EXPECT_STREQ(Path::canonicalPath("/out").c_str(), "/out");
+   EXPECT_STREQ(Path::canonicalPath("./out").c_str(), "./out");
+   EXPECT_STREQ(Path::canonicalPath("./././out").c_str(), "./out");
+   EXPECT_STREQ(Path::canonicalPath("./out/./bin").c_str(), "./out/bin");
+   EXPECT_STREQ(Path::canonicalPath("./out/./././bin").c_str(), "./out/bin");
+   EXPECT_STREQ(Path::canonicalPath("out/../../bin").c_str(), "../bin");
+   EXPECT_STREQ(Path::canonicalPath("../../bin").c_str(), "../../bin");
+   EXPECT_STREQ(Path::canonicalPath("../..//bin").c_str(), "../../bin");
+   EXPECT_STREQ(Path::canonicalPath("../.././bin").c_str(), "../../bin");
+   EXPECT_STREQ(Path::canonicalPath("/../out/../in").c_str(), "/in");
+   EXPECT_STREQ(Path::canonicalPath("/../out/../in/").c_str(), "/in");
+   EXPECT_STREQ(Path::canonicalPath("/does/not/exist//data/somefolder").c_str(),
                 "/does/not/exist/data/somefolder");
-   ASSERT_STREQ(Path::canonicalPath("/does/not/exist//data/somefolder/").c_str(),
+   EXPECT_STREQ(Path::canonicalPath("/does/not/exist//data/somefolder/").c_str(),
                 "/does/not/exist/data/somefolder");
-   ASSERT_STREQ(Path::canonicalPath("/does/not/exist//data/somefolder//").c_str(),
+   EXPECT_STREQ(Path::canonicalPath("/does/not/exist//data/somefolder//").c_str(),
                 "/does/not/exist/data/somefolder");
 }
 
@@ -207,67 +207,67 @@ TEST(TestDir, canonicalPathExtended)
 {
 
    // Additional base tests
-   ASSERT_STREQ(Path::canonicalPath("./").c_str(), ".");
-   ASSERT_STREQ(Path::canonicalPath("././").c_str(), ".");
-   ASSERT_STREQ(Path::canonicalPath("./.").c_str(), ".");
-   ASSERT_STREQ(Path::canonicalPath("./../").c_str(), "..");
-   ASSERT_STREQ(Path::canonicalPath("../..").c_str(), "../..");
+   EXPECT_STREQ(Path::canonicalPath("./").c_str(), ".");
+   EXPECT_STREQ(Path::canonicalPath("././").c_str(), ".");
+   EXPECT_STREQ(Path::canonicalPath("./.").c_str(), ".");
+   EXPECT_STREQ(Path::canonicalPath("./../").c_str(), "..");
+   EXPECT_STREQ(Path::canonicalPath("../..").c_str(), "../..");
 
    // Case with multiple separators and cleaning
-   ASSERT_STREQ(Path::canonicalPath("/foo//bar").c_str(), "/foo/bar");
-   ASSERT_STREQ(Path::canonicalPath("/foo///bar").c_str(), "/foo/bar");
-   ASSERT_STREQ(Path::canonicalPath("/foo/./bar").c_str(), "/foo/bar");
-   ASSERT_STREQ(Path::canonicalPath("/./foo/bar").c_str(), "/foo/bar");
+   EXPECT_STREQ(Path::canonicalPath("/foo//bar").c_str(), "/foo/bar");
+   EXPECT_STREQ(Path::canonicalPath("/foo///bar").c_str(), "/foo/bar");
+   EXPECT_STREQ(Path::canonicalPath("/foo/./bar").c_str(), "/foo/bar");
+   EXPECT_STREQ(Path::canonicalPath("/./foo/bar").c_str(), "/foo/bar");
 
    // Handling consecutive '..'
-   ASSERT_STREQ(Path::canonicalPath("/foo/bar/../..").c_str(), "/");
-   ASSERT_STREQ(Path::canonicalPath("/foo/bar/../../baz").c_str(), "/baz");
-   ASSERT_STREQ(Path::canonicalPath("../../../foo").c_str(), "../../../foo");
+   EXPECT_STREQ(Path::canonicalPath("/foo/bar/../..").c_str(), "/");
+   EXPECT_STREQ(Path::canonicalPath("/foo/bar/../../baz").c_str(), "/baz");
+   EXPECT_STREQ(Path::canonicalPath("../../../foo").c_str(), "../../../foo");
 
    // Tests with mixed separators (Windows/Unix)
-   ASSERT_STREQ(Path::canonicalPath("/foo/bar\\/baz").c_str(), "/foo/bar/baz");
-   ASSERT_STREQ(Path::canonicalPath("/foo\\bar/baz").c_str(), "/foo/bar/baz");
+   EXPECT_STREQ(Path::canonicalPath("/foo/bar\\/baz").c_str(), "/foo/bar/baz");
+   EXPECT_STREQ(Path::canonicalPath("/foo\\bar/baz").c_str(), "/foo/bar/baz");
 
    // Special cases with dots
-   ASSERT_STREQ(Path::canonicalPath("/foo/./bar/.").c_str(), "/foo/bar");
-   ASSERT_STREQ(Path::canonicalPath("/foo/././bar").c_str(), "/foo/bar");
-   ASSERT_STREQ(Path::canonicalPath("/foo/./../bar").c_str(), "/bar");
+   EXPECT_STREQ(Path::canonicalPath("/foo/./bar/.").c_str(), "/foo/bar");
+   EXPECT_STREQ(Path::canonicalPath("/foo/././bar").c_str(), "/foo/bar");
+   EXPECT_STREQ(Path::canonicalPath("/foo/./../bar").c_str(), "/bar");
 
    // Case with empty segments
-   ASSERT_STREQ(Path::canonicalPath("//foo///bar//").c_str(), "/foo/bar");
-   ASSERT_STREQ(Path::canonicalPath("foo//bar//").c_str(), "foo/bar");
+   EXPECT_STREQ(Path::canonicalPath("//foo///bar//").c_str(), "/foo/bar");
+   EXPECT_STREQ(Path::canonicalPath("foo//bar//").c_str(), "foo/bar");
 
    // Tests with Windows paths
-   ASSERT_STREQ(Path::canonicalPath("C:\\foo\\..\\bar").c_str(), "C:\\bar");
-   ASSERT_STREQ(Path::canonicalPath("C:/foo/../bar").c_str(), "C:\\bar");
-   ASSERT_STREQ(Path::canonicalPath("C:\\..\\foo").c_str(), "C:\\foo");
-   ASSERT_STREQ(Path::canonicalPath("C:\\.\\foo\\.\\bar").c_str(), "C:\\foo\\bar");
+   EXPECT_STREQ(Path::canonicalPath("C:\\foo\\..\\bar").c_str(), "C:\\bar");
+   EXPECT_STREQ(Path::canonicalPath("C:/foo/../bar").c_str(), "C:\\bar");
+   EXPECT_STREQ(Path::canonicalPath("C:\\..\\foo").c_str(), "C:\\foo");
+   EXPECT_STREQ(Path::canonicalPath("C:\\.\\foo\\.\\bar").c_str(), "C:\\foo\\bar");
 }
 
 #if 0
 TEST(TestDir, normalize)
 {
-   ASSERT_STREQ(Path::normalize("A//B").c_str(), "A/B");
-   ASSERT_STREQ(Path::normalize("A/B/").c_str(), "A/B");
-   ASSERT_STREQ(Path::normalize("A/B//").c_str(), "A/B");
-   ASSERT_STREQ(Path::normalize("A/./B").c_str(), "A/B");
-   ASSERT_STREQ(Path::normalize("A/foo/../B").c_str(), "A/B");
-   ASSERT_STREQ(Path::normalize("./A/B").c_str(), "A/B");
-   ASSERT_STREQ(Path::normalize("A/B/.").c_str(), "A/B");
-   ASSERT_STREQ(Path::normalize("A/B/./").c_str(), "A/B");
-   ASSERT_STREQ(Path::normalize("A/B/./C").c_str(), "A/B/C");
-   ASSERT_STREQ(Path::normalize("A/B/./C/").c_str(), "A/B/C");
+   EXPECT_STREQ(Path::normalize("A//B").c_str(), "A/B");
+   EXPECT_STREQ(Path::normalize("A/B/").c_str(), "A/B");
+   EXPECT_STREQ(Path::normalize("A/B//").c_str(), "A/B");
+   EXPECT_STREQ(Path::normalize("A/./B").c_str(), "A/B");
+   EXPECT_STREQ(Path::normalize("A/foo/../B").c_str(), "A/B");
+   EXPECT_STREQ(Path::normalize("./A/B").c_str(), "A/B");
+   EXPECT_STREQ(Path::normalize("A/B/.").c_str(), "A/B");
+   EXPECT_STREQ(Path::normalize("A/B/./").c_str(), "A/B");
+   EXPECT_STREQ(Path::normalize("A/B/./C").c_str(), "A/B/C");
+   EXPECT_STREQ(Path::normalize("A/B/./C/").c_str(), "A/B/C");
 }
 
 TEST(TestDir, normalizeSpecialCase)
 {
-   ASSERT_STREQ(Path::normalize("/../foo").c_str(), "/foo");
-   ASSERT_STREQ(Path::normalize("/../../foo").c_str(), "/foo");
-   ASSERT_STREQ(Path::normalize("bar/../foo").c_str(), "bar/../foo");
-   ASSERT_STREQ(Path::normalize("bar/../../foo").c_str(), "../foo");
-   ASSERT_STREQ(Path::normalize("/../").c_str(), "/");
-   ASSERT_STREQ(Path::normalize("/a/../../").c_str(), "/");
-   ASSERT_STREQ(Path::normalize("/a/b/../../").c_str(), "/");
+   EXPECT_STREQ(Path::normalize("/../foo").c_str(), "/foo");
+   EXPECT_STREQ(Path::normalize("/../../foo").c_str(), "/foo");
+   EXPECT_STREQ(Path::normalize("bar/../foo").c_str(), "bar/../foo");
+   EXPECT_STREQ(Path::normalize("bar/../../foo").c_str(), "../foo");
+   EXPECT_STREQ(Path::normalize("/../").c_str(), "/");
+   EXPECT_STREQ(Path::normalize("/a/../../").c_str(), "/");
+   EXPECT_STREQ(Path::normalize("/a/b/../../").c_str(), "/");
 }
 #endif
 
@@ -276,48 +276,48 @@ TEST(TestDir, normalizeSpecialCase)
 // -----------------------------------------------------------------------------
 TEST(TestWindowsPaths, fileNameWindows)
 {
-   ASSERT_STREQ(Path::fileName("C:\\foo\\bar\\file.txt").c_str(), "file.txt");
-   ASSERT_STREQ(Path::fileName("C:\\foo\\bar\\file.foo.txt").c_str(), "file.foo.txt");
-   ASSERT_STREQ(Path::fileName("C:\\foo\\bar").c_str(), "bar");
-   ASSERT_STREQ(Path::fileName("C:\\foo\\bar\\").c_str(), "");
-   ASSERT_STREQ(Path::fileName("C:\\Program Files\\App\\data.bin").c_str(), "data.bin");
-   ASSERT_STREQ(Path::fileName("\\\\server\\share\\file.txt").c_str(), "file.txt");
+   EXPECT_STREQ(Path::fileName("C:\\foo\\bar\\file.txt").c_str(), "file.txt");
+   EXPECT_STREQ(Path::fileName("C:\\foo\\bar\\file.foo.txt").c_str(), "file.foo.txt");
+   EXPECT_STREQ(Path::fileName("C:\\foo\\bar").c_str(), "bar");
+   EXPECT_STREQ(Path::fileName("C:\\foo\\bar\\").c_str(), "");
+   EXPECT_STREQ(Path::fileName("C:\\Program Files\\App\\data.bin").c_str(), "data.bin");
+   EXPECT_STREQ(Path::fileName("\\\\server\\share\\file.txt").c_str(), "file.txt");
 }
 
 TEST(TestWindowsPaths, dirNameWindows)
 {
-   ASSERT_STREQ(Path::dirName("C:\\foo\\bar\\file.txt").c_str(), "C:\\foo\\bar");
-   ASSERT_STREQ(Path::dirName("C:\\foo\\bar\\").c_str(), "C:\\foo\\bar");
-   ASSERT_STREQ(Path::dirName("C:\\foo\\bar").c_str(), "C:\\foo");
-   ASSERT_STREQ(Path::dirName("C:\\foo").c_str(), "C:\\");
-   ASSERT_STREQ(Path::dirName("C:\\").c_str(), "C:\\");
-   ASSERT_STREQ(Path::dirName("\\\\server\\share\\folder").c_str(), "\\\\server\\share");
+   EXPECT_STREQ(Path::dirName("C:\\foo\\bar\\file.txt").c_str(), "C:\\foo\\bar");
+   EXPECT_STREQ(Path::dirName("C:\\foo\\bar\\").c_str(), "C:\\foo\\bar");
+   EXPECT_STREQ(Path::dirName("C:\\foo\\bar").c_str(), "C:\\foo");
+   EXPECT_STREQ(Path::dirName("C:\\foo").c_str(), "C:\\");
+   EXPECT_STREQ(Path::dirName("C:\\").c_str(), "C:\\");
+   EXPECT_STREQ(Path::dirName("\\\\server\\share\\folder").c_str(), "\\\\server\\share");
 }
 
 TEST(TestWindowsPaths, suffixWindows)
 {
-   ASSERT_STREQ(Path::extension("C:\\foo\\bar\\file.txt").c_str(), "txt");
-   ASSERT_STREQ(Path::extension("C:\\foo\\bar\\file.foo.txt").c_str(), "foo.txt");
-   ASSERT_STREQ(Path::extension("C:\\foo\\bar\\archive.tar.gz").c_str(), "tar.gz");
-   ASSERT_STREQ(Path::extension("C:\\foo\\bar\\file").c_str(), "");
+   EXPECT_STREQ(Path::extension("C:\\foo\\bar\\file.txt").c_str(), "txt");
+   EXPECT_STREQ(Path::extension("C:\\foo\\bar\\file.foo.txt").c_str(), "foo.txt");
+   EXPECT_STREQ(Path::extension("C:\\foo\\bar\\archive.tar.gz").c_str(), "tar.gz");
+   EXPECT_STREQ(Path::extension("C:\\foo\\bar\\file").c_str(), "");
 }
 
 TEST(TestWindowsPaths, canonicalPathWindows)
 {
-   ASSERT_STREQ(Path::canonicalPath("C:\\foo\\..\\bar\\file.txt").c_str(), "C:\\bar\\file.txt");
-   ASSERT_STREQ(Path::canonicalPath("C:\\foo\\.\\bar\\..\\baz").c_str(), "C:\\foo\\baz");
-   ASSERT_STREQ(Path::canonicalPath("C:\\foo\\bar\\..\\..\\baz").c_str(), "C:\\baz");
-   ASSERT_STREQ(Path::canonicalPath("C:\\.\\foo\\.\\bar").c_str(), "C:\\foo\\bar");
+   EXPECT_STREQ(Path::canonicalPath("C:\\foo\\..\\bar\\file.txt").c_str(), "C:\\bar\\file.txt");
+   EXPECT_STREQ(Path::canonicalPath("C:\\foo\\.\\bar\\..\\baz").c_str(), "C:\\foo\\baz");
+   EXPECT_STREQ(Path::canonicalPath("C:\\foo\\bar\\..\\..\\baz").c_str(), "C:\\baz");
+   EXPECT_STREQ(Path::canonicalPath("C:\\.\\foo\\.\\bar").c_str(), "C:\\foo\\bar");
    // TODO
-   // ASSERT_STREQ(Path::canonicalPath("\\\\server\\share\\..\\other").c_str(), "\\\\server\\other");
+   // EXPECT_STREQ(Path::canonicalPath("\\\\server\\share\\..\\other").c_str(), "\\\\server\\other");
 }
 
 TEST(TestWindowsPaths, normalizeWindows)
 {
-   ASSERT_STREQ(Path::normalize("C:\\foo\\\\bar").c_str(), "C:\\foo\\bar");
-   ASSERT_STREQ(Path::normalize("C:\\foo\\.\\bar").c_str(), "C:\\foo\\bar");
-   ASSERT_STREQ(Path::normalize("C:\\foo\\bar\\..\\baz").c_str(), "C:\\foo\\baz");
-   ASSERT_STREQ(Path::normalize("\\\\server\\\\share").c_str(), "\\\\server\\share");
+   EXPECT_STREQ(Path::normalize("C:\\foo\\\\bar").c_str(), "C:\\foo\\bar");
+   EXPECT_STREQ(Path::normalize("C:\\foo\\.\\bar").c_str(), "C:\\foo\\bar");
+   EXPECT_STREQ(Path::normalize("C:\\foo\\bar\\..\\baz").c_str(), "C:\\foo\\baz");
+   EXPECT_STREQ(Path::normalize("\\\\server\\\\share").c_str(), "\\\\server\\share");
 }
 
 // -----------------------------------------------------------------------------
@@ -325,28 +325,28 @@ TEST(TestWindowsPaths, normalizeWindows)
 // -----------------------------------------------------------------------------
 TEST(TestMixedPaths, hasMixedSeparators)
 {
-   ASSERT_TRUE(Path::hasMixedSeparators("C:/foo\\bar/file.txt"));
-   ASSERT_TRUE(Path::hasMixedSeparators("/usr\\local/bin"));
-   ASSERT_FALSE(Path::hasMixedSeparators("C:\\foo\\bar\\file.txt"));
-   ASSERT_FALSE(Path::hasMixedSeparators("/usr/local/bin"));
+   EXPECT_TRUE(Path::hasMixedSeparators("C:/foo\\bar/file.txt"));
+   EXPECT_TRUE(Path::hasMixedSeparators("/usr\\local/bin"));
+   EXPECT_FALSE(Path::hasMixedSeparators("C:\\foo\\bar\\file.txt"));
+   EXPECT_FALSE(Path::hasMixedSeparators("/usr/local/bin"));
 }
 
 TEST(TestMixedPaths, fileNameMixed)
 {
-   ASSERT_STREQ(Path::fileName("C:/foo\\bar/file.txt").c_str(), "file.txt");
-   ASSERT_STREQ(Path::fileName("/usr\\local/bin\\app").c_str(), "app");
+   EXPECT_STREQ(Path::fileName("C:/foo\\bar/file.txt").c_str(), "file.txt");
+   EXPECT_STREQ(Path::fileName("/usr\\local/bin\\app").c_str(), "app");
 }
 
 TEST(TestMixedPaths, dirNameMixed)
 {
-   ASSERT_STREQ(Path::dirName("C:/foo\\bar/file.txt").c_str(), "C:/foo\\bar");
-   ASSERT_STREQ(Path::dirName("/usr\\local/bin\\app").c_str(), "/usr\\local/bin");
+   EXPECT_STREQ(Path::dirName("C:/foo\\bar/file.txt").c_str(), "C:/foo\\bar");
+   EXPECT_STREQ(Path::dirName("/usr\\local/bin\\app").c_str(), "/usr\\local/bin");
 }
 
 TEST(TestMixedPaths, normalizeMixed)
 {
-   ASSERT_STREQ(Path::normalize("C:/foo\\bar//\\file.txt").c_str(), "C:\\foo\\bar\\file.txt");
-   ASSERT_STREQ(Path::normalize("/usr\\local/./bin\\\\app").c_str(), "/usr/local/bin/app");
+   EXPECT_STREQ(Path::normalize("C:/foo\\bar//\\file.txt").c_str(), "C:\\foo\\bar\\file.txt");
+   EXPECT_STREQ(Path::normalize("/usr\\local/./bin\\\\app").c_str(), "/usr/local/bin/app");
 }
 
 // -----------------------------------------------------------------------------
@@ -354,34 +354,34 @@ TEST(TestMixedPaths, normalizeMixed)
 // -----------------------------------------------------------------------------
 TEST(TestPathConversion, toUnixSeparators)
 {
-   ASSERT_STREQ(Path::toUnixSeparators("C:\\foo\\bar\\file.txt").c_str(), "C:/foo/bar/file.txt");
-   ASSERT_STREQ(Path::toUnixSeparators("/usr/local/bin").c_str(), "/usr/local/bin");
-   ASSERT_STREQ(Path::toUnixSeparators("C:/foo\\bar/file.txt").c_str(), "C:/foo/bar/file.txt");
+   EXPECT_STREQ(Path::toUnixSeparators("C:\\foo\\bar\\file.txt").c_str(), "C:/foo/bar/file.txt");
+   EXPECT_STREQ(Path::toUnixSeparators("/usr/local/bin").c_str(), "/usr/local/bin");
+   EXPECT_STREQ(Path::toUnixSeparators("C:/foo\\bar/file.txt").c_str(), "C:/foo/bar/file.txt");
 }
 
 TEST(TestPathConversion, toWindowsSeparators)
 {
-   ASSERT_STREQ(Path::toWindowsSeparators("C:/foo/bar/file.txt").c_str(), "C:\\foo\\bar\\file.txt");
-   ASSERT_STREQ(Path::toWindowsSeparators("/usr/local/bin").c_str(), "\\usr\\local\\bin");
-   ASSERT_STREQ(Path::toWindowsSeparators("C:/foo\\bar/file.txt").c_str(), "C:\\foo\\bar\\file.txt");
+   EXPECT_STREQ(Path::toWindowsSeparators("C:/foo/bar/file.txt").c_str(), "C:\\foo\\bar\\file.txt");
+   EXPECT_STREQ(Path::toWindowsSeparators("/usr/local/bin").c_str(), "\\usr\\local\\bin");
+   EXPECT_STREQ(Path::toWindowsSeparators("C:/foo\\bar/file.txt").c_str(), "C:\\foo\\bar\\file.txt");
 }
 
 TEST(TestPathConversion, toNativeSeparators)
 {
 #if defined(_WIN32)
-   ASSERT_STREQ(Path::toNativeSeparators("C:/foo/bar/file.txt").c_str(), "C:\\foo\\bar\\file.txt");
-   ASSERT_STREQ(Path::toNativeSeparators("/usr/local/bin").c_str(), "\\usr\\local\\bin");
+   EXPECT_STREQ(Path::toNativeSeparators("C:/foo/bar/file.txt").c_str(), "C:\\foo\\bar\\file.txt");
+   EXPECT_STREQ(Path::toNativeSeparators("/usr/local/bin").c_str(), "\\usr\\local\\bin");
 #else
-   ASSERT_STREQ(Path::toNativeSeparators("C:\\foo\\bar\\file.txt").c_str(), "C:/foo/bar/file.txt");
-   ASSERT_STREQ(Path::toNativeSeparators("/usr/local/bin").c_str(), "/usr/local/bin");
+   EXPECT_STREQ(Path::toNativeSeparators("C:\\foo\\bar\\file.txt").c_str(), "C:/foo/bar/file.txt");
+   EXPECT_STREQ(Path::toNativeSeparators("/usr/local/bin").c_str(), "/usr/local/bin");
 #endif
 }
 
 TEST(TestPathConversion, toZipArchiveSeparators)
 {
-   ASSERT_STREQ(Path::toZipArchiveSeparators("C:\\foo\\bar\\file.txt").c_str(), "C:/foo/bar/file.txt");
-   ASSERT_STREQ(Path::toZipArchiveSeparators("/usr/local/bin").c_str(), "/usr/local/bin");
-   ASSERT_STREQ(Path::toZipArchiveSeparators("C:/foo\\bar/file.txt").c_str(), "C:/foo/bar/file.txt");
+   EXPECT_STREQ(Path::toZipArchiveSeparators("C:\\foo\\bar\\file.txt").c_str(), "C:/foo/bar/file.txt");
+   EXPECT_STREQ(Path::toZipArchiveSeparators("/usr/local/bin").c_str(), "/usr/local/bin");
+   EXPECT_STREQ(Path::toZipArchiveSeparators("C:/foo\\bar/file.txt").c_str(), "C:/foo/bar/file.txt");
 }
 
 // -----------------------------------------------------------------------------
@@ -389,16 +389,16 @@ TEST(TestPathConversion, toZipArchiveSeparators)
 // -----------------------------------------------------------------------------
 TEST(TestRoot, rootFunctions)
 {
-   ASSERT_TRUE(Path::isRoot("C:\\"));
-   ASSERT_TRUE(Path::isRoot("D:\\"));
-   ASSERT_TRUE(Path::isRoot("/"));
-   ASSERT_FALSE(Path::isRoot("C:\\Windows"));
-   ASSERT_STREQ(Path::root("C:\\Windows\\System32").c_str(), "C:\\");
-   ASSERT_STREQ(Path::root("D:\\Program Files").c_str(), "D:\\");
-   ASSERT_TRUE(Path::isRoot("/"));
-   ASSERT_FALSE(Path::isRoot("/usr"));
-   ASSERT_STREQ(Path::root("/usr/local/bin").c_str(), "/");
-   ASSERT_FALSE(Path::isRoot("relative/path"));
+   EXPECT_TRUE(Path::isRoot("C:\\"));
+   EXPECT_TRUE(Path::isRoot("D:\\"));
+   EXPECT_TRUE(Path::isRoot("/"));
+   EXPECT_FALSE(Path::isRoot("C:\\Windows"));
+   EXPECT_STREQ(Path::root("C:\\Windows\\System32").c_str(), "C:\\");
+   EXPECT_STREQ(Path::root("D:\\Program Files").c_str(), "D:\\");
+   EXPECT_TRUE(Path::isRoot("/"));
+   EXPECT_FALSE(Path::isRoot("/usr"));
+   EXPECT_STREQ(Path::root("/usr/local/bin").c_str(), "/");
+   EXPECT_FALSE(Path::isRoot("relative/path"));
 }
 
 // -----------------------------------------------------------------------------
@@ -406,35 +406,35 @@ TEST(TestRoot, rootFunctions)
 // -----------------------------------------------------------------------------
 TEST(TestRelativeAbsolute, isRelativePath)
 {
-   ASSERT_TRUE(Path::isRelativePath("relative/path"));
-   ASSERT_TRUE(Path::isRelativePath("./foo/bar"));
-   ASSERT_TRUE(Path::isRelativePath("../foo/bar"));
-   ASSERT_FALSE(Path::isRelativePath("/usr/local/bin"));
-   ASSERT_FALSE(Path::isRelativePath("C:\\Windows"));
-   ASSERT_FALSE(Path::isRelativePath("C:/Program Files"));
+   EXPECT_TRUE(Path::isRelativePath("relative/path"));
+   EXPECT_TRUE(Path::isRelativePath("./foo/bar"));
+   EXPECT_TRUE(Path::isRelativePath("../foo/bar"));
+   EXPECT_FALSE(Path::isRelativePath("/usr/local/bin"));
+   EXPECT_FALSE(Path::isRelativePath("C:\\Windows"));
+   EXPECT_FALSE(Path::isRelativePath("C:/Program Files"));
 }
 
 #if 0
 TEST(TestRelativeAbsolute, makePathRelative)
 {
    std::string path = "/usr/local/bin";
-   ASSERT_TRUE(Path::makePathRelative(path, "/usr"));
-   ASSERT_STREQ(path.c_str(), "local/bin");
+   EXPECT_TRUE(Path::makePathRelative(path, "/usr"));
+   EXPECT_STREQ(path.c_str(), "local/bin");
 
    path = "C:\\Windows\\System32";
-   ASSERT_TRUE(Path::makePathRelative(path, "C:\\Windows"));
-   ASSERT_STREQ(path.c_str(), "System32");
+   EXPECT_TRUE(Path::makePathRelative(path, "C:\\Windows"));
+   EXPECT_STREQ(path.c_str(), "System32");
 }
 
 TEST(TestRelativeAbsolute, makePathAbsolute)
 {
    std::string path = "local/bin";
-   ASSERT_TRUE(Path::makePathAbsolute(path, "/usr"));
-   ASSERT_STREQ(path.c_str(), "/usr/local/bin");
+   EXPECT_TRUE(Path::makePathAbsolute(path, "/usr"));
+   EXPECT_STREQ(path.c_str(), "/usr/local/bin");
 
    path = "System32";
-   ASSERT_TRUE(Path::makePathAbsolute(path, "C:\\Windows"));
-   ASSERT_STREQ(path.c_str(), "C:\\Windows\\System32");
+   EXPECT_TRUE(Path::makePathAbsolute(path, "C:\\Windows"));
+   EXPECT_STREQ(path.c_str(), "C:\\Windows\\System32");
 }
 #endif
 
@@ -444,20 +444,20 @@ TEST(TestRelativeAbsolute, makePathAbsolute)
 TEST(TestDir, folderNameWithSeparator)
 {
     // Tests on Linux (or with Unix separators)
-    ASSERT_STREQ(Path::folderNameWithSeparator("/usr/local").c_str(), "/usr/local/");
-    ASSERT_STREQ(Path::folderNameWithSeparator("/usr/local/").c_str(), "/usr/local/");
-    ASSERT_STREQ(Path::folderNameWithSeparator("/tmp").c_str(), "/tmp/");
-    ASSERT_STREQ(Path::folderNameWithSeparator("relative/path").c_str(), "relative/path/");
-    ASSERT_STREQ(Path::folderNameWithSeparator("./foo").c_str(), "./foo/");
-    ASSERT_STREQ(Path::folderNameWithSeparator("").c_str(), "/");
+    EXPECT_STREQ(Path::folderNameWithSeparator("/usr/local").c_str(), "/usr/local/");
+    EXPECT_STREQ(Path::folderNameWithSeparator("/usr/local/").c_str(), "/usr/local/");
+    EXPECT_STREQ(Path::folderNameWithSeparator("/tmp").c_str(), "/tmp/");
+    EXPECT_STREQ(Path::folderNameWithSeparator("relative/path").c_str(), "relative/path/");
+    EXPECT_STREQ(Path::folderNameWithSeparator("./foo").c_str(), "./foo/");
+    EXPECT_STREQ(Path::folderNameWithSeparator("").c_str(), "/");
 
     // Tests with Windows paths
-    ASSERT_STREQ(Path::folderNameWithSeparator("C:\\Windows").c_str(), "C:\\Windows/");
-    ASSERT_STREQ(Path::folderNameWithSeparator("C:\\Windows\\").c_str(), "C:\\Windows/");
-    ASSERT_STREQ(Path::folderNameWithSeparator("C:/Windows").c_str(), "C:/Windows/");
-    ASSERT_STREQ(Path::folderNameWithSeparator("C:/Windows/").c_str(), "C:/Windows/");
+    EXPECT_STREQ(Path::folderNameWithSeparator("C:\\Windows").c_str(), "C:\\Windows/");
+    EXPECT_STREQ(Path::folderNameWithSeparator("C:\\Windows\\").c_str(), "C:\\Windows/");
+    EXPECT_STREQ(Path::folderNameWithSeparator("C:/Windows").c_str(), "C:/Windows/");
+    EXPECT_STREQ(Path::folderNameWithSeparator("C:/Windows/").c_str(), "C:/Windows/");
 
     // Tests with mixed paths
-    ASSERT_STREQ(Path::folderNameWithSeparator("C:/Program Files\\App").c_str(), "C:/Program Files\\App/");
-    ASSERT_STREQ(Path::folderNameWithSeparator("/usr\\local/bin").c_str(), "/usr\\local/bin/");
+    EXPECT_STREQ(Path::folderNameWithSeparator("C:/Program Files\\App").c_str(), "C:/Program Files\\App/");
+    EXPECT_STREQ(Path::folderNameWithSeparator("/usr\\local/bin").c_str(), "/usr\\local/bin/");
 }
