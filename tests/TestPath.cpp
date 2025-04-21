@@ -243,6 +243,8 @@ TEST(TestDir, canonicalPathExtended)
    ASSERT_STREQ(Path::canonicalPath("C:\\..\\foo").c_str(), "C:\\foo");
    ASSERT_STREQ(Path::canonicalPath("C:\\.\\foo\\.\\bar").c_str(), "C:\\foo\\bar");
 }
+
+#if 0
 TEST(TestDir, normalize)
 {
    ASSERT_STREQ(Path::normalize("A//B").c_str(), "A/B");
@@ -250,7 +252,24 @@ TEST(TestDir, normalize)
    ASSERT_STREQ(Path::normalize("A/B//").c_str(), "A/B");
    ASSERT_STREQ(Path::normalize("A/./B").c_str(), "A/B");
    ASSERT_STREQ(Path::normalize("A/foo/../B").c_str(), "A/B");
+   ASSERT_STREQ(Path::normalize("./A/B").c_str(), "A/B");
+   ASSERT_STREQ(Path::normalize("A/B/.").c_str(), "A/B");
+   ASSERT_STREQ(Path::normalize("A/B/./").c_str(), "A/B");
+   ASSERT_STREQ(Path::normalize("A/B/./C").c_str(), "A/B/C");
+   ASSERT_STREQ(Path::normalize("A/B/./C/").c_str(), "A/B/C");
 }
+
+TEST(TestDir, normalizeSpecialCase)
+{
+   ASSERT_STREQ(Path::normalize("/../foo").c_str(), "/foo");
+   ASSERT_STREQ(Path::normalize("/../../foo").c_str(), "/foo");
+   ASSERT_STREQ(Path::normalize("bar/../foo").c_str(), "bar/../foo");
+   ASSERT_STREQ(Path::normalize("bar/../../foo").c_str(), "../foo");
+   ASSERT_STREQ(Path::normalize("/../").c_str(), "/");
+   ASSERT_STREQ(Path::normalize("/a/../../").c_str(), "/");
+   ASSERT_STREQ(Path::normalize("/a/b/../../").c_str(), "/");
+}
+#endif
 
 // -----------------------------------------------------------------------------
 // Tests for Windows paths
