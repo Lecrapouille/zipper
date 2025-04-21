@@ -168,32 +168,25 @@ TEST(FileZipTests, ZipperNominalOpenings)
 // -----------------------------------------------------------------------------
 TEST(FileZipTests, ZipperPathologicalOpenings)
 {
+    std::string folder;
 #if ! defined(_WIN32)
     // Opening a folder
-    ASSERT_EQ(Path::exist("/usr/bin"), true);
-    ASSERT_EQ(Path::isDir("/usr/bin"), true);
-    try
-    {
-        Zipper zipper("/usr/bin");
-    }
-    catch (std::runtime_error const& e)
-    {
-        ASSERT_STREQ(e.what(), "Is a directory");
-    }
+    folder = "/usr/bin";
 #else
-    // Opening a folder
-    ASSERT_EQ(Path::exist("C:\\Windows"), true);
-    ASSERT_EQ(Path::isDir("C:\\Windows"), true);
+    folder = "C:\\Windows";
+#endif
+    ASSERT_EQ(Path::exist(folder), true);
+    ASSERT_EQ(Path::isDir(folder), true);
     try
     {
-        Zipper zipper("C:\\Windows");
+        Zipper zipper(folder);
     }
     catch (std::runtime_error const& e)
     {
         ASSERT_STREQ(e.what(), "Is a directory");
     }
-#endif
 
+#if ! defined(_WIN32)
     // Permission denied
     ASSERT_EQ(Path::exist("/usr/bin/ziptest.zip"), false);
     try
@@ -202,7 +195,7 @@ TEST(FileZipTests, ZipperPathologicalOpenings)
     }
     catch (std::runtime_error const& e)
     {
-#if defined(__APPLE__)
+#  if defined(__APPLE__)
         std::string s1 = "Read-only file system";
         std::string s2 = "Operation not permitted";
         std::string str = e.what();
@@ -210,10 +203,11 @@ TEST(FileZipTests, ZipperPathologicalOpenings)
         {
             return str == s1 || str == s2;
         }, str, s1, s2);
-#else
+#  else
         ASSERT_STREQ(e.what(), "Permission denied");
-#endif
+#  endif
     }
+#endif
 }
 
 // -----------------------------------------------------------------------------
@@ -918,9 +912,16 @@ TEST(ZipTests, Issue33_unzipping)
         ASSERT_EQ(unzipper.entries().size(), 1u);
         ASSERT_STREQ(unzipper.entries()[0].name.c_str(), "../Test1");
         ASSERT_EQ(unzipper.extractEntry("../Test1"), false);
+#if defined(_WIN32)
+        ASSERT_STREQ(unzipper.error().message().c_str(),
+                     "Security error: entry '..\\Test1' would be outside your "
+                     "target directory");
+#else
         ASSERT_STREQ(unzipper.error().message().c_str(),
                      "Security error: entry '../Test1' would be outside your "
                      "target directory");
+#endif
+
         unzipper.close();
         ASSERT_EQ(Path::exist("../Test1"), false);
     }
@@ -1093,14 +1094,16 @@ TEST(FileZipTests, ExtractFileWithNameOfDir)
     // Check cannot extract the file because the folder with the same name exists
     zipper::Unzipper unzipper("ziptest.zip");
     ASSERT_EQ(unzipper.extractAll(Path::getTempDirectory() + "foo", false), false);
-    std::string error = "Security Error: '" + Path::getTempDirectory() +
-        "foo/test1.txt' already exists and would have been replaced!";
+    std::string error = "Security Error: '" +
+        Path::toNativeSeparators(Path::getTempDirectory() + "foo/test1.txt") +
+        "' already exists and would have been replaced!";
     ASSERT_STREQ(unzipper.error().message().c_str(), error.c_str());
 
     // Check cannot extract the file because the folder with the same name exists
     ASSERT_EQ(unzipper.extractAll(Path::getTempDirectory() + "foo", true), false);
-    error = "Failed creating '" + Path::getTempDirectory() +
-        "foo/test1.txt' file because Is a directory";
+    error = "Failed creating '" +
+        Path::toNativeSeparators(Path::getTempDirectory() + "foo/test1.txt") +
+        "' file because Is a directory";
     ASSERT_STREQ(unzipper.error().message().c_str(), error.c_str());
 
     Path::remove(Path::getTempDirectory() + "foo/test1.txt");
@@ -1129,13 +1132,12 @@ TEST(MemoryZipTests, Issue5)
 
         // Check cannot be extracted, by security: files already exist
         ASSERT_EQ(unzipper.extractAll(Path::getTempDirectory()), false);
-        std::string error = "Security Error: '" + Path::getTempDirectory() +
-            "manifest.xml' already exists and would have been replaced!";
+        std::string error = "Security Error: '" +
+            Path::toNativeSeparators(Path::getTempDirectory() + "manifest.xml") +
+            "' already exists and would have been replaced!";
         ASSERT_STREQ(unzipper.error().message().c_str(), error.c_str());
 
         // Check cannot be extracted, by security: files already exist
-        error = "Security Error: '" + Path::getTempDirectory() +
-            "manifest.xml' already exists and would have been replaced!";
         ASSERT_EQ(unzipper.extractAll(Path::getTempDirectory(), false), false);
         ASSERT_STREQ(unzipper.error().message().c_str(), error.c_str());
 

@@ -126,7 +126,7 @@ private:
         if (!res)
         {
             std::stringstream str;
-            str << "Invalid info entry '" << name << "'";
+            str << "Invalid info entry '" << Path::toNativeSeparators(name) << "'";
             m_error_code = make_error_code(unzipper_error::NO_ENTRY, str.str());
             return false;
         }
@@ -139,7 +139,7 @@ private:
         if (!entryinfo.valid())
         {
             std::stringstream str;
-            str << "Invalid info entry '" << entryinfo.name << "'";
+            str << "Invalid info entry '" << Path::toNativeSeparators(entryinfo.name) << "'";
             m_error_code = make_error_code(
                 unzipper_error::NO_ENTRY, str.str());
             return false;
@@ -157,7 +157,7 @@ private:
         if (UNZ_OK != err)
         {
             std::stringstream str;
-            str << "Invalid info entry '" << entry.name << "'";
+            str << "Invalid info entry '" << Path::toNativeSeparators(entry.name) << "'";
             m_error_code = make_error_code(unzipper_error::NO_ENTRY, str.str());
             return false;
         }
@@ -171,7 +171,7 @@ private:
         if (UNZ_OK != err)
         {
             std::stringstream str;
-            str << "Invalid info entry '" << entry.name << "'";
+            str << "Invalid info entry '" << Path::toNativeSeparators(entry.name) << "'";
             m_error_code = make_error_code(unzipper_error::NO_ENTRY, str.str());
             return false;
         }
@@ -255,7 +255,7 @@ public:
             if (!Path::createDir(fileName))
             {
                 std::stringstream str;
-                str << "Error cannot create the folder '" << fileName << "'";
+                str << "Error cannot create the folder '" << Path::toNativeSeparators(fileName) << "'";
                 m_error_code = make_error_code(
                     unzipper_error::INTERNAL_ERROR, str.str());
                 err = UNZ_ERRNO;
@@ -385,7 +385,7 @@ public:
             {
                 // Prevent Zip Slip attack (See ticket #33)
                 std::stringstream str;
-                str << "Security error: entry '" << filename
+                str << "Security error: entry '" << Path::toNativeSeparators(filename)
                     << "' would be outside your target directory";
 
                 m_error_code = make_error_code(unzipper_error::SECURITY_ERROR,
@@ -396,7 +396,7 @@ public:
             {
                 std::stringstream str;
                 str << "Error: cannot create the folder '"
-                    << folder << "'";
+                    << Path::toNativeSeparators(folder) << "'";
 
                 m_error_code = make_error_code(unzipper_error::INTERNAL_ERROR,
                                                str.str());
@@ -408,7 +408,7 @@ public:
         if (!replace && Path::exist(filename))
         {
             std::stringstream str;
-            str << "Security Error: '" << filename
+            str << "Security Error: '" << Path::toNativeSeparators(filename)
                 << "' already exists and would have been replaced!";
 
             m_error_code = make_error_code(unzipper_error::SECURITY_ERROR,
@@ -421,7 +421,7 @@ public:
         if (!canon.empty() && canon.find("..") != std::string::npos)
         {
             std::stringstream str;
-            str << "Security error: entry '" << filename
+            str << "Security error: entry '" << Path::toNativeSeparators(filename)
                 << "' would be outside your target directory";
 
             m_error_code = make_error_code(unzipper_error::SECURITY_ERROR,
@@ -449,7 +449,7 @@ public:
             // Possible error is a directory already exists. The errno message
             // is not very explicit.
             std::stringstream str;
-            str << "Failed creating '" << filename
+            str << "Failed creating '" << Path::toNativeSeparators(filename)
                 << "' file because " << strerror(errno);
 
             m_error_code = make_error_code(
