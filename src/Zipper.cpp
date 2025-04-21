@@ -336,6 +336,7 @@ struct Zipper::Impl
         uint32_t crcFile = 0;
 
         zip_fileinfo zi;
+        memset(&zi, 0, sizeof(zi)); // Zero out the structure first
         zi.dos_date = 0; // if dos_date == 0, tmz_date is used
         zi.internal_fa = 0; // internal file attributes
         zi.external_fa = 0; // external file attributes
