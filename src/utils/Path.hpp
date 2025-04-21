@@ -244,6 +244,11 @@ public:
     //! \biref Check if the file name ends with a backslash or slash char
     static bool hasTrailingSlash(const std::string& path);
 
+    //! \brief Get the size of a file in bytes.
+    //! \param[in] path Path to the file.
+    //! \return size_t File size in bytes, or 0 if the file does not exist or is not a file.
+    static size_t getFileSize(const std::string& path);
+
 private:
 
 #if 0

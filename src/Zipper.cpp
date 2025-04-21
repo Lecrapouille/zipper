@@ -692,4 +692,10 @@ std::error_code const& Zipper::error() const
     return m_error_code;
 }
 
+// -----------------------------------------------------------------------------
+bool Zipper::isOpen() const
+{
+    return m_open;
+}
+
 } // namespace zipper

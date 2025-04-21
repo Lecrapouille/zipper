@@ -119,9 +119,17 @@ TEST(TestDir, extension)
 TEST(TestDir, createDir)
 {
    std::string const c_fooBar(Path::getTempDirectory() + "/foo/bar");
+   std::string const c_barFoo(Path::getTempDirectory() + "/bar/foo");
 
    EXPECT_EQ(Path::exist(Path::getTempDirectory()), true);
    std::remove(c_fooBar.c_str());
+   std::remove(c_barFoo.c_str());
+
+   EXPECT_EQ(Path::createDir("bar/foo/", Path::getTempDirectory()), true);
+   EXPECT_EQ(Path::exist(c_barFoo), true);
+   EXPECT_EQ(Path::isDir(c_barFoo), true);
+   EXPECT_EQ(Path::isWritable(c_barFoo), true);
+   EXPECT_EQ(Path::isReadable(c_barFoo), true);
 
    EXPECT_EQ(Path::createDir("foo/bar", Path::getTempDirectory()), true);
    EXPECT_EQ(Path::exist(c_fooBar), true);

@@ -1273,3 +1273,113 @@ TEST(ZipTests, UnzipperClosed)
 
     Path::remove("ziptest.zip");
 }
+
+// -----------------------------------------------------------------------------
+/**
+ * @brief Test adding a large file with a password to trigger chunked CRC calculation.
+ */
+TEST(ZipTests, LargeFileWithPassword)
+{
+    const std::string zipFilename = "ziptest_large.zip";
+    const std::string largeFilename = "large_test_file.dat";
+    const std::string password = "verysecretpassword";
+    const size_t fileSize = 110 * 1024 * 1024; // 110 MB to trigger chunked reading in getFileCrc
+
+    // Clean up potential leftovers
+    Path::remove(zipFilename);
+    Path::remove(largeFilename);
+
+    // Create a large file
+    {
+        std::ofstream ofs(largeFilename, std::ios::binary | std::ios::out);
+        ASSERT_TRUE(ofs.is_open());
+        // Fill with some data, 'A' for simplicity
+        std::vector<char> buffer(1024 * 1024, 'A'); // 1MB buffer
+        size_t bytesWritten = 0;
+        while (bytesWritten < fileSize)
+        {
+            size_t toWrite = std::min(buffer.size(), fileSize - bytesWritten);
+            ofs.write(buffer.data(), std::streamsize(toWrite));
+            ASSERT_TRUE(ofs.good());
+            bytesWritten += toWrite;
+        }
+        ofs.flush();
+        ASSERT_TRUE(ofs.good());
+        ofs.close();
+    }
+    ASSERT_TRUE(Path::exist(largeFilename));
+    // Check file size using Path::getFileSize
+    ASSERT_EQ(Path::getFileSize(largeFilename), fileSize);
+
+
+    // Create zipper with password and add the large file
+    {
+        Zipper zipper(zipFilename, password);
+        ASSERT_TRUE(zipper.isOpen()); // Use the new method
+        std::ifstream ifs(largeFilename, std::ios::binary);
+        ASSERT_TRUE(ifs.is_open());
+        ASSERT_TRUE(zipper.add(ifs, largeFilename));
+        ifs.close();
+        zipper.close();
+        ASSERT_FALSE(zipper.isOpen()); // Use the new method
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+    }
+
+    // Verify the zip file
+    ASSERT_TRUE(Path::exist(zipFilename));
+    {
+        zipper::Unzipper unzipper(zipFilename, password);
+        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+        std::vector<zipper::ZipEntry> entries = unzipper.entries();
+        ASSERT_EQ(entries.size(), 1u);
+        ASSERT_STREQ(entries[0].name.c_str(), largeFilename.c_str());
+        ASSERT_EQ(entries[0].uncompressedSize, fileSize); // Check original size
+        // We could extract and verify content, but for coverage, checking existence is enough
+        unzipper.close();
+    }
+
+    // Clean up
+    Path::remove(zipFilename);
+    Path::remove(largeFilename);
+}
+
+// -----------------------------------------------------------------------------
+/**
+ * @brief Test extracting a single entry to an std::ostream.
+ */
+TEST(UnzipTests, ExtractEntryToStream)
+{
+    const std::string entryName = "stream_entry.txt";
+    const std::string entryContent = "hello stream test";
+    std::stringstream zipDataStream; // To hold the zip data in memory
+
+    // 1. Create zip in memory
+    {
+        zipper::Zipper zipper(zipDataStream);
+        std::stringstream contentStream(entryContent);
+        ASSERT_TRUE(zipper.add(contentStream, entryName));
+        zipper.close();
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+    }
+
+    // Ensure zipDataStream has content and reset position
+    zipDataStream.seekg(0, std::ios::end);
+    ASSERT_GT(zipDataStream.tellg(), 0);
+    zipDataStream.seekg(0, std::ios::beg);
+
+    // 2. Create Unzipper from the stream
+    zipper::Unzipper unzipper(zipDataStream);
+    ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+
+    // 3. Create output stream
+    std::stringstream outputStream;
+
+    // 4. Extract the entry to the output stream
+    ASSERT_TRUE(unzipper.extractEntryToStream(entryName, outputStream));
+    ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+
+    // 5. Verify the extracted content
+    ASSERT_STREQ(outputStream.str().c_str(), entryContent.c_str());
+
+    unzipper.close();
+}

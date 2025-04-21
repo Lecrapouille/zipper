@@ -1109,3 +1109,16 @@ std::string Path::toNativeSeparators(const std::string& path)
     return toUnixSeparators(path);
 #endif
 }
+
+// -----------------------------------------------------------------------------
+size_t Path::getFileSize(const std::string& path)
+{
+    std::ifstream file(path, std::ios::binary | std::ios::ate);
+    if (!file.is_open())
+    {
+        return 0; // Return 0 if file doesn't exist or cannot be opened
+    }
+    std::streampos size = file.tellg();
+    file.close();
+    return (size >= 0) ? static_cast<size_t>(size) : 0;
+}

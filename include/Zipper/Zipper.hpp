@@ -183,6 +183,12 @@ public:
     bool open(Zipper::openFlags flags = Zipper::openFlags::Append);
 
     // -------------------------------------------------------------------------
+    //! \brief Check if the zipper is currently open.
+    //! \return True if the zipper is open, false otherwise.
+    // -------------------------------------------------------------------------
+    bool isOpen() const;
+
+    // -------------------------------------------------------------------------
     //! \brief Get the error information when a method returned false.
     //! \return Reference to the error code.
     // -------------------------------------------------------------------------
