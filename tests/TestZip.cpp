@@ -961,40 +961,43 @@ TEST(ZipTests, Issue34)
     ASSERT_STREQ(unzipper.entries()[11].name.c_str(), "issue34/11/foo/bar/");
     ASSERT_STREQ(unzipper.entries()[12].name.c_str(), "issue34/11/foo/bar/here.txt");
 
-    Path::remove("/tmp/issue34");
-    ASSERT_EQ(unzipper.extractAll("/tmp"), true);
+    Path::remove(Path::getTempDirectory() + "issue34");
+    ASSERT_EQ(unzipper.extractAll(Path::getTempDirectory()), true);
 
-    ASSERT_EQ(Path::exist("/tmp/issue34/"), true);
-    ASSERT_EQ(Path::exist("/tmp/issue34/1/"), true);
-    ASSERT_EQ(Path::exist("/tmp/issue34/1/.dummy"), true);
-    ASSERT_EQ(Path::exist("/tmp/issue34/1/2/"), true);
-    ASSERT_EQ(Path::exist("/tmp/issue34/1/2/3/"), true);
-    ASSERT_EQ(Path::exist("/tmp/issue34/1/2/3/4/"), true);
-    ASSERT_EQ(Path::exist("/tmp/issue34/1/2/3_1/"), true);
-    ASSERT_EQ(Path::exist("/tmp/issue34/1/2/3_1/3.1.txt"), true);
-    ASSERT_EQ(Path::exist("/tmp/issue34/1/2/foobar.txt"), true);
-    ASSERT_EQ(Path::exist("/tmp/issue34/11/"), true);
-    ASSERT_EQ(Path::exist("/tmp/issue34/11/foo/"), true);
-    ASSERT_EQ(Path::exist("/tmp/issue34/11/foo/bar/"), true);
-    ASSERT_EQ(Path::exist("/tmp/issue34/11/foo/bar/here.txt"), true);
+    ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue34/"), true);
+    ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue34/1/"), true);
+    ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue34/1/.dummy"), true);
+    ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue34/1/2/"), true);
+    ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue34/1/2/3/"), true);
+    ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue34/1/2/3/4/"), true);
+    ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue34/1/2/3_1/"), true);
+    ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue34/1/2/3_1/3.1.txt"), true);
+    ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue34/1/2/foobar.txt"), true);
+    ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue34/11/"), true);
+    ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue34/11/foo/"), true);
+    ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue34/11/foo/bar/"), true);
+    ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue34/11/foo/bar/here.txt"), true);
 
-    ASSERT_EQ(Path::isDir("/tmp/issue34/"), true);
-    ASSERT_EQ(Path::isDir("/tmp/issue34/1/"), true);
-    ASSERT_EQ(Path::isFile("/tmp/issue34/1/.dummy"), true);
-    ASSERT_EQ(Path::isDir("/tmp/issue34/1/2/"), true);
-    ASSERT_EQ(Path::isDir("/tmp/issue34/1/2/3/"), true);
-    ASSERT_EQ(Path::isDir("/tmp/issue34/1/2/3/4/"), true);
-    ASSERT_EQ(Path::isDir("/tmp/issue34/1/2/3_1/"), true);
-    ASSERT_EQ(Path::isFile("/tmp/issue34/1/2/3_1/3.1.txt"), true);
-    ASSERT_EQ(Path::isFile("/tmp/issue34/1/2/foobar.txt"), true);
-    ASSERT_EQ(Path::isDir("/tmp/issue34/11/"), true);
-    ASSERT_EQ(Path::isDir("/tmp/issue34/11/foo/"), true);
-    ASSERT_EQ(Path::isDir("/tmp/issue34/11/foo/bar/"), true);
-    ASSERT_EQ(Path::isFile("/tmp/issue34/11/foo/bar/here.txt"), true);
+    ASSERT_EQ(Path::isDir(Path::getTempDirectory() + "issue34/"), true);
+    ASSERT_EQ(Path::isDir(Path::getTempDirectory() + "issue34/1/"), true);
+    ASSERT_EQ(Path::isFile(Path::getTempDirectory() + "issue34/1/.dummy"), true);
+    ASSERT_EQ(Path::isDir(Path::getTempDirectory() + "issue34/1/2/"), true);
+    ASSERT_EQ(Path::isDir(Path::getTempDirectory() + "issue34/1/2/3/"), true);
+    ASSERT_EQ(Path::isDir(Path::getTempDirectory() + "issue34/1/2/3/4/"), true);
+    ASSERT_EQ(Path::isDir(Path::getTempDirectory() + "issue34/1/2/3_1/"), true);
+    ASSERT_EQ(Path::isFile(Path::getTempDirectory() + "issue34/1/2/3_1/3.1.txt"), true);
+    ASSERT_EQ(Path::isFile(Path::getTempDirectory() + "issue34/1/2/foobar.txt"), true);
+    ASSERT_EQ(Path::isDir(Path::getTempDirectory() + "issue34/11/"), true);
+    ASSERT_EQ(Path::isDir(Path::getTempDirectory() + "issue34/11/foo/"), true);
+    ASSERT_EQ(Path::isDir(Path::getTempDirectory() + "issue34/11/foo/bar/"), true);
+    ASSERT_EQ(Path::isFile(Path::getTempDirectory() + "issue34/11/foo/bar/here.txt"), true);
 
-    ASSERT_STREQ(readFileContent("/tmp/issue34/1/2/3_1/3.1.txt").c_str(), "3.1\n");
-    ASSERT_STREQ(readFileContent("/tmp/issue34/1/2/foobar.txt").c_str(), "foobar.txt\n");
-    ASSERT_STREQ(readFileContent("/tmp/issue34/11/foo/bar/here.txt").c_str(), "");
+    std::string f1 = Path::getTempDirectory() + "issue34/1/2/3_1/3.1.txt";
+    ASSERT_STREQ(readFileContent(f1.c_str()).c_str(), "3.1\n");
+    std::string f2 = Path::getTempDirectory() + "issue34/1/2/foobar.txt";
+    ASSERT_STREQ(readFileContent(f2.c_str()).c_str(), "foobar.txt\n");
+    std::string f3 = Path::getTempDirectory() + "issue34/11/foo/bar/here.txt";
+    ASSERT_STREQ(readFileContent(f3.c_str()).c_str(), "");
 }
 
 // -----------------------------------------------------------------------------
@@ -1082,23 +1085,25 @@ TEST(FileZipTests, ExtractFileWithNameOfDir)
     zipper.close();
 
     // Create a folder with a file name
-    Path::remove("/tmp/foo/test1.txt");
-    Path::createDir("/tmp/foo/test1.txt");
-    ASSERT_EQ(Path::exist("/tmp/foo/test1.txt"), true);
-    ASSERT_EQ(Path::isDir("/tmp/foo/test1.txt"), true);
+    Path::remove(Path::getTempDirectory() + "foo/test1.txt");
+    Path::createDir(Path::getTempDirectory() + "foo/test1.txt");
+    ASSERT_EQ(Path::exist(Path::getTempDirectory() + "foo/test1.txt"), true);
+    ASSERT_EQ(Path::isDir(Path::getTempDirectory() + "foo/test1.txt"), true);
 
-    // Check cannot extract the file because the folder with the same name
-    // exists
+    // Check cannot extract the file because the folder with the same name exists
     zipper::Unzipper unzipper("ziptest.zip");
-    ASSERT_EQ(unzipper.extractAll("/tmp/foo", false), false);
-    ASSERT_STREQ(unzipper.error().message().c_str(),
-                 "Security Error: '/tmp/foo/test1.txt' already exists and would have been replaced!");
+    ASSERT_EQ(unzipper.extractAll(Path::getTempDirectory() + "foo", false), false);
+    std::string error = "Security Error: '" + Path::getTempDirectory() +
+        "foo/test1.txt' already exists and would have been replaced!";
+    ASSERT_STREQ(unzipper.error().message().c_str(), error.c_str());
 
-    ASSERT_EQ(unzipper.extractAll("/tmp/foo", true), false);
-    ASSERT_STREQ(unzipper.error().message().c_str(),
-                 "Failed creating '/tmp/foo/test1.txt' file because Is a directory");
+    // Check cannot extract the file because the folder with the same name exists
+    ASSERT_EQ(unzipper.extractAll(Path::getTempDirectory() + "foo", true), false);
+    error = "Failed creating '" + Path::getTempDirectory() +
+        "foo/test1.txt' file because Is a directory";
+    ASSERT_STREQ(unzipper.error().message().c_str(), error.c_str());
 
-    Path::remove("/tmp/foo/test1.txt");
+    Path::remove(Path::getTempDirectory() + "foo/test1.txt");
 }
 
 // -----------------------------------------------------------------------------
@@ -1114,22 +1119,28 @@ TEST(MemoryZipTests, Issue5)
         ASSERT_STREQ(entries[1].name.c_str(), "model.xml");
         ASSERT_STREQ(entries[2].name.c_str(), "manifest.xml");
 
-        ASSERT_EQ(unzipper.extractAll("/tmp", true), true);
-        ASSERT_EQ(Path::exist("/tmp/sim.sedml"), true);
-        ASSERT_EQ(Path::exist("/tmp/model.xml"), true);
-        ASSERT_EQ(Path::exist("/tmp/manifest.xml"), true);
-        ASSERT_EQ(Path::isFile("/tmp/sim.sedml"), true);
-        ASSERT_EQ(Path::isFile("/tmp/model.xml"), true);
-        ASSERT_EQ(Path::isFile("/tmp/manifest.xml"), true);
+        ASSERT_EQ(unzipper.extractAll(Path::getTempDirectory(), true), true);
+        ASSERT_EQ(Path::exist(Path::getTempDirectory() + "sim.sedml"), true);
+        ASSERT_EQ(Path::exist(Path::getTempDirectory() + "model.xml"), true);
+        ASSERT_EQ(Path::exist(Path::getTempDirectory() + "manifest.xml"), true);
+        ASSERT_EQ(Path::isFile(Path::getTempDirectory() + "sim.sedml"), true);
+        ASSERT_EQ(Path::isFile(Path::getTempDirectory() + "model.xml"), true);
+        ASSERT_EQ(Path::isFile(Path::getTempDirectory() + "manifest.xml"), true);
 
         // Check cannot be extracted, by security: files already exist
-        ASSERT_EQ(unzipper.extractAll("/tmp"), false);
-        ASSERT_STREQ(unzipper.error().message().c_str(),
-                     "Security Error: '/tmp/manifest.xml' already exists and would have been replaced!");
-        ASSERT_EQ(unzipper.extractAll("/tmp", false), false);
-        ASSERT_STREQ(unzipper.error().message().c_str(),
-                     "Security Error: '/tmp/manifest.xml' already exists and would have been replaced!");
-        ASSERT_EQ(unzipper.extractAll("/tmp", true), true);
+        ASSERT_EQ(unzipper.extractAll(Path::getTempDirectory()), false);
+        std::string error = "Security Error: '" + Path::getTempDirectory() +
+            "manifest.xml' already exists and would have been replaced!";
+        ASSERT_STREQ(unzipper.error().message().c_str(), error.c_str());
+
+        // Check cannot be extracted, by security: files already exist
+        error = "Security Error: '" + Path::getTempDirectory() +
+            "manifest.xml' already exists and would have been replaced!";
+        ASSERT_EQ(unzipper.extractAll(Path::getTempDirectory(), false), false);
+        ASSERT_STREQ(unzipper.error().message().c_str(), error.c_str());
+
+        // Check can be extracted, by security: files already exist
+        ASSERT_EQ(unzipper.extractAll(Path::getTempDirectory(), true), true);
 
         unzipper.close();
     }
@@ -1145,22 +1156,22 @@ TEST(MemoryZipTests, Issue5)
         ASSERT_STREQ(entries[3].name.c_str(), "issue_05/foo/");
         ASSERT_STREQ(entries[4].name.c_str(), "issue_05/foo/bar");
 
-        Path::remove("/tmp/issue_05");
-        ASSERT_EQ(unzipper.extractAll("/tmp"), true);
+        Path::remove(Path::getTempDirectory() + "issue_05");
+        ASSERT_EQ(unzipper.extractAll(Path::getTempDirectory()), true);
         unzipper.close();
 
-        ASSERT_EQ(Path::exist("/tmp/issue_05/"), true);
-        ASSERT_EQ(Path::isDir("/tmp/issue_05/"), true);
-        ASSERT_EQ(Path::exist("/tmp/issue_05/Nouveau dossier/"), true);
-        ASSERT_EQ(Path::isDir("/tmp/issue_05/Nouveau dossier/"), true);
-        ASSERT_EQ(Path::exist("/tmp/issue_05/Nouveau fichier vide"), true);
-        ASSERT_EQ(Path::isFile("/tmp/issue_05/Nouveau fichier vide"), true);
-        ASSERT_EQ(Path::exist("/tmp/issue_05/foo/"), true);
-        ASSERT_EQ(Path::isDir("/tmp/issue_05/foo/"), true);
-        ASSERT_EQ(Path::exist("/tmp/issue_05/foo/bar"), true);
-        ASSERT_EQ(Path::isFile("/tmp/issue_05/foo/bar"), true);
+        ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue_05/"), true);
+        ASSERT_EQ(Path::isDir(Path::getTempDirectory() + "issue_05/"), true);
+        ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue_05/Nouveau dossier/"), true);
+        ASSERT_EQ(Path::isDir(Path::getTempDirectory() + "issue_05/Nouveau dossier/"), true);
+        ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue_05/Nouveau fichier vide"), true);
+        ASSERT_EQ(Path::isFile(Path::getTempDirectory() + "issue_05/Nouveau fichier vide"), true);
+        ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue_05/foo/"), true);
+        ASSERT_EQ(Path::isDir(Path::getTempDirectory() + "issue_05/foo/"), true);
+        ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue_05/foo/bar"), true);
+        ASSERT_EQ(Path::isFile(Path::getTempDirectory() + "issue_05/foo/bar"), true);
 
-        Path::remove("/tmp/issue_05");
+        Path::remove(Path::getTempDirectory() + "issue_05");
     }
 
     // With password
@@ -1174,22 +1185,22 @@ TEST(MemoryZipTests, Issue5)
         ASSERT_STREQ(entries[3].name.c_str(), "issue_05/foo/");
         ASSERT_STREQ(entries[4].name.c_str(), "issue_05/foo/bar");
 
-        Path::remove("/tmp/issue_05");
-        ASSERT_EQ(unzipper.extractAll("/tmp"), true);
+        Path::remove(Path::getTempDirectory() + "issue_05");
+        ASSERT_EQ(unzipper.extractAll(Path::getTempDirectory()), true);
         unzipper.close();
 
-        ASSERT_EQ(Path::exist("/tmp/issue_05/"), true);
-        ASSERT_EQ(Path::isDir("/tmp/issue_05/"), true);
-        ASSERT_EQ(Path::exist("/tmp/issue_05/Nouveau dossier/"), true);
-        ASSERT_EQ(Path::isDir("/tmp/issue_05/Nouveau dossier/"), true);
-        ASSERT_EQ(Path::exist("/tmp/issue_05/Nouveau fichier vide"), true);
-        ASSERT_EQ(Path::isFile("/tmp/issue_05/Nouveau fichier vide"), true);
-        ASSERT_EQ(Path::exist("/tmp/issue_05/foo/"), true);
-        ASSERT_EQ(Path::isDir("/tmp/issue_05/foo/"), true);
-        ASSERT_EQ(Path::exist("/tmp/issue_05/foo/bar"), true);
-        ASSERT_EQ(Path::isFile("/tmp/issue_05/foo/bar"), true);
+        ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue_05/"), true);
+        ASSERT_EQ(Path::isDir(Path::getTempDirectory() + "issue_05/"), true);
+        ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue_05/Nouveau dossier/"), true);
+        ASSERT_EQ(Path::isDir(Path::getTempDirectory() + "issue_05/Nouveau dossier/"), true);
+        ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue_05/Nouveau fichier vide"), true);
+        ASSERT_EQ(Path::isFile(Path::getTempDirectory() + "issue_05/Nouveau fichier vide"), true);
+        ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue_05/foo/"), true);
+        ASSERT_EQ(Path::isDir(Path::getTempDirectory() + "issue_05/foo/"), true);
+        ASSERT_EQ(Path::exist(Path::getTempDirectory() + "issue_05/foo/bar"), true);
+        ASSERT_EQ(Path::isFile(Path::getTempDirectory() + "issue_05/foo/bar"), true);
 
-        Path::remove("/tmp/issue_05");
+        Path::remove(Path::getTempDirectory() + "issue_05");
     }
 }
 
@@ -1199,8 +1210,8 @@ TEST(MemoryZipTests, Issue5)
 TEST(ZipTests, FileFakingFolder)
 {
     Path::remove("ziptest.zip");
-    Path::remove("/tmp/test");
-    Path::remove("/tmp/test2");
+    Path::remove(Path::getTempDirectory() + "test");
+    Path::remove(Path::getTempDirectory() + "test2");
 
     // Try adding test1.txt with folder extension
     Zipper zipper("ziptest.zip");
@@ -1225,15 +1236,15 @@ TEST(ZipTests, FileFakingFolder)
     ASSERT_STREQ(entries[3].name.c_str(), "test2/bar");
 
     // Extract
-    ASSERT_EQ(unzipper.extractAll("/tmp", true), true);
-    ASSERT_STREQ(readFileContent("/tmp/test1.txt").c_str(),
-                 "test1 file compression");
-    ASSERT_STREQ(readFileContent("/tmp/test2.txt").c_str(),
-                 "test2 file compression");
-    ASSERT_STREQ(readFileContent("/tmp/test").c_str(),
-                 "test3 file compression");
-    ASSERT_STREQ(readFileContent("/tmp/test2/bar").c_str(),
-                 "test4 file compression");
+    ASSERT_EQ(unzipper.extractAll(Path::getTempDirectory(), true), true);
+    std::string test1 = readFileContent((Path::getTempDirectory() + "test1.txt").c_str());
+    ASSERT_STREQ(test1.c_str(), "test1 file compression");
+    std::string test2 = readFileContent((Path::getTempDirectory() + "test2.txt").c_str());
+    ASSERT_STREQ(test2.c_str(), "test2 file compression");
+    std::string test3 = readFileContent((Path::getTempDirectory() + "test").c_str());
+    ASSERT_STREQ(test3.c_str(), "test3 file compression");
+    std::string test4 = readFileContent((Path::getTempDirectory() + "test2/bar").c_str());
+    ASSERT_STREQ(test4.c_str(), "test4 file compression");
 
     unzipper.close();
     Path::remove("ziptest.zip");
@@ -1255,8 +1266,8 @@ TEST(ZipTests, UnzipperClosed)
     std::vector<zipper::ZipEntry> entries = unzipper.entries();
     ASSERT_EQ(entries.size(), 0u);
 
-    ASSERT_EQ(unzipper.extractAll("/tmp", false), false);
-    ASSERT_EQ(unzipper.extractAll("/tmp", true), false);
+    ASSERT_EQ(unzipper.extractAll(Path::getTempDirectory(), false), false);
+    ASSERT_EQ(unzipper.extractAll(Path::getTempDirectory(), true), false);
 
     Path::remove("ziptest.zip");
 }
