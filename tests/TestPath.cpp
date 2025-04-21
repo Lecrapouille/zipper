@@ -197,8 +197,52 @@ TEST(TestDir, canonicalPath)
    ASSERT_STREQ(Path::canonicalPath("/../out/../in/").c_str(), "/in");
    ASSERT_STREQ(Path::canonicalPath("/does/not/exist//data/somefolder").c_str(),
                 "/does/not/exist/data/somefolder");
+   ASSERT_STREQ(Path::canonicalPath("/does/not/exist//data/somefolder/").c_str(),
+                "/does/not/exist/data/somefolder");
+   ASSERT_STREQ(Path::canonicalPath("/does/not/exist//data/somefolder//").c_str(),
+                "/does/not/exist/data/somefolder");
 }
 
+TEST(TestDir, canonicalPathExtended)
+{
+
+   // Additional base tests
+   ASSERT_STREQ(Path::canonicalPath("./").c_str(), ".");
+   ASSERT_STREQ(Path::canonicalPath("././").c_str(), ".");
+   ASSERT_STREQ(Path::canonicalPath("./.").c_str(), ".");
+   ASSERT_STREQ(Path::canonicalPath("./../").c_str(), "..");
+   ASSERT_STREQ(Path::canonicalPath("../..").c_str(), "../..");
+
+   // Case with multiple separators and cleaning
+   ASSERT_STREQ(Path::canonicalPath("/foo//bar").c_str(), "/foo/bar");
+   ASSERT_STREQ(Path::canonicalPath("/foo///bar").c_str(), "/foo/bar");
+   ASSERT_STREQ(Path::canonicalPath("/foo/./bar").c_str(), "/foo/bar");
+   ASSERT_STREQ(Path::canonicalPath("/./foo/bar").c_str(), "/foo/bar");
+
+   // Handling consecutive '..'
+   ASSERT_STREQ(Path::canonicalPath("/foo/bar/../..").c_str(), "/");
+   ASSERT_STREQ(Path::canonicalPath("/foo/bar/../../baz").c_str(), "/baz");
+   ASSERT_STREQ(Path::canonicalPath("../../../foo").c_str(), "../../../foo");
+
+   // Tests with mixed separators (Windows/Unix)
+   ASSERT_STREQ(Path::canonicalPath("/foo/bar\\/baz").c_str(), "/foo/bar/baz");
+   ASSERT_STREQ(Path::canonicalPath("/foo\\bar/baz").c_str(), "/foo/bar/baz");
+
+   // Special cases with dots
+   ASSERT_STREQ(Path::canonicalPath("/foo/./bar/.").c_str(), "/foo/bar");
+   ASSERT_STREQ(Path::canonicalPath("/foo/././bar").c_str(), "/foo/bar");
+   ASSERT_STREQ(Path::canonicalPath("/foo/./../bar").c_str(), "/bar");
+
+   // Case with empty segments
+   ASSERT_STREQ(Path::canonicalPath("//foo///bar//").c_str(), "/foo/bar");
+   ASSERT_STREQ(Path::canonicalPath("foo//bar//").c_str(), "foo/bar");
+
+   // Tests with Windows paths
+   ASSERT_STREQ(Path::canonicalPath("C:\\foo\\..\\bar").c_str(), "C:\\bar");
+   ASSERT_STREQ(Path::canonicalPath("C:/foo/../bar").c_str(), "C:\\bar");
+   ASSERT_STREQ(Path::canonicalPath("C:\\..\\foo").c_str(), "C:\\foo");
+   ASSERT_STREQ(Path::canonicalPath("C:\\.\\foo\\.\\bar").c_str(), "C:\\foo\\bar");
+}
 TEST(TestDir, normalize)
 {
    ASSERT_STREQ(Path::normalize("A//B").c_str(), "A/B");

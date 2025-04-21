@@ -182,6 +182,7 @@ public:
 
     static bool remove(const std::string& path);
 
+#if 0
     //! \brief Remove files or directories matching the pattern in directory dir.
     //! \param[in] pattern
     //! \param[in] dir
@@ -204,6 +205,7 @@ public:
     //! \return bool match
     static bool match(const std::string& name,
                       const std::vector<std::string>& patternList);
+#endif
 
     //! \brief Checks whether the given path is relative
     //! \param[in] path: file path.
@@ -244,6 +246,7 @@ public:
 
 private:
 
+#if 0
     //! \brief This private methods checks whether the active section matches the
     //! specified patter. The section is automatically advanced to allow
     //! repeated calls. On the first call 'at' must be 0. The parameters
@@ -257,6 +260,7 @@ private:
                               const std::string pattern,
                               std::string::size_type& at,
                               std::string::size_type& after);
+#endif
 };
 
 } // namespace

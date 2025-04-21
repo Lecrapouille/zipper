@@ -14,6 +14,7 @@
 #include <numeric>
 #include <random>
 #include <chrono>
+#include <vector>
 
 using namespace zipper;
 
@@ -872,91 +873,165 @@ std::string Path::canonicalPath(const std::string& path)
     if (path.empty())
         return {};
 
-    // Detect the type of path (Windows or Unix)
-    char preferred_separator = Path::preferredSeparator(path);
+    // Determine the original separator style and work internally with Unix separators
+    char original_separator = Path::preferredSeparator(path);
+    std::string current_path = toUnixSeparators(path);
 
-    // If the path starts with a separator we must preserve it
-    bool starts_with_slash = (path[0] == UNIX_DIRECTORY_SEPARATOR ||
-        path[0] == WINDOWS_DIRECTORY_SEPARATOR);
+    std::string root;
+    bool is_absolute = false;
 
-    // Store each element of the path
-    std::vector<std::string> segments;
+    // Identify and separate the root part
+    if (current_path.length() >= 1 && current_path[0] == '/')
+    {
+        is_absolute = true;
+        root = "/";
+        current_path = current_path.substr(1);
+    }
+    else if (current_path.length() >= 2 && current_path[1] == ':')
+    {
+        // Matches C:, D:, etc. Normalize to C:/ format internally
+        is_absolute = true;
+        root = current_path.substr(0, 2) + "/";
+        current_path = (current_path.length() > 2) ? current_path.substr(3) : "";
+    }
+    // else: path is relative
 
-    size_t current;
-    size_t next = size_t(-1);
+    std::vector<std::string> segments_in;
+    std::string segment;
+    std::stringstream ss(current_path);
 
-    do {
-        // Extract the element of the path
-        current = size_t(next + 1u);
-        next = path.find_first_of("/\\", current);
-        std::string segment(path.substr(current, next - current));
-        size_t size = segment.length();
+    // Split the path by '/'
+    while (std::getline(ss, segment, '/'))
+    {
+        segments_in.push_back(segment);
+    }
 
-        // Skip empty string: keep initial (i.e. ///)
-        if (size == 0u)
+    // Handle paths ending with '/', which adds an empty segment unless the path was just the root.
+    if ((!current_path.empty()) && current_path.back() == '/')
+    {
+        if (segments_in.empty() || !segments_in.back().empty())
         {
+           segments_in.push_back(""); // Represent the trailing slash
+        }
+    }
+
+    std::vector<std::string> segments_out;
+    for (const std::string& seg : segments_in)
+    {
+        // Check for empty segment added by trailing slash; ignore it for canonicalization unless it's the only segment after root
+        if (seg.empty() && !segments_out.empty() )
+        {
+             // Ignore trailing slash representation (empty string) if it's not the first segment
+             if (&seg == &segments_in.back())
+             {
+                continue;
+             }
+        }
+
+        if (seg == ".")
+        {
+            // Ignore "." segments. Handle "." or "./" case later if segments_out remains empty.
             continue;
         }
 
-        // skip "." string: keep initial
-        else if ((segment == ".") && (segments.size() > 0u))
+        if (seg == "..")
         {
-            continue;
-        }
-
-        // Remove "..": replace "foo/../bar" by "bar"
-        else if (segment == "..")
-        {
-            // Ignore if .. follows initial '/'
-            if (starts_with_slash && (segments.size() == 0u))
+            if (!segments_out.empty() && segments_out.back() != "..")
             {
-                continue;
+                // If not already at root or navigating up relative path, pop the last segment
+                segments_out.pop_back();
             }
-
-            // Segments [ ..., "foo", "bar" ] becomes [ ..., "foo" ]
-            if ((segments.size() > 0u) && (segments.back() != ".."))
+            else if (!is_absolute)
             {
-                segments.pop_back();
-                continue;
+                // Path is relative, and we are at the start or already have "..", so keep adding ".."
+                segments_out.push_back("..");
+            }
+            // If absolute and segments_out is empty, ".." at root is ignored.
+        }
+        else
+        {
+            // Regular segment (including potentially empty segment if path was like "//" or "C://")
+             if (!seg.empty())
+             { 
+                // Explicitly skip empty segments from input like "//"
+                segments_out.push_back(seg);
+             }
+        }
+    }
+
+    // --- Reconstruct the canonical path ---
+    std::string result;
+
+    // Handle cases resulting in an empty stack
+    if (segments_out.empty())
+    {
+        if (is_absolute)
+        {
+            result = root; // Should be "/" or "C:/"
+        }
+        else
+        {
+            // Relative path simplified to nothing (e.g., "foo/..", "./", ".")
+            result = ".";
+        }
+    }
+    else
+    {
+        // Join the processed segments
+        std::string joined_segments;
+        for (size_t i = 0; i < segments_out.size(); ++i)
+        {
+            joined_segments += segments_out[i];
+            // Add separator unless it's the last segment
+            if (i < segments_out.size() - 1)
+            {
+                joined_segments += "/";
             }
         }
 
-        segments.push_back(segment);
-    } while (next != std::string::npos);
-
-    // Manage the case where the path starts with '/'
-    std::string clean_path;
-    if (starts_with_slash)
-    {
-        if (segments.empty() || (segments[0] != "."))
+        if (is_absolute)
         {
-            clean_path += preferred_separator;
+             // Check if root already ends with separator (it should: "/" or "C:/")
+             if (!root.empty() && root.back() == '/')
+             {
+                 result = root + joined_segments;
+             }
+             else
+             {
+                  // Should not happen with current root logic, but fallback just in case
+                  result = root + "/" + joined_segments;
+             }
+        }
+        else
+        {
+            result = joined_segments;
+        }
+
+        // Preserve leading "./" if original path started with it and result is still relative
+        bool original_starts_with_dot_slash = (path.length() >= 2 && path[0] == '.' && (path[1] == '/' || path[1] == '\\'));
+        bool result_is_relative = !is_absolute && (segments_out.empty() || segments_out[0] != "..");
+
+        // Ensure result is not just "." before prepending "./"
+        if (original_starts_with_dot_slash && result_is_relative && result != ".")
+        {
+             // Avoid cases like "./.." becoming "./../.."
+             if (result.length() < 2 || result.substr(0, 2) != "..")
+             {
+                 result = "./" + result;
+             }
         }
     }
 
-    // Join the vector as a single string, every element is separated by the
-    // folder separator.
-    for (auto const& it: segments)
+    // Final conversion to the original preferred separator style
+    if (original_separator == WINDOWS_DIRECTORY_SEPARATOR)
     {
-        clean_path += it;
-        clean_path += preferred_separator;
+        return toWindowsSeparators(result);
     }
-
-    // Manage the case "./" where the '/' was adding during the join.
-    if ((clean_path.size() == 2u) && (clean_path[0] == '.') &&
-        (clean_path[1] == UNIX_DIRECTORY_SEPARATOR ||
-         clean_path[1] == WINDOWS_DIRECTORY_SEPARATOR))
+    else
     {
-        return std::string(1, preferred_separator);
+        // Ensure Unix style result doesn't accidentally contain Windows separators
+        return toUnixSeparators(result);
     }
-
-    // Remove the last separator
-    if (clean_path.length() > 1u)
-    {
-        clean_path.pop_back();
-    }
-
-    return clean_path;
 }
 
 // -----------------------------------------------------------------------------
