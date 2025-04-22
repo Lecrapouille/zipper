@@ -574,8 +574,8 @@ TEST(MemoryZipTests, ZipVectorFeedWithDifferentInputs2)
     test7.flush();
     test7.close();
 
-    auto flags = Zipper::zipFlags::Better | Zipper::zipFlags::SaveHierarchy;
-    zipper.add("./subdirectory/test1.txt", static_cast<Zipper::zipFlags>(flags));
+    Zipper::zipFlags flags = Zipper::zipFlags::Better | Zipper::zipFlags::SaveHierarchy;
+    zipper.add("./subdirectory/test1.txt", flags);
 
     zipper.close();
 

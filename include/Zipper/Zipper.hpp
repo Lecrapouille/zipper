@@ -213,6 +213,79 @@ private:
     Impl* m_impl;
 };
 
+// -------------------------------------------------------------------------
+//! \name Bitwise operators for Zipper::zipFlags
+// -------------------------------------------------------------------------
+
+//! \brief Bitwise OR operator for Zipper::zipFlags.
+//! \param[in] lhs Left-hand side operand.
+//! \param[in] rhs Right-hand side operand.
+//! \return Result of the bitwise OR operation.
+inline constexpr Zipper::zipFlags operator|(Zipper::zipFlags lhs, Zipper::zipFlags rhs)
+{
+    using T = std::underlying_type_t<Zipper::zipFlags>;
+    return static_cast<Zipper::zipFlags>(static_cast<T>(lhs) | static_cast<T>(rhs));
+}
+
+//! \brief Bitwise AND operator for Zipper::zipFlags.
+//! \param[in] lhs Left-hand side operand.
+//! \param[in] rhs Right-hand side operand.
+//! \return Result of the bitwise AND operation.
+inline constexpr Zipper::zipFlags operator&(Zipper::zipFlags lhs, Zipper::zipFlags rhs)
+{
+    using T = std::underlying_type_t<Zipper::zipFlags>;
+    return static_cast<Zipper::zipFlags>(static_cast<T>(lhs) & static_cast<T>(rhs));
+}
+
+//! \brief Bitwise XOR operator for Zipper::zipFlags.
+//! \param[in] lhs Left-hand side operand.
+//! \param[in] rhs Right-hand side operand.
+//! \return Result of the bitwise XOR operation.
+inline constexpr Zipper::zipFlags operator^(Zipper::zipFlags lhs, Zipper::zipFlags rhs)
+{
+    using T = std::underlying_type_t<Zipper::zipFlags>;
+    return static_cast<Zipper::zipFlags>(static_cast<T>(lhs) ^ static_cast<T>(rhs));
+}
+
+//! \brief Bitwise NOT operator for Zipper::zipFlags.
+//! \param[in] flag Operand.
+//! \return Result of the bitwise NOT operation.
+inline constexpr Zipper::zipFlags operator~(Zipper::zipFlags flag)
+{
+    using T = std::underlying_type_t<Zipper::zipFlags>;
+    return static_cast<Zipper::zipFlags>(~static_cast<T>(flag));
+}
+
+//! \brief Bitwise OR assignment operator for Zipper::zipFlags.
+//! \param[in,out] lhs Left-hand side operand.
+//! \param[in] rhs Right-hand side operand.
+//! \return Reference to the modified left-hand side operand.
+inline Zipper::zipFlags& operator|=(Zipper::zipFlags& lhs, Zipper::zipFlags rhs)
+{
+    lhs = lhs | rhs;
+    return lhs;
+}
+
+//! \brief Bitwise AND assignment operator for Zipper::zipFlags.
+//! \param[in,out] lhs Left-hand side operand.
+//! \param[in] rhs Right-hand side operand.
+//! \return Reference to the modified left-hand side operand.
+inline Zipper::zipFlags& operator&=(Zipper::zipFlags& lhs, Zipper::zipFlags rhs)
+{
+    lhs = lhs & rhs;
+    return lhs;
+}
+
+//! \brief Bitwise XOR assignment operator for Zipper::zipFlags.
+//! \param[in,out] lhs Left-hand side operand.
+//! \param[in] rhs Right-hand side operand.
+//! \return Reference to the modified left-hand side operand.
+inline Zipper::zipFlags& operator^=(Zipper::zipFlags& lhs, Zipper::zipFlags rhs)
+{
+    lhs = lhs ^ rhs;
+    return lhs;
+}
+
 } // namespace zipper
 
 #endif // ZIPPER_ZIPPER_HPP
