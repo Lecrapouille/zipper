@@ -136,7 +136,7 @@ static void getFileCrc(std::istream& input_stream, std::vector<char>& buff, uint
 struct Zipper::Impl
 {
     Zipper& m_outer;
-    zipFile m_zf;
+    zipFile m_zf = nullptr;
     ourmemory_t m_zipmem;
     zlib_filefunc_def m_filefunc;
     std::error_code& m_error_code;
@@ -147,9 +147,8 @@ struct Zipper::Impl
         : m_outer(outer), m_zipmem(), m_filefunc(),
           m_error_code(error_code), m_buffer(ZIPPER_WRITE_BUFFER_SIZE)
     {
-        m_zf = nullptr;
-        m_zipmem.base = nullptr;
-        //m_filefunc = { 0 };
+        memset(&m_zipmem, 0, sizeof(m_zipmem));
+        memset(&m_filefunc, 0, sizeof(m_filefunc));
     }
 
     // -------------------------------------------------------------------------
