@@ -657,27 +657,32 @@ bool Zipper::open(Zipper::openFlags flags)
         return false;
     }
 
+    // If already open, do nothing and return success
     if (m_open)
+    {
         return true;
+    }
 
+    bool success = false;
     if (m_usingMemoryVector)
     {
-        if (!m_impl->initWithVector(m_vecbuffer))
-            return false;
+        success = m_impl->initWithVector(m_vecbuffer);
     }
     else if (m_usingStream)
     {
-        if (!m_impl->initWithStream(m_obuffer))
-            return false;
+        success = m_impl->initWithStream(m_obuffer);
     }
     else
     {
-        if (!m_impl->initFile(m_zipname, flags))
-            return false;
+        success = m_impl->initFile(m_zipname, flags);
     }
 
-    m_open = true;
-    return true;
+    if (success)
+    {
+        m_open = true;
+        m_error_code = {};
+    }
+    return success;
 }
 
 // -----------------------------------------------------------------------------
