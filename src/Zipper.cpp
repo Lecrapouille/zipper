@@ -72,12 +72,6 @@ struct ZipperErrorCategory : std::error_category
 static ZipperErrorCategory theZipperErrorCategory;
 
 // -----------------------------------------------------------------------------
-static std::error_code make_error_code(zipper_error e)
-{
-    return { static_cast<int>(e), theZipperErrorCategory };
-}
-
-// -----------------------------------------------------------------------------
 static std::error_code make_error_code(zipper_error e, std::string const& message)
 {
     // std::cerr << message << std::endl;
@@ -221,7 +215,7 @@ struct Zipper::Impl
         std::streampos s = stream.tellg();
         if (s < 0)
         {
-            m_error_code = make_error_code(zipper_error::INTERNAL_ERROR);
+            m_error_code = make_error_code(zipper_error::INTERNAL_ERROR, "Invalid stream provided");
             return false;
         }
         size_t size = static_cast<size_t>(s);
@@ -315,7 +309,7 @@ struct Zipper::Impl
         m_zf = zipOpen3("__notused__", mode, 0, 0, &filefunc);
         if (m_zf != nullptr)
             return true;
-        m_error_code = make_error_code(zipper_error::INTERNAL_ERROR);
+        m_error_code = make_error_code(zipper_error::INTERNAL_ERROR, "zipOpen3 failed for memory mode");
         return false;
     }
 
@@ -325,7 +319,7 @@ struct Zipper::Impl
     {
         if (!m_zf)
         {
-            m_error_code = make_error_code(zipper_error::INTERNAL_ERROR);
+            m_error_code = make_error_code(zipper_error::INTERNAL_ERROR, "Zip archive not open");
             return false;
         }
 
@@ -357,7 +351,7 @@ struct Zipper::Impl
 
         if (nameInZip.empty())
         {
-            m_error_code = make_error_code(zipper_error::NO_ENTRY);
+            m_error_code = make_error_code(zipper_error::NO_ENTRY, "Entry name cannot be empty");
             return false;
         }
 
@@ -659,7 +653,7 @@ bool Zipper::open(Zipper::openFlags flags)
     if (m_impl == nullptr)
     {
         m_error_code = make_error_code(
-            zipper_error::INTERNAL_ERROR, "Malloc error");
+            zipper_error::INTERNAL_ERROR, "Zipper implementation not available for open");
         return false;
     }
 
