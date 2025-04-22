@@ -433,8 +433,12 @@ TEST(MemoryZipTests, ZipVectorFeedWithDifferentInputs1)
     zipper.add(test1stream, "test1.txt", Zipper::SaveHierarchy);
     test1stream.close();
     zipper.close();
-    Path::remove("test1.txt");
 
+    // Reopen the zip
+    zipper::Zipper zipper2(zipvec);
+    zipper2.close();
+
+    // Unzip the zip
     zipper::Unzipper unzipper(zipvec);
 
     // Check if the zip vector has one entry named 'test1.txt'
@@ -443,6 +447,7 @@ TEST(MemoryZipTests, ZipVectorFeedWithDifferentInputs1)
 
     // Extracting the test1.txt entry creates a file named 'test1.txt' with the
     // text 'test file compression'
+    Path::remove("test1.txt");
     ASSERT_EQ(unzipper.extractEntry("test1.txt"), true);
     // due to sections forking or creating different stacks we need to make sure the local instance is closed to
     // prevent mixing the closing when both instances are freed at the end of the scope

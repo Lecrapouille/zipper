@@ -281,14 +281,18 @@ struct Zipper::Impl
 
         if (!buffer.empty())
         {
+            // Free existing memory if it exists
             if (m_zipmem.base != nullptr)
             {
                 free(m_zipmem.base);
+                memset(&m_zipmem, 0, sizeof(m_zipmem));
             }
 
             // Allocate memory directly with the correct size
             m_zipmem.base = reinterpret_cast<char*>(malloc(buffer.size()));
-            if (m_zipmem.base == nullptr) {
+            if (m_zipmem.base == nullptr)
+            {
+                memset(&m_zipmem, 0, sizeof(m_zipmem));
                 m_error_code = make_error_code(zipper_error::INTERNAL_ERROR, "Failed to allocate memory");
                 return false;
             }
@@ -297,9 +301,17 @@ struct Zipper::Impl
             memcpy(m_zipmem.base, buffer.data(), buffer.size());
             m_zipmem.size = static_cast<uint32_t>(buffer.size());
         }
+        else // Handle empty vector case
+        {
+            if (m_zipmem.base != nullptr)
+            {
+                free(m_zipmem.base);
+                m_zipmem.base = nullptr;
+            }
+            m_zipmem.size = 0;
+        }        
 
         fill_memory_filefunc(&m_filefunc, &m_zipmem);
-
         return initMemory(buffer.empty() ? APPEND_STATUS_CREATE : APPEND_STATUS_ADDINZIP, m_filefunc);
     }
 
