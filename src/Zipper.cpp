@@ -609,42 +609,91 @@ bool Zipper::add(std::istream& source, const std::string& nameInZip, zipFlags fl
 // -------------------------------------------------------------------------
 bool Zipper::add(const std::string& fileOrFolderPath, Zipper::zipFlags flags)
 {
-    bool res = true;
-
-    if (Path::isDir(fileOrFolderPath))
+    // Check if open and impl exists
+    if (!m_open || !m_impl)
     {
-        std::string folderWithSeparator = Path::folderNameWithSeparator(fileOrFolderPath);
-        std::vector<std::string> files = Path::filesFromDir(fileOrFolderPath, true);
-        for (const auto& filePath: files)
+        if (!m_open)
         {
-            Timestamp time(filePath);
-            std::ifstream input(filePath.c_str(), std::ios::binary);
-            std::string nameInZip = filePath.substr(filePath.find(folderWithSeparator));
-            res &= add(input, time.timestamp, nameInZip, flags);
-            input.close();
-        }
-    }
-    else
-    {
-        Timestamp time(fileOrFolderPath);
-        std::ifstream input(fileOrFolderPath.c_str(), std::ios::binary);
-        std::string fullFileName;
-
-        if (flags & Zipper::SaveHierarchy)
-        {
-            fullFileName = fileOrFolderPath;
+            m_error_code = make_error_code(zipper_error::OPENING_ERROR, "Zipper not open");
         }
         else
         {
-            fullFileName = Path::fileName(fileOrFolderPath);
+            m_error_code = make_error_code(zipper_error::INTERNAL_ERROR, "Zipper not initialized");
         }
-
-        res &= add(input, time.timestamp, fullFileName, flags);
-
-        input.close();
+         return false;
     }
 
-    return res;
+    bool overall_success = true;
+
+    if (Path::isDir(fileOrFolderPath))
+    {
+        // Get base folder path with separator for relative path calculation
+        std::string folderBase = Path::folderNameWithSeparator(fileOrFolderPath);
+        std::vector<std::string> files = Path::filesFromDir(fileOrFolderPath, true);
+        for (const auto& filePath: files)
+        {
+            std::ifstream input(filePath.c_str(), std::ios::binary);
+            if (!input.is_open())
+            {
+                m_error_code = make_error_code(zipper_error::OPENING_ERROR, "Cannot open file: " + filePath);
+                // Mark failure but continue trying other files? Or break? Let's continue.
+                overall_success = false;
+                continue;
+            }
+            std::string nameInZip;
+
+            // If saving hierarchy and base folder is found, use relative path
+            if (flags & Zipper::SaveHierarchy)
+            {
+                nameInZip = filePath;
+            }
+            else
+            {
+                nameInZip = Path::fileName(filePath);
+            }
+
+            // Call the stream-based add function
+            Timestamp time(filePath);
+            bool success = add(input, time.timestamp, nameInZip, flags);
+            if (!success)
+            {
+                overall_success = false;
+                // error_code should be set by the called add function
+            }
+        }
+    }
+    else // It's a single file
+    {
+        std::ifstream input(fileOrFolderPath.c_str(), std::ios::binary);
+        if (!input.is_open())
+        {
+            m_error_code = make_error_code(zipper_error::OPENING_ERROR, "Cannot open file: " + fileOrFolderPath);
+            return false; // Fail immediately if single file cannot be opened
+        }
+
+        std::string nameInZip;
+
+        // Check if hierarchy needs to be saved
+        if (flags & Zipper::SaveHierarchy)
+        {
+            std::cout << "Saving hierarchy" << std::endl;
+            // Use full path
+            nameInZip = fileOrFolderPath;
+        }
+        else
+        {
+            // Use just the filename
+            std::cout << "Not saving hierarchy" << std::endl;
+            nameInZip = Path::fileName(fileOrFolderPath);
+        }
+
+        // Get timestamp for the file
+        Timestamp time(fileOrFolderPath);
+        // Call the stream-based add function
+        overall_success = add(input, time.timestamp, nameInZip, flags);
+    }
+
+    return overall_success;
 }
 
 // -------------------------------------------------------------------------
