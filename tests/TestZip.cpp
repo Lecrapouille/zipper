@@ -883,8 +883,8 @@ TEST(ZipTests, Issue33_zipping)
         Zipper zipper("ziptest.zip");
         ASSERT_EQ(helperZipEntry(zipper, "Test1.txt", "hello", "../Test1"), false);
         ASSERT_STREQ(zipper.error().message().c_str(),
-                     "Security error: forbidden insertion of ../Test1 "
-                     "(canonic: ../Test1) to prevent possible Zip Slip attack");
+                     "Security error: forbidden insertion of '../Test1' "
+                     "(canonical: '../Test1') to prevent possible Zip Slip attack");
         zipper.close();
 
         Unzipper unzipper("ziptest.zip");

@@ -322,31 +322,28 @@ struct Zipper::Impl
             return false;
         }
 
+        // Ensure buffer exists and has the standard size.
+        // Should be guaranteed by constructor, but check doesn't hurt.
+        if (m_buffer.size() != ZIPPER_WRITE_BUFFER_SIZE)
+        {
+             m_buffer.resize(ZIPPER_WRITE_BUFFER_SIZE);
+        }
+
         int compressLevel = 5; // Zipper::zipFlags::Medium
-        bool zip64;
-        size_t size_buf = ZIPPER_WRITE_BUFFER_SIZE;
         int err = ZIP_OK;
-        uint32_t crcFile = 0;
+        uint32_t crcFile = 0; // Calculated only if password is used
 
         zip_fileinfo zi;
         memset(&zi, 0, sizeof(zi)); // Zero out the structure first
         zi.dos_date = 0; // if dos_date == 0, tmz_date is used
         zi.internal_fa = 0; // internal file attributes
         zi.external_fa = 0; // external file attributes
-        zi.tmz_date.tm_sec = uInt(timestamp.tm_sec);
-        zi.tmz_date.tm_min = uInt(timestamp.tm_min);
-        zi.tmz_date.tm_hour = uInt(timestamp.tm_hour);
-        zi.tmz_date.tm_mday = uInt(timestamp.tm_mday);
-        zi.tmz_date.tm_mon = uInt(timestamp.tm_mon);
-        zi.tmz_date.tm_year = uInt(timestamp.tm_year);
-
-        size_t size_read;
-
-        // Make sure the buffer has the correct size
-        if (m_buffer.size() != size_buf)
-        {
-            m_buffer.resize(size_buf);
-        }
+        zi.tmz_date.tm_sec = static_cast<uInt>(timestamp.tm_sec);
+        zi.tmz_date.tm_min = static_cast<uInt>(timestamp.tm_min);
+        zi.tmz_date.tm_hour = static_cast<uInt>(timestamp.tm_hour);
+        zi.tmz_date.tm_mday = static_cast<uInt>(timestamp.tm_mday);
+        zi.tmz_date.tm_mon = static_cast<uInt>(timestamp.tm_mon);
+        zi.tmz_date.tm_year = static_cast<uInt>(timestamp.tm_year);
 
         if (nameInZip.empty())
         {
@@ -360,105 +357,123 @@ struct Zipper::Impl
         if (canonNameInZip.find_first_of("..") == 0u)
         {
             std::stringstream str;
-            str << "Security error: forbidden insertion of "
-                << nameInZip << " (canonic: " << canonNameInZip
-                << ") to prevent possible Zip Slip attack";
+            str << "Security error: forbidden insertion of '"
+                << nameInZip << "' (canonical: '" << canonNameInZip
+                << "') to prevent possible Zip Slip attack";
             m_error_code = make_error_code(zipper_error::SECURITY_ERROR, str.str());
             return false;
         }
 
-        flags = flags & ~int(Zipper::zipFlags::SaveHierarchy);
-        if (flags == Zipper::zipFlags::Store)
-            compressLevel = 0;
-        else if (flags == Zipper::zipFlags::Faster)
-            compressLevel = 1;
-        else if (flags == Zipper::zipFlags::Better)
-            compressLevel = 9;
-        else
+        // Determine compression level from flags (mask out hierarchy flag)
+        int compressionFlag = flags & (~static_cast<int>(Zipper::zipFlags::SaveHierarchy));
+        switch (compressionFlag)
         {
-            std::stringstream str;
-            str << "Unknown compression level: " << flags;
-            m_error_code = make_error_code(zipper_error::INTERNAL_ERROR, str.str());
-            return false;
+            case Zipper::zipFlags::Store: compressLevel = 0; break;
+            case Zipper::zipFlags::Faster: compressLevel = 1; break;
+            case Zipper::zipFlags::Better: compressLevel = 9; break;
+            case Zipper::zipFlags::Medium: compressLevel = 5; break;
+            default:
+            {
+                std::stringstream str;
+                str << "Invalid compression level flag: " << flags;
+                m_error_code = make_error_code(zipper_error::INTERNAL_ERROR, str.str());
+                return false;
+            }
         }
 
-        zip64 = Path::isLargeFile(input_stream);
+        bool zip64 = Path::isLargeFile(input_stream);
         if (password.empty())
         {
             err = zipOpenNewFileInZip64(
                 m_zf,
                 canonNameInZip.c_str(),
                 &zi,
-                nullptr,
-                0,
-                nullptr,
-                0,
-                nullptr /* comment*/,
+                nullptr, // extrafield_local
+                0,       // size_extrafield_local
+                nullptr, // extrafield_global
+                0,       // size_extrafield_global
+                nullptr, // comment
                 (compressLevel != 0) ? Z_DEFLATED : 0,
                 compressLevel,
                 zip64);
         }
         else
         {
+            // Calculate CRC32 first, as it's needed for encryption header
+            // This reads the entire stream.
             getFileCrc(input_stream, m_buffer, crcFile);
             err = zipOpenNewFileInZip3_64(
                 m_zf,
                 canonNameInZip.c_str(),
                 &zi,
-                nullptr,
-                0,
-                nullptr,
-                0,
-                nullptr /* comment*/,
+                nullptr, // extrafield_local
+                0,       // size_extrafield_local
+                nullptr, // extrafield_global
+                0,       // size_extrafield_global
+                nullptr, // comment
                 (compressLevel != 0) ? Z_DEFLATED : 0,
                 compressLevel,
-                0,
-                /* -MAX_WBITS, DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY, */
-                -MAX_WBITS, DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY,
-                password.c_str(),
-                crcFile,
+                0, // raw == 1 means no compression, AES encryption needs compression
+                /* Following are crypto parameters */
+                -MAX_WBITS,         // windowBits
+                DEF_MEM_LEVEL,      // memLevel
+                Z_DEFAULT_STRATEGY, // strategy
+                password.c_str(),   // password
+                crcFile,            // crcForCrypting
                 zip64);
         }
 
-        if (ZIP_OK == err)
-        {
-            do
-            {
-                err = ZIP_OK;
-                input_stream.read(m_buffer.data(), std::streamsize(m_buffer.size()));
-                size_read = static_cast<size_t>(input_stream.gcount());
-                if (size_read < m_buffer.size() && !input_stream.eof() && !input_stream.good())
-                {
-                    err = ZIP_ERRNO;
-                }
-
-                if (size_read > 0)
-                {
-                    err = zipWriteInFileInZip(this->m_zf, m_buffer.data(),
-                                              static_cast<unsigned int>(size_read));
-                }
-            } while ((err == ZIP_OK) && (size_read > 0));
-        }
-        else
+        if (err != ZIP_OK)
         {
             std::stringstream str;
-            str << "Error when adding " << nameInZip << " to zip";
+            str << "Error opening '" << nameInZip << "' in zip file, error code: " << err;
             m_error_code = make_error_code(zipper_error::INTERNAL_ERROR, str.str());
             return false;
         }
 
-        if (ZIP_OK == err)
+        // Read from input stream and write to zip file chunk by chunk
+        size_t size_read = 0;
+        do
         {
-            err = zipCloseFileInZip(this->m_zf);
-            if (ZIP_OK != err)
+            input_stream.read(m_buffer.data(), std::streamsize(m_buffer.size()));
+            size_read = static_cast<size_t>(input_stream.gcount());
+
+            if (size_read > 0)
             {
-                std::stringstream str;
-                str << "Error when closing zip";
-                m_error_code = make_error_code(zipper_error::INTERNAL_ERROR, str.str());
+                err = zipWriteInFileInZip(this->m_zf, m_buffer.data(),
+                                          static_cast<unsigned int>(size_read));
+                if (err != ZIP_OK)
+                {
+                    std::stringstream str;
+                    str << "Error writing '" << nameInZip << "' to zip file, error code: " << err;
+                    m_error_code = make_error_code(zipper_error::INTERNAL_ERROR, str.str());
+                    // Don't close file in zip here, let the main close handle cleanup? Or try to close?
+                    // Let's break and let the close file step handle it.
+                    break;
+                }
             }
+
+            // Check stream state *after* trying to read
+            else if (!input_stream.eof() && !input_stream.good())
+            {
+                err = ZIP_ERRNO;
+                m_error_code = make_error_code(zipper_error::INTERNAL_ERROR, "Input stream read error");
+                break;
+            }
+         } while (err == ZIP_OK && size_read > 0);
+
+        // Close the current file entry in the zip archive
+        int close_err = zipCloseFileInZip(this->m_zf);
+        if (err == ZIP_OK && close_err != ZIP_OK) // Report close error only if write loop was ok
+        {
+             std::stringstream str;
+             str << "Error closing '" << nameInZip << "' in zip file, error code: " << close_err;
+             m_error_code = make_error_code(zipper_error::INTERNAL_ERROR, str.str());
+             return false; // Return false on close error
         }
 
-        return ZIP_OK == err;
+        // Return true only if both write loop and close entry succeeded
+        return (err == ZIP_OK && close_err == ZIP_OK);
     }
 
     // -------------------------------------------------------------------------
