@@ -223,6 +223,7 @@ struct Zipper::Impl
         if (m_zipmem.base != nullptr)
         {
             free(m_zipmem.base);
+            memset(&m_zipmem, 0, sizeof(m_zipmem));
         }
 
         // Allocate memory directly
@@ -501,7 +502,7 @@ struct Zipper::Impl
         if (m_zipmem.base != nullptr)
         {
             free(m_zipmem.base);
-            m_zipmem.base = nullptr;
+            memset(&m_zipmem, 0, sizeof(m_zipmem));
         }
 
         // Free the memory of the buffer by resizing it to 0
@@ -583,7 +584,7 @@ Zipper::~Zipper()
 // -------------------------------------------------------------------------
 void Zipper::close()
 {
-    if (m_open && (m_impl != nullptr))
+    if (m_open && m_impl)
     {
         m_impl->close();
     }
