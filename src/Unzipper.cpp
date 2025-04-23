@@ -429,7 +429,7 @@ public:
             if (!Path::createDir(folder))
             {
                 std::stringstream str;
-                str << "Error: cannot create the folder '"
+                str << "Cannot create the folder '"
                     << Path::toNativeSeparators(folder) << "'";
 
                 m_error_code =

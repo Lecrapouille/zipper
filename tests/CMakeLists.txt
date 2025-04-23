@@ -18,11 +18,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(googletest)
 
 # Define the test sources
-set(TESTS_SOURCES
-    main.cpp
-    TestZip.cpp
-    TestPath.cpp
-)
+file(GLOB TESTS_SOURCES "*.cpp")
 
 # Define the test executable
 add_executable(zipper-tests ${TESTS_SOURCES})

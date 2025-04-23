@@ -820,7 +820,7 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
                 // files
                 m_error_code =
                     make_error_code(ZipperError::OPENING_ERROR,
-                                    "Cannot open file: " + file_path);
+                                    "Cannot open file: '" + file_path + "'");
                 overall_success = false;
                 continue; // Try next file
             }
@@ -864,9 +864,9 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
         std::ifstream input(p_file_or_folder_path.c_str(), std::ios::binary);
         if (!input.is_open())
         {
-            m_error_code =
-                make_error_code(ZipperError::OPENING_ERROR,
-                                "Cannot open file: " + p_file_or_folder_path);
+            m_error_code = make_error_code(ZipperError::OPENING_ERROR,
+                                           "Cannot open file: '" +
+                                               p_file_or_folder_path + "'");
             return false; // Fail immediately if single file cannot be opened
         }
 
