@@ -101,7 +101,7 @@ struct Unzipper::Impl
     zipFile m_zip_file = nullptr;
     ourmemory_t m_zip_memory;
     zlib_filefunc_def m_file_func;
-    std::string m_password;
+    const std::string m_password;
     std::error_code& m_error_code;
     std::vector<char> m_char_buffer;
     std::vector<unsigned char> m_uchar_buffer;
@@ -360,7 +360,7 @@ public:
     // -------------------------------------------------------------------------
     void changeFileDate(std::string const& p_filename,
                         uLong p_dos_date,
-                        tm_zip const& p_tmu_date)
+                        const tm_zip& p_tmu_date)
     {
 #if defined(_WIN32)
         (void)p_tmu_date;
@@ -495,7 +495,7 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    int extractToStream(std::ostream& stream, ZipEntry& /*p_entry_info*/)
+    int extractToStream(std::ostream& stream, const ZipEntry& /*p_entry_info*/)
     {
         int err;
         int bytes = 0;
@@ -539,7 +539,8 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    int extractToMemory(std::vector<unsigned char>& outvec, ZipEntry& p_info)
+    int extractToMemory(std::vector<unsigned char>& outvec,
+                        const ZipEntry& p_info)
     {
         int err;
         int bytes = 0;
@@ -703,14 +704,14 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    bool initWithVector(std::vector<unsigned char>& p_buffer)
+    bool initWithVector(const std::vector<unsigned char>& p_buffer)
     {
         if (!p_buffer.empty())
         {
             m_zip_memory.base =
                 reinterpret_cast<char*>(malloc(p_buffer.size() * sizeof(char)));
             memcpy(m_zip_memory.base,
-                   reinterpret_cast<char*>(p_buffer.data()),
+                   reinterpret_cast<const char*>(p_buffer.data()),
                    p_buffer.size());
             m_zip_memory.size = static_cast<uint32_t>(p_buffer.size());
         }
