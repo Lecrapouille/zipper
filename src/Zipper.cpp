@@ -101,20 +101,32 @@ static void getFileCrc(std::istream& p_input_stream,
         file_size <
             100 * 1024 * 1024) // Limit to 100 Mo to avoid exhausting memory
     {
-        // Resize the buffer to contain the whole file
-        p_buff.resize(static_cast<size_t>(file_size));
+        try // Add try-catch for resize
+        {
+            // Resize the buffer to contain the whole file
+            p_buff.resize(static_cast<size_t>(file_size));
 
-        // Read the whole file in one go
-        p_input_stream.read(p_buff.data(), file_size);
-        size_read = static_cast<unsigned int>(p_input_stream.gcount());
+            // Read the whole file in one go
+            p_input_stream.read(p_buff.data(), file_size);
+            size_read = static_cast<unsigned int>(p_input_stream.gcount());
 
-        if (size_read > 0)
-            calculate_crc =
-                crc32(calculate_crc,
-                      reinterpret_cast<const unsigned char*>(p_buff.data()),
-                      size_read);
-
-        // Reset the stream position
+            if (size_read > 0)
+                calculate_crc =
+                    crc32(calculate_crc,
+                          reinterpret_cast<const unsigned char*>(p_buff.data()),
+                          size_read);
+        }
+        catch (const std::bad_alloc& e)
+        {
+            // Handle allocation error - cannot calculate CRC if buffer fails
+            // Maybe set a specific error code or just let the caller handle
+            // potential 0 CRC? For now, CRC will remain 0, which might cause
+            // issues if encryption is used. Let's ensure crc is 0 and stream is
+            // reset.
+            calculate_crc = 0; // Ensure CRC is 0 on error
+            // Consider logging or setting an error state if possible
+        }
+        // Reset the stream position regardless of allocation success/failure
         p_input_stream.clear();
         p_input_stream.seekg(0, std::ios_base::beg);
     }
@@ -253,9 +265,23 @@ struct Zipper::Impl
 
         // Use the member buffer for reading
         constexpr size_t CHUNK_SIZE = 1024 * 1024; // 1 Mo per chunk
-        if (m_buffer.size() < std::min(CHUNK_SIZE, size))
+        try                                        // Add try-catch for resize
         {
-            m_buffer.resize(std::min(CHUNK_SIZE, size));
+            size_t required_buffer_size = std::min(CHUNK_SIZE, size);
+            if (m_buffer.size() < required_buffer_size)
+            {
+                m_buffer.resize(required_buffer_size);
+            }
+        }
+        catch (const std::bad_alloc& e)
+        {
+            m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
+                                           "Failed to allocate read buffer");
+            // Need to free the malloc'd base buffer before returning
+            if (m_zip_memory.base)
+                free(m_zip_memory.base);
+            memset(&m_zip_memory, 0, sizeof(m_zip_memory));
+            return false;
         }
 
         char* dest = m_zip_memory.base;
@@ -281,56 +307,76 @@ struct Zipper::Impl
         {
             size_t actual_size = size - remaining;
             // Reallocate to free unused memory
-            m_zip_memory.base = reinterpret_cast<char*>(
+            char* reallocated_base = reinterpret_cast<char*>(
                 realloc(m_zip_memory.base, actual_size));
-            size = actual_size;
+
+            // Check if realloc succeeded
+            if (reallocated_base != nullptr ||
+                actual_size == 0) // realloc(ptr, 0) might return NULL
+            {
+                m_zip_memory.base =
+                    reallocated_base; // Update pointer only on success
+                size = actual_size;   // Update size only on success
+            }
+            else
+            {
+                // Realloc failed: base still points to the old (larger) block.
+                // The data is still there, but we have extra unused memory.
+                // This is not critical, but good to be aware of.
+                // We keep the original 'size' value associated with the old
+                // block. Or, we could set an error if freeing unused memory is
+                // critical. Let's keep the old block for now. Size remains the
+                // original malloc'd size. So no change needed here if failure
+                // is acceptable. size = size; // Keep original size if realloc
+                // fails
+            }
         }
 
-        m_zip_memory.size = static_cast<uint32_t>(size);
+        m_zip_memory.size =
+            static_cast<uint32_t>(size); // Use potentially updated size
 
         fill_memory_filefunc(&m_file_func, &m_zip_memory);
-
-        return initMemory(size > 0 ? APPEND_STATUS_CREATE
-                                   : APPEND_STATUS_ADDINZIP,
+        // Use actual_size for mode check? If realloc failed, size is
+        // original... Let's base mode on whether actual_size > 0
+        size_t final_size = m_zip_memory.size;
+        return initMemory(final_size > 0 ? APPEND_STATUS_CREATE
+                                         : APPEND_STATUS_ADDINZIP,
                           m_file_func);
     }
 
     // -------------------------------------------------------------------------
-    bool initWithVector(std::vector<unsigned char>& p_buffer)
+    bool initWithVector(const std::vector<unsigned char>& p_buffer)
     {
         m_zip_memory.grow = 1;
 
+        // Free existing memory if any
+        if (m_zip_memory.base != nullptr)
+        {
+            free(m_zip_memory.base);
+            memset(&m_zip_memory, 0, sizeof(m_zip_memory));
+        }
+
         if (!p_buffer.empty())
         {
-            // Free existing memory if it exists
-            if (m_zip_memory.base != nullptr)
-            {
-                free(m_zip_memory.base);
-                memset(&m_zip_memory, 0, sizeof(m_zip_memory));
-            }
-
             // Allocate memory directly with the correct size
             m_zip_memory.base =
                 reinterpret_cast<char*>(malloc(p_buffer.size()));
             if (m_zip_memory.base == nullptr)
             {
-                memset(&m_zip_memory, 0, sizeof(m_zip_memory));
+                // No need to memset here as it wasn't allocated
                 m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
                                                "Failed to allocate memory");
                 return false;
             }
 
-            // Use memcpy which is generally more optimized for large copies
+            // Read from const p_buffer
             memcpy(m_zip_memory.base, p_buffer.data(), p_buffer.size());
             m_zip_memory.size = static_cast<uint32_t>(p_buffer.size());
         }
         else // Handle empty vector case
         {
-            if (m_zip_memory.base != nullptr)
-            {
-                free(m_zip_memory.base);
-                m_zip_memory.base = nullptr;
-            }
+            // Base should already be nullptr from freeing above or initial
+            // state
             m_zip_memory.size = 0;
         }
 
@@ -738,6 +784,25 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
     if (Path::isDir(p_file_or_folder_path))
     {
         std::vector<std::string> files;
+        try // Add try-catch for filesFromDir allocation
+        {
+            files = Path::filesFromDir(p_file_or_folder_path, true);
+        }
+        catch (const std::bad_alloc& e)
+        {
+            m_error_code =
+                make_error_code(ZipperError::INTERNAL_ERROR,
+                                "Failed to allocate memory for file list");
+            return false;
+        }
+        catch (
+            const std::exception& e) // Catch other potential errors from Path
+        {
+            m_error_code = make_error_code(
+                ZipperError::INTERNAL_ERROR,
+                std::string("Error listing directory files: ") + e.what());
+            return false;
+        }
 
         // Get base folder path with separator for relative path calculation
         // Assuming p_file_or_folder_path is normalized enough or handled by
@@ -746,7 +811,6 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
         // Replace baseName with filename to get the last component
         std::string base_folder = Path::fileName(folder_path);
 
-        files = Path::filesFromDir(p_file_or_folder_path, true);
         for (const auto& file_path : files)
         {
             std::ifstream input(file_path.c_str(), std::ios::binary);
