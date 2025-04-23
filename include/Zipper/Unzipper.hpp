@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <system_error>
@@ -279,31 +280,16 @@ public:
 
 private:
 
-    //! \brief Releases allocated resources.
-    void release();
-
-private:
-
     struct Impl;
 
-    //! \brief Stream containing zipped entries to extract.
-    std::istream& m_ibuffer;
-    //! \brief Vector containing zipped entries to extract.
-    std::vector<unsigned char>& m_vecbuffer;
-    //! \brief Path of the zip file to extract.
-    std::string m_zipname;
     //! \brief Password used during compression (empty if no password).
     std::string m_password;
-    //! \brief Whether to use a memory vector.
-    bool m_usingMemoryVector;
-    //! \brief Whether to use a stream.
-    bool m_usingStream;
     //! \brief Whether the archive is open.
-    bool m_open;
+    bool m_open = false;
     //! \brief Error code.
     std::error_code m_error_code;
     //! \brief Implementation.
-    Impl* m_impl;
+    std::unique_ptr<Impl> m_impl;
 };
 
 // *************************************************************************

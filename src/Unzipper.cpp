@@ -19,6 +19,7 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 
 #ifndef ZIPPER_WRITE_BUFFER_SIZE
@@ -617,6 +618,7 @@ public:
         {
             free(m_zip_memory.base);
             m_zip_memory.base = nullptr;
+            m_zip_memory.size = 0;
         }
 
         // Free the memory of the buffers
@@ -821,16 +823,11 @@ public:
 
 // -----------------------------------------------------------------------------
 Unzipper::Unzipper(std::istream& p_zipped_buffer, std::string const& p_password)
-    : m_ibuffer(p_zipped_buffer),
-      m_vecbuffer(*(new std::vector<unsigned char>())),
-      m_password(p_password),
-      m_usingMemoryVector(false),
-      m_usingStream(true),
-      m_impl(new Impl(*this, m_error_code))
+    : m_password(p_password),
+      m_impl(std::make_unique<Impl>(*this, m_error_code))
 {
-    if (!m_impl->initWithStream(m_ibuffer))
+    if (!m_impl->initWithStream(p_zipped_buffer))
     {
-        release();
         throw std::runtime_error(m_impl->m_error_code.message());
     }
     m_open = true;
@@ -839,22 +836,12 @@ Unzipper::Unzipper(std::istream& p_zipped_buffer, std::string const& p_password)
 // -----------------------------------------------------------------------------
 Unzipper::Unzipper(std::vector<unsigned char>& p_zipped_buffer,
                    std::string const& p_password)
-    : m_ibuffer(*(new std::stringstream())),
-      m_vecbuffer(p_zipped_buffer),
-      m_password(p_password),
-      m_usingMemoryVector(true),
-      m_usingStream(false),
-      m_impl(new Impl(*this, m_error_code))
+    : m_password(p_password),
+      m_impl(std::make_unique<Impl>(*this, m_error_code))
 {
-    // if (zippedBuffer.empty())
-    //{
-    //     release();
-    //     throw std::runtime_error("std::vector shall not be empty");
-    // }
-    if (!m_impl->initWithVector(m_vecbuffer))
+    if (!m_impl->initWithVector(p_zipped_buffer))
     {
         std::runtime_error exception(m_impl->m_error_code.message());
-        release();
         throw exception;
     }
     else
@@ -865,22 +852,17 @@ Unzipper::Unzipper(std::vector<unsigned char>& p_zipped_buffer,
 
 // -----------------------------------------------------------------------------
 Unzipper::Unzipper(std::string const& p_zipname, std::string const& p_password)
-    : m_ibuffer(*(new std::stringstream())),
-      m_vecbuffer(*(new std::vector<unsigned char>())),
-      m_zipname(p_zipname),
-      m_password(p_password),
-      m_usingMemoryVector(false),
-      m_usingStream(false),
-      m_impl(new Impl(*this, m_error_code))
+    : m_password(p_password),
+      m_impl(std::make_unique<Impl>(*this, m_error_code))
 {
     if (!m_impl->initFile(p_zipname))
     {
         if (m_impl->m_error_code)
         {
             std::runtime_error exception(m_impl->m_error_code.message());
-            release();
             throw exception;
         }
+        m_open = true;
     }
     else
     {
@@ -891,8 +873,7 @@ Unzipper::Unzipper(std::string const& p_zipname, std::string const& p_password)
 // -----------------------------------------------------------------------------
 Unzipper::~Unzipper()
 {
-    close();
-    release();
+    // close();
 }
 
 // -----------------------------------------------------------------------------
@@ -974,28 +955,13 @@ bool Unzipper::extractAll(std::string const& p_destination,
 }
 
 // -----------------------------------------------------------------------------
-void Unzipper::release()
-{
-    if (!m_usingMemoryVector)
-    {
-        delete &m_vecbuffer;
-    }
-    if (!m_usingStream)
-    {
-        delete &m_ibuffer;
-    }
-    if (m_impl != nullptr)
-    {
-        delete m_impl;
-    }
-}
-
-// -----------------------------------------------------------------------------
 void Unzipper::close()
 {
-    if (m_open && (m_impl != nullptr))
+    if (m_open && m_impl)
     {
-        m_impl->close();
+        // We don't explicitly call m_impl->close() here anymore,
+        // as it's handled by ~Impl(). Resetting m_open prevents misuse
+        // after explicitly calling close().
     }
     m_open = false;
     m_error_code.clear();
