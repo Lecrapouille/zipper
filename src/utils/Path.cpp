@@ -5,38 +5,42 @@
 // MIT License. Copyright (c) 2015 -- 2022 Sebastian <devsebas@gmail.com>
 // -----------------------------------------------------------------------------
 
-#include "utils/OS.hpp"
 #include "utils/Path.hpp"
+#include "utils/OS.hpp"
 
+#include <chrono>
 #include <fstream>
 #include <iterator>
-#include <sstream>
 #include <numeric>
 #include <random>
-#include <chrono>
+#include <sstream>
 #include <vector>
 
 using namespace zipper;
 
 // The most common convention for ZIP archives is to use Unix separators
 #define PREFERRED_DIRECTORY_SEPARATOR UNIX_DIRECTORY_SEPARATOR
-const std::string STRING_PREFERRED_DIRECTORY_SEPARATOR = std::string(1, PREFERRED_DIRECTORY_SEPARATOR);
+const std::string STRING_PREFERRED_DIRECTORY_SEPARATOR =
+    std::string(1, PREFERRED_DIRECTORY_SEPARATOR);
 #define CONVERT_TO_PREFERRED_SEPARATORS(a) toUnixSeparators(a)
 
 // -----------------------------------------------------------------------------
 char Path::preferredSeparator(const std::string& path)
 {
     // Detect the type of path (Windows or Unix)
-    bool isWindowsPath = (path.length() > 1 && path[1] == ':') ||
-                        (path.length() > 1 && path[0] == '\\' && path[1] == '\\');
-    return isWindowsPath ? WINDOWS_DIRECTORY_SEPARATOR : UNIX_DIRECTORY_SEPARATOR;
+    bool isWindowsPath =
+        (path.length() > 1 && path[1] == ':') ||
+        (path.length() > 1 && path[0] == '\\' && path[1] == '\\');
+    return isWindowsPath ? WINDOWS_DIRECTORY_SEPARATOR
+                         : UNIX_DIRECTORY_SEPARATOR;
 }
 
 // -----------------------------------------------------------------------------
 std::string Path::currentPath()
 {
     char buffer[1024u];
-    return (OS_GETCWD(buffer, sizeof(buffer)) ? std::string(buffer) : std::string(""));
+    return (OS_GETCWD(buffer, sizeof(buffer)) ? std::string(buffer)
+                                              : std::string(""));
 }
 
 // -----------------------------------------------------------------------------
@@ -79,10 +83,12 @@ std::string Path::folderNameWithSeparator(const std::string& folder_path)
         return STRING_PREFERRED_DIRECTORY_SEPARATOR;
 
     bool end_by_slash = Path::hasTrailingSlash(folder_path);
-    std::string folder_name(end_by_slash ? std::string(folder_path.begin(), --folder_path.end())
-                            : folder_path);
+    std::string folder_name(
+        end_by_slash ? std::string(folder_path.begin(), --folder_path.end())
+                     : folder_path);
 
-    const std::string folder_with_separator = folder_name + STRING_PREFERRED_DIRECTORY_SEPARATOR;
+    const std::string folder_with_separator =
+        folder_name + STRING_PREFERRED_DIRECTORY_SEPARATOR;
     return folder_with_separator;
 }
 
@@ -95,7 +101,8 @@ bool Path::exist(const std::string& path)
         return false;
 
 #if defined(_WIN32)
-    return ((st.st_mode & S_IFREG) == S_IFREG || (st.st_mode & S_IFDIR) == S_IFDIR);
+    return ((st.st_mode & S_IFREG) == S_IFREG ||
+            (st.st_mode & S_IFDIR) == S_IFDIR);
 #else
     return (S_ISREG(st.st_mode) || S_ISDIR(st.st_mode));
 #endif
@@ -140,9 +147,10 @@ bool Path::isRoot(const std::string& path)
 
     // Recognize "C:\" or "C:/" as Windows roots even on Linux
     return (path.length() == 3) && (path[1] == ':') &&
-            (((path[0] >= 'A') && (path[0] <= 'Z')) || ((path[0] >= 'a') && (path[0] <= 'z'))) &&
-            ((path[2] == UNIX_DIRECTORY_SEPARATOR) ||
-             (path[2] == WINDOWS_DIRECTORY_SEPARATOR));
+           (((path[0] >= 'A') && (path[0] <= 'Z')) ||
+            ((path[0] >= 'a') && (path[0] <= 'z'))) &&
+           ((path[2] == UNIX_DIRECTORY_SEPARATOR) ||
+            (path[2] == WINDOWS_DIRECTORY_SEPARATOR));
 }
 
 // -----------------------------------------------------------------------------
@@ -154,8 +162,10 @@ std::string Path::root(const std::string& path)
 
     // For Windows paths like "C:\path" or "C:/path"
     if ((path.length() > 2) && (path[1] == ':') &&
-            (((path[0] >= 'A') && (path[0] <= 'Z')) || ((path[0] >= 'a') && (path[0] <= 'z'))) &&
-            ((path[2] == WINDOWS_DIRECTORY_SEPARATOR) || (path[2] == UNIX_DIRECTORY_SEPARATOR)))
+        (((path[0] >= 'A') && (path[0] <= 'Z')) ||
+         ((path[0] >= 'a') && (path[0] <= 'z'))) &&
+        ((path[2] == WINDOWS_DIRECTORY_SEPARATOR) ||
+         (path[2] == UNIX_DIRECTORY_SEPARATOR)))
     {
         return path.substr(0, 2) + WINDOWS_DIRECTORY_SEPARATOR;
     }
@@ -211,7 +221,8 @@ std::string Path::extension(const std::string& path)
     // Find the last point in the filename
     std::string::size_type pos = filename.find('.');
 
-    // If no point is found or it is at the beginning of the name (hidden file under Unix)
+    // If no point is found or it is at the beginning of the name (hidden file
+    // under Unix)
     if (pos == std::string::npos)
         return {};
 
@@ -262,7 +273,7 @@ bool Path::removeFiles(const std::string& pattern,
 
     PatternList = compilePattern(pattern);
 
-#if defined(_WIN32)
+#    if defined(_WIN32)
 
     // We want the same pattern matching behaviour for all platforms.
     // Therefore, we do not use the MS provided one and list all files instead.
@@ -296,7 +307,7 @@ bool Path::removeFiles(const std::string& pattern,
 
     _findclose(hList);
 
-#else //! _WIN32
+#    else //! _WIN32
 
     DIR* pDir = opendir(path.c_str());
 
@@ -325,7 +336,7 @@ bool Path::removeFiles(const std::string& pattern,
 
     closedir(pDir);
 
-#endif // _WIN32
+#    endif // _WIN32
 
     return success;
 }
@@ -405,11 +416,14 @@ std::vector<std::string> Path::filesFromDir(const std::string& path,
 
         if (recurse)
         {
-            if (Path::isDir(path + STRING_PREFERRED_DIRECTORY_SEPARATOR + filename))
+            if (Path::isDir(path + STRING_PREFERRED_DIRECTORY_SEPARATOR +
+                            filename))
             {
-                std::vector<std::string> moreFiles =
-                        Path::filesFromDir(path + STRING_PREFERRED_DIRECTORY_SEPARATOR + filename, recurse);
-                std::copy(moreFiles.begin(), moreFiles.end(),
+                std::vector<std::string> moreFiles = Path::filesFromDir(
+                    path + STRING_PREFERRED_DIRECTORY_SEPARATOR + filename,
+                    recurse);
+                std::copy(moreFiles.begin(),
+                          moreFiles.end(),
                           std::back_inserter(files));
                 continue;
             }
@@ -436,11 +450,14 @@ std::vector<std::string> Path::filesFromDir(const std::string& path,
 
         if (recurse)
         {
-            if (Path::isDir(path + STRING_PREFERRED_DIRECTORY_SEPARATOR + filename))
+            if (Path::isDir(path + STRING_PREFERRED_DIRECTORY_SEPARATOR +
+                            filename))
             {
-                std::vector<std::string> moreFiles =
-                        Path::filesFromDir(path + STRING_PREFERRED_DIRECTORY_SEPARATOR + filename, recurse);
-                std::copy(moreFiles.begin(), moreFiles.end(),
+                std::vector<std::string> moreFiles = Path::filesFromDir(
+                    path + STRING_PREFERRED_DIRECTORY_SEPARATOR + filename,
+                    recurse);
+                std::copy(moreFiles.begin(),
+                          moreFiles.end(),
                           std::back_inserter(files));
                 continue;
             }
@@ -470,16 +487,18 @@ std::string Path::getTempDirectory()
     // Linux / macOS
 #else
     const char* tmpDir = std::getenv("TMPDIR"); // Try TMPDIR (macOS)
-    if (!tmpDir) tmpDir = std::getenv("TMP");   // Try TMP
-    if (!tmpDir) tmpDir = std::getenv("TEMP");  // Try TEMP
-    if (!tmpDir) tmpDir = "/tmp";               // Fallback default (Linux)
+    if (!tmpDir)
+        tmpDir = std::getenv("TMP"); // Try TMP
+    if (!tmpDir)
+        tmpDir = std::getenv("TEMP"); // Try TEMP
+    if (!tmpDir)
+        tmpDir = "/tmp"; // Fallback default (Linux)
 
     tempDir = tmpDir;
 #endif
 
     // Ensure the path ends with a separator
-    if ((!tempDir.empty()) &&
-        (tempDir.back() != UNIX_DIRECTORY_SEPARATOR) &&
+    if ((!tempDir.empty()) && (tempDir.back() != UNIX_DIRECTORY_SEPARATOR) &&
         (tempDir.back() != WINDOWS_DIRECTORY_SEPARATOR))
     {
         tempDir += DIRECTORY_SEPARATOR;
@@ -489,7 +508,8 @@ std::string Path::getTempDirectory()
 }
 
 // -----------------------------------------------------------------------------
-std::string Path::createTempName(const std::string& dir, const std::string& suffix)
+std::string Path::createTempName(const std::string& dir,
+                                 const std::string& suffix)
 {
     std::mt19937 engine(static_cast<std::mt19937::result_type>(
         std::chrono::system_clock::now().time_since_epoch().count()));
@@ -498,8 +518,7 @@ std::string Path::createTempName(const std::string& dir, const std::string& suff
 
     do
     {
-        if ((!dir.empty()) &&
-            (dir.back() != UNIX_DIRECTORY_SEPARATOR) &&
+        if ((!dir.empty()) && (dir.back() != UNIX_DIRECTORY_SEPARATOR) &&
             (dir.back() != WINDOWS_DIRECTORY_SEPARATOR))
         {
             RandomName = dir + DIRECTORY_SEPARATOR;
@@ -547,13 +566,13 @@ bool Path::move(const std::string& from, const std::string& to)
     if (isDir(To))
         return false;
 
-#if defined(_WIN32)
+#    if defined(_WIN32)
 
     // The target must not exist under WIN32 for rename to succeed.
     if (exist(To) && !remove(To))
         return false;
 
-#endif // WIN32
+#    endif // WIN32
 
     bool success = (::rename(from.c_str(), To.c_str()) == 0);
 
@@ -631,7 +650,8 @@ bool Path::isRelativePath(const std::string& path)
     if (Path.length() == 0)
         return false;
 
-    if ((Path[0] == UNIX_DIRECTORY_SEPARATOR || Path[0] == WINDOWS_DIRECTORY_SEPARATOR))
+    if ((Path[0] == UNIX_DIRECTORY_SEPARATOR ||
+         Path[0] == WINDOWS_DIRECTORY_SEPARATOR))
         return false;
 
     // Windows path with drive letter
@@ -672,14 +692,14 @@ bool Path::makePathRelative(std::string& absolutePath, const std::string& relati
         i = absolutePath.find_last_of('/', i) + 1;
     }
 
-#if defined(_WIN32)
+#    if defined(_WIN32)
 
     if (i == 0)
     {
         return false; // A different drive letter we cannot do anything
     }
 
-#endif // _WIN32
+#    endif // _WIN32
 
     RelativeTo = RelativeTo.substr(i);
 
@@ -794,7 +814,8 @@ std::string Path::normalize(const std::string& path)
     std::string clean_path = path;
 
     // Convert Windows separators to Unix separators for normalization
-    for (size_t i = 0; i < clean_path.length(); ++i) {
+    for (size_t i = 0; i < clean_path.length(); ++i)
+    {
         if (clean_path[i] == WINDOWS_DIRECTORY_SEPARATOR)
             clean_path[i] = UNIX_DIRECTORY_SEPARATOR;
     }
@@ -873,7 +894,8 @@ std::string Path::canonicalPath(const std::string& path)
     if (path.empty())
         return {};
 
-    // Determine the original separator style and work internally with Unix separators
+    // Determine the original separator style and work internally with Unix
+    // separators
     char original_separator = Path::preferredSeparator(path);
     std::string current_path = toUnixSeparators(path);
 
@@ -892,7 +914,8 @@ std::string Path::canonicalPath(const std::string& path)
         // Matches C:, D:, etc. Normalize to C:/ format internally
         is_absolute = true;
         root = current_path.substr(0, 2) + "/";
-        current_path = (current_path.length() > 2) ? current_path.substr(3) : "";
+        current_path =
+            (current_path.length() > 2) ? current_path.substr(3) : "";
     }
     // else: path is relative
 
@@ -906,31 +929,35 @@ std::string Path::canonicalPath(const std::string& path)
         segments_in.push_back(segment);
     }
 
-    // Handle paths ending with '/', which adds an empty segment unless the path was just the root.
+    // Handle paths ending with '/', which adds an empty segment unless the path
+    // was just the root.
     if ((!current_path.empty()) && current_path.back() == '/')
     {
         if (segments_in.empty() || !segments_in.back().empty())
         {
-           segments_in.push_back(""); // Represent the trailing slash
+            segments_in.push_back(""); // Represent the trailing slash
         }
     }
 
     std::vector<std::string> segments_out;
     for (const std::string& seg : segments_in)
     {
-        // Check for empty segment added by trailing slash; ignore it for canonicalization unless it's the only segment after root
-        if (seg.empty() && !segments_out.empty() )
+        // Check for empty segment added by trailing slash; ignore it for
+        // canonicalization unless it's the only segment after root
+        if (seg.empty() && !segments_out.empty())
         {
-             // Ignore trailing slash representation (empty string) if it's not the first segment
-             if (&seg == &segments_in.back())
-             {
+            // Ignore trailing slash representation (empty string) if it's not
+            // the first segment
+            if (&seg == &segments_in.back())
+            {
                 continue;
-             }
+            }
         }
 
         if (seg == ".")
         {
-            // Ignore "." segments. Handle "." or "./" case later if segments_out remains empty.
+            // Ignore "." segments. Handle "." or "./" case later if
+            // segments_out remains empty.
             continue;
         }
 
@@ -938,24 +965,27 @@ std::string Path::canonicalPath(const std::string& path)
         {
             if (!segments_out.empty() && segments_out.back() != "..")
             {
-                // If not already at root or navigating up relative path, pop the last segment
+                // If not already at root or navigating up relative path, pop
+                // the last segment
                 segments_out.pop_back();
             }
             else if (!is_absolute)
             {
-                // Path is relative, and we are at the start or already have "..", so keep adding ".."
+                // Path is relative, and we are at the start or already have
+                // "..", so keep adding ".."
                 segments_out.push_back("..");
             }
             // If absolute and segments_out is empty, ".." at root is ignored.
         }
         else
         {
-            // Regular segment (including potentially empty segment if path was like "//" or "C://")
-             if (!seg.empty())
-             { 
+            // Regular segment (including potentially empty segment if path was
+            // like "//" or "C://")
+            if (!seg.empty())
+            {
                 // Explicitly skip empty segments from input like "//"
                 segments_out.push_back(seg);
-             }
+            }
         }
     }
 
@@ -991,34 +1021,41 @@ std::string Path::canonicalPath(const std::string& path)
 
         if (is_absolute)
         {
-             // Check if root already ends with separator (it should: "/" or "C:/")
-             if (!root.empty() && root.back() == '/')
-             {
-                 result = root + joined_segments;
-             }
-             else
-             {
-                  // Should not happen with current root logic, but fallback just in case
-                  result = root + "/" + joined_segments;
-             }
+            // Check if root already ends with separator (it should: "/" or
+            // "C:/")
+            if (!root.empty() && root.back() == '/')
+            {
+                result = root + joined_segments;
+            }
+            else
+            {
+                // Should not happen with current root logic, but fallback just
+                // in case
+                result = root + "/" + joined_segments;
+            }
         }
         else
         {
             result = joined_segments;
         }
 
-        // Preserve leading "./" if original path started with it and result is still relative
-        bool original_starts_with_dot_slash = (path.length() >= 2 && path[0] == '.' && (path[1] == '/' || path[1] == '\\'));
-        bool result_is_relative = !is_absolute && (segments_out.empty() || segments_out[0] != "..");
+        // Preserve leading "./" if original path started with it and result is
+        // still relative
+        bool original_starts_with_dot_slash =
+            (path.length() >= 2 && path[0] == '.' &&
+             (path[1] == '/' || path[1] == '\\'));
+        bool result_is_relative =
+            !is_absolute && (segments_out.empty() || segments_out[0] != "..");
 
         // Ensure result is not just "." before prepending "./"
-        if (original_starts_with_dot_slash && result_is_relative && result != ".")
+        if (original_starts_with_dot_slash && result_is_relative &&
+            result != ".")
         {
-             // Avoid cases like "./.." becoming "./../.."
-             if (result.length() < 2 || result.substr(0, 2) != "..")
-             {
-                 result = "./" + result;
-             }
+            // Avoid cases like "./.." becoming "./../.."
+            if (result.length() < 2 || result.substr(0, 2) != "..")
+            {
+                result = "./" + result;
+            }
         }
     }
 
@@ -1029,7 +1066,8 @@ std::string Path::canonicalPath(const std::string& path)
     }
     else
     {
-        // Ensure Unix style result doesn't accidentally contain Windows separators
+        // Ensure Unix style result doesn't accidentally contain Windows
+        // separators
         return toUnixSeparators(result);
     }
 }
@@ -1049,7 +1087,7 @@ bool Path::isLargeFile(std::istream& input_stream)
 bool Path::hasTrailingSlash(const std::string& path)
 {
     return (path.size() >= 1u) && (path.back() == WINDOWS_DIRECTORY_SEPARATOR ||
-        path.back() == UNIX_DIRECTORY_SEPARATOR);
+                                   path.back() == UNIX_DIRECTORY_SEPARATOR);
 }
 
 // -----------------------------------------------------------------------------
@@ -1082,7 +1120,8 @@ bool Path::hasMixedSeparators(const std::string& path)
 std::string Path::toUnixSeparators(const std::string& path)
 {
     std::string result = path;
-    for (size_t i = 0; i < result.length(); ++i) {
+    for (size_t i = 0; i < result.length(); ++i)
+    {
         if (result[i] == WINDOWS_DIRECTORY_SEPARATOR)
             result[i] = UNIX_DIRECTORY_SEPARATOR;
     }
@@ -1093,7 +1132,8 @@ std::string Path::toUnixSeparators(const std::string& path)
 std::string Path::toWindowsSeparators(const std::string& path)
 {
     std::string result = path;
-    for (size_t i = 0; i < result.length(); ++i) {
+    for (size_t i = 0; i < result.length(); ++i)
+    {
         if (result[i] == UNIX_DIRECTORY_SEPARATOR)
             result[i] = WINDOWS_DIRECTORY_SEPARATOR;
     }

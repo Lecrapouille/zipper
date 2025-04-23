@@ -134,27 +134,27 @@ using namespace zipper;
 - Constructor without password and replace `ziptest.zip` if already present. The new zip archive is empty.
 
 ```c++
-Zipper zipper("ziptest.zip", Zipper::openFlags::Overwrite);
+Zipper zipper("ziptest.zip", Zipper::OpenFlags::Overwrite);
 // Or simply: zipper("ziptest.zip");
 ```
 
 - Constructor without password and preserve `ziptest.zip` if already present.
 
 ```c++
-Zipper zipper("ziptest.zip", Zipper::openFlags::Append);
+Zipper zipper("ziptest.zip", Zipper::OpenFlags::Append);
 ```
 
 - Constructor with password (using AES algorithm) and replace `ziptest.zip` if already present. The new zip archive is empty.
 
 ```c++
-Zipper zipper("ziptest.zip", "my_password", Zipper::openFlags::Overwrite);
+Zipper zipper("ziptest.zip", "my_password", Zipper::OpenFlags::Overwrite);
 // Or simply: zipper("ziptest.zip");
 ```
 
 - Constructor with a password and preserve `ziptest.zip` if already present.
 
 ```c++
-Zipper zipper("ziptest.zip", "my_password", Zipper::openFlags::Append);
+Zipper zipper("ziptest.zip", "my_password", Zipper::OpenFlags::Append);
 ```
 
 - Note: all constructors will throw a `std::runtime_error` exception in case of failure.
@@ -183,8 +183,8 @@ zipper.close(); // Now Unzipper unzipper("ziptest.zip") can work
 ```
 
 After `close()` you can reopen the zip archive with `open()`. The implicit option
-`Zipper::openFlags::Append` is to preserve the zip content. To replace the zip
-file, use `Zipper::openFlags::Overwrite`.
+`Zipper::OpenFlags::Append` is to preserve the zip content. To replace the zip
+file, use `Zipper::OpenFlags::Overwrite`.
 
 ```c++
 Zipper zipper("ziptest.zip", ...);
@@ -192,8 +192,8 @@ Zipper zipper("ziptest.zip", ...);
 zipper.close();
 ...
 
-zipper.open(); // equivalent to zipper.open(Zipper::openFlags::Append);
-// or zipper.open(Zipper::openFlags::Overwrite);
+zipper.open(); // equivalent to zipper.open(Zipper::OpenFlags::Append);
+// or zipper.open(Zipper::OpenFlags::Overwrite);
 ...
 zipper.close();
 ```
@@ -209,12 +209,12 @@ if (!zipper.open())
 
 #### Appending files or folders inside the archive.
 
-The `add()` method allows appending files or folders. The `Zipper::zipFlags::Better` is set implicitly. Other options are (as the last argument):
+The `add()` method allows appending files or folders. The `Zipper::ZipFlags::Better` is set implicitly. Other options are (as the last argument):
 
-- Store only: `Zipper::zipFlags::Store`.
-- Compress faster, less compressed: `Zipper::zipFlags::Faster`.
-- Compress intermediate time/compression: `Zipper::zipFlags::Medium`.
-- Compress better: `Zipper::zipFlags::Better`.
+- Store only: `Zipper::ZipFlags::Store`.
+- Compress faster, less compressed: `Zipper::ZipFlags::Faster`.
+- Compress intermediate time/compression: `Zipper::ZipFlags::Medium`.
+- Compress better: `Zipper::ZipFlags::Better`.
 
 In case of success, the `add()` will return `true`; otherwise it will return `false` and `error()` should be used for getting the std::error_code.
 

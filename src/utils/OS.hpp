@@ -6,53 +6,52 @@
 //-----------------------------------------------------------------------------
 
 #ifndef ZIPPER_UTILS_OS_HPP
-#  define ZIPPER_UTILS_OS_HPP
+#define ZIPPER_UTILS_OS_HPP
 
-extern "C"
-{
-#  include <stdio.h>
-#  include <stdlib.h>
-#  include <string.h>
-#  include <time.h>
-#  include <errno.h>
-#  include <fcntl.h>
-#  include <sys/stat.h>
+extern "C" {
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <time.h>
 
-#  define WINDOWS_DIRECTORY_SEPARATOR '\\'
-#  define UNIX_DIRECTORY_SEPARATOR '/'
-#  if defined(_WIN32)
+#define WINDOWS_DIRECTORY_SEPARATOR '\\'
+#define UNIX_DIRECTORY_SEPARATOR '/'
+#if defined(_WIN32)
 #    define DIRECTORY_SEPARATOR WINDOWS_DIRECTORY_SEPARATOR
-#  else
+#else
 #    define DIRECTORY_SEPARATOR UNIX_DIRECTORY_SEPARATOR
-#  endif
+#endif
 
-#  if defined(_WIN32)
+#if defined(_WIN32)
 #    include <direct.h>
 #    include <io.h>
-    typedef struct _stat STAT;
+typedef struct _stat STAT;
 #    define stat _stat
 #    define S_IFREG _S_IFREG
 #    define S_IFDIR _S_IFDIR
 #    define access _access
 #    define mkdir _mkdir
 #    define rmdir _rmdir
-#  else
-#    include <sys/types.h>
+#else
 #    include <dirent.h>
+#    include <sys/types.h>
 #    include <unistd.h>
 #    include <utime.h>
 typedef struct stat STAT;
-#  endif
+#endif
 
-#  if defined(_WIN32)
+#if defined(_WIN32)
 #    define USEWIN32IOAPI
 #    include "external/minizip/ioapi.h"
 #    include "external/minizip/iowin32.h"
-#  endif
+#endif
 
 } // extern C
 
-#  if defined(_WIN64) && (!defined(__APPLE__))
+#if defined(_WIN64) && (!defined(__APPLE__))
 #    ifndef __USE_FILE_OFFSET64
 #        define __USE_FILE_OFFSET64
 #    endif
@@ -65,24 +64,24 @@ typedef struct stat STAT;
 #    ifndef _FILE_OFFSET_BIT
 #        define _FILE_OFFSET_BIT 64
 #    endif
-#  endif
+#endif
 
-#  if defined(_WIN32)
+#if defined(_WIN32)
 #    define OS_MKDIR(d, v) ::_mkdir(d)
-#    define OS_CHDIR(d)    ::_chdir(d)
-#    define OS_GETCWD(b,s) ::_getcwd(b,s)
-#    define OS_UNLINK(f)   ::_unlink(f)
-#    define OS_RMDIR(d)    ::_rmdir(d)
-#    define OS_REMOVE(f)   ::remove(f)
-#    define OS_RENAME(o,n) ::rename(o,n)
-#  else
+#    define OS_CHDIR(d) ::_chdir(d)
+#    define OS_GETCWD(b, s) ::_getcwd(b, s)
+#    define OS_UNLINK(f) ::_unlink(f)
+#    define OS_RMDIR(d) ::_rmdir(d)
+#    define OS_REMOVE(f) ::remove(f)
+#    define OS_RENAME(o, n) ::rename(o, n)
+#else
 #    define OS_MKDIR(d, v) ::mkdir(d, v)
-#    define OS_CHDIR(d)    ::chdir(d)
-#    define OS_GETCWD(b,s) ::getcwd(b,s)
-#    define OS_UNLINK(f)   ::unlink(f)
-#    define OS_RMDIR(d)    ::rmdir(d)
-#    define OS_REMOVE(f)   ::remove(f)
-#    define OS_RENAME(o,n) ::rename(o,n)
-#  endif
+#    define OS_CHDIR(d) ::chdir(d)
+#    define OS_GETCWD(b, s) ::getcwd(b, s)
+#    define OS_UNLINK(f) ::unlink(f)
+#    define OS_RMDIR(d) ::rmdir(d)
+#    define OS_REMOVE(f) ::remove(f)
+#    define OS_RENAME(o, n) ::rename(o, n)
+#endif
 
 #endif // ZIPPER_UTILS_OS_HPP

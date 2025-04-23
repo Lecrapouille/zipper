@@ -1,0 +1,5 @@
+{
+    // clang-format
+    "clang-format.executable": "clang-format",
+    "editor.formatOnSave": true,
+}

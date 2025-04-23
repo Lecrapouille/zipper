@@ -44,21 +44,20 @@
  *
  * ////////////////////////////////////////////////////////////////////////// */
 
-
 /** \file dirent.h
  *
  * Contains the declarations for the opendir()/readdir() API.
  */
 
 #ifndef SYNSOFT_UNIXEM_INCL_H_DIRENT
-#define SYNSOFT_UNIXEM_INCL_H_DIRENT
+#    define SYNSOFT_UNIXEM_INCL_H_DIRENT
 
-#ifndef _SYNSOFT_DOCUMENTATION_SKIP_SECTION
-# define SYNSOFT_UNIXEM_VER_H_DIRENT_MAJOR      2
-# define SYNSOFT_UNIXEM_VER_H_DIRENT_MINOR      1
-# define SYNSOFT_UNIXEM_VER_H_DIRENT_REVISION   1
-# define SYNSOFT_UNIXEM_VER_H_DIRENT_EDIT       19
-#endif /* !_SYNSOFT_DOCUMENTATION_SKIP_SECTION */
+#    ifndef _SYNSOFT_DOCUMENTATION_SKIP_SECTION
+#        define SYNSOFT_UNIXEM_VER_H_DIRENT_MAJOR 2
+#        define SYNSOFT_UNIXEM_VER_H_DIRENT_MINOR 1
+#        define SYNSOFT_UNIXEM_VER_H_DIRENT_REVISION 1
+#        define SYNSOFT_UNIXEM_VER_H_DIRENT_EDIT 19
+#    endif /* !_SYNSOFT_DOCUMENTATION_SKIP_SECTION */
 
 /* ////////////////////////////////////////////////////////////////////////// */
 
@@ -68,44 +67,47 @@
 
 /** \weakgroup unixem_dirent opendir()/readdir() API
  * \ingroup UNIXem unixem
- * \brief This API provides facilities for enumerating the contents of directories
+ * \brief This API provides facilities for enumerating the contents of
+ * directories
  * @{
  */
 
 /* ////////////////////////////////////////////////////////////////////////// */
 
-#ifndef _WIN32
-# error This file is only currently defined for compilation on Win32 systems
-#endif /* _WIN32 */
+#    ifndef _WIN32
+#        error This file is only currently defined for compilation on Win32 systems
+#    endif /* _WIN32 */
 
 /* /////////////////////////////////////////////////////////////////////////////
  * Constants and definitions
  */
 
-#ifndef NAME_MAX
-# define NAME_MAX   (260)   /*!< \brief The maximum number of characters (including null terminator) in a directory entry name */
-#endif /* !NAME_MAX */
+#    ifndef NAME_MAX
+#        define NAME_MAX                                                       \
+            (260) /*!< \brief The maximum number of characters (including null \
+                     terminator) in a directory entry name */
+#    endif        /* !NAME_MAX */
 
 /* /////////////////////////////////////////////////////////////////////////////
  * Typedefs
  */
 
-typedef struct dirent_dir   DIR; /*!< \brief dirent_dir is defined internally */
+typedef struct dirent_dir DIR; /*!< \brief dirent_dir is defined internally */
 
 /** \brief Results structure for readdir()
  */
 struct dirent
 {
-    char d_name[NAME_MAX + 1];   /*!< file name (null-terminated) */
+    char d_name[NAME_MAX + 1]; /*!< file name (null-terminated) */
 };
 
 /* /////////////////////////////////////////////////////////////////////////////
  * API functions
  */
 
-#ifdef __cplusplus
+#    ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#    endif /* __cplusplus */
 
 /** \brief Returns a pointer to the next directory entry.
  *
@@ -117,7 +119,7 @@ extern "C" {
  * \param name The name of the directory to search
  * \return The directory handle from which the entries are read or NULL
  */
-DIR             *opendir(const char *name);
+DIR* opendir(const char* name);
 
 /** \brief Closes a directory handle
  *
@@ -127,7 +129,7 @@ DIR             *opendir(const char *name);
  * \param dir The directory handle from which the entries are read
  * \return 0 on success, or -1 to indicate error.
  */
-int             closedir(DIR *dir);
+int closedir(DIR* dir);
 
 /** \brief Resets a directory search position
  *
@@ -136,7 +138,7 @@ int             closedir(DIR *dir);
  *
  * \param dir The directory handle whose position should be reset
  */
-void            rewinddir(DIR *dir);
+void rewinddir(DIR* dir);
 
 /** \brief Returns a pointer to the next directory entry.
  *
@@ -146,11 +148,11 @@ void            rewinddir(DIR *dir);
  * \param dir The directory handle from which the entries are read
  * \return A dirent structure or NULL
  */
-struct dirent   *readdir(DIR *dir);
+struct dirent* readdir(DIR* dir);
 
-#ifdef __cplusplus
+#    ifdef __cplusplus
 }
-#endif /* __cplusplus */
+#    endif /* __cplusplus */
 
 /* ////////////////////////////////////////////////////////////////////////// */
 

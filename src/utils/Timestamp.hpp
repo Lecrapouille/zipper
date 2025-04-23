@@ -6,16 +6,16 @@
 //-----------------------------------------------------------------------------
 
 #ifndef ZIPPER_UTILS_TIMESTAMP_HPP
-#  define ZIPPER_UTILS_TIMESTAMP_HPP
+#define ZIPPER_UTILS_TIMESTAMP_HPP
 
-#  if defined(_WIN32)
+#if defined(_WIN32)
 #    include <Windows.h>
-#  elif defined(__linux__)
+#elif defined(__linux__)
 #    include <sys/stat.h>
-#  endif
+#endif
 
-#  include <string>
-#  include <time.h>
+#include <string>
+#include <time.h>
 
 namespace zipper {
 
@@ -36,6 +36,6 @@ struct Timestamp
     tm timestamp;
 };
 
-} // namespace
+} // namespace zipper
 
 #endif // ZIPPER_UTILS_TIMESTAMP_HPP
