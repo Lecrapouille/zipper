@@ -63,12 +63,13 @@ public:
     // -------------------------------------------------------------------------
     //! \brief In-memory zip decompressor (from std::vector).
     //!
-    //! \param[in,out] p_buffer Vector containing zipped entries to extract.
+    //! \param[in] p_buffer Vector containing zipped entries to extract.
+    //! The vector content is copied internally.
     //! \param[in] p_password Optional password used during compression (empty
     //! if no password).
     //! \throw std::runtime_error if an error occurs during initialization.
     // -------------------------------------------------------------------------
-    Unzipper(std::vector<unsigned char>& p_buffer,
+    Unzipper(const std::vector<unsigned char>& p_buffer,
              std::string const& p_password = std::string());
 
     // -------------------------------------------------------------------------

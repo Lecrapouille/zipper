@@ -706,24 +706,31 @@ public:
     // -------------------------------------------------------------------------
     bool initWithVector(const std::vector<unsigned char>& p_buffer)
     {
+        m_zip_memory.grow = 1; // Pas sûr que ce soit utile ici ?
+
+        // Free existing memory if any
+        if (m_zip_memory.base != nullptr)
+        {
+            free(m_zip_memory.base);
+            m_zip_memory.base = nullptr;
+            m_zip_memory.size = 0;
+        }
+
         if (!p_buffer.empty())
         {
             m_zip_memory.base =
                 reinterpret_cast<char*>(malloc(p_buffer.size() * sizeof(char)));
-            memcpy(m_zip_memory.base,
-                   reinterpret_cast<const char*>(p_buffer.data()),
-                   p_buffer.size());
+            memcpy(m_zip_memory.base, p_buffer.data(), p_buffer.size());
             m_zip_memory.size = static_cast<uint32_t>(p_buffer.size());
         }
-        else
+        else // Handle empty vector case
         {
-            // Handle empty buffer case: ensure base is NULL and size is 0 if
-            // needed
-            m_zip_memory.base = nullptr;
             m_zip_memory.size = 0;
+            // Base should already be nullptr here after freeing or initial
+            // state
         }
-        fill_memory_filefunc(&m_file_func, &m_zip_memory);
 
+        fill_memory_filefunc(&m_file_func, &m_zip_memory);
         return initMemory(m_file_func);
     }
 
@@ -841,7 +848,7 @@ Unzipper::Unzipper(std::istream& p_zipped_buffer, std::string const& p_password)
 }
 
 // -----------------------------------------------------------------------------
-Unzipper::Unzipper(std::vector<unsigned char>& p_zipped_buffer,
+Unzipper::Unzipper(const std::vector<unsigned char>& p_zipped_buffer,
                    std::string const& p_password)
     : m_impl(std::make_unique<Impl>(p_password, m_error_code))
 {
