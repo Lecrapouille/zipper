@@ -273,17 +273,24 @@ public:
     void close();
 
     // -------------------------------------------------------------------------
+    //! \brief Check if the unzipper is valid.
+    //! \return true if the unzipper is valid, false otherwise.
+    // -------------------------------------------------------------------------
+    bool checkValid();
+
+    // -------------------------------------------------------------------------
     //! \brief Get the error information when a method returned false.
     //! \return Reference to the error code.
     // -------------------------------------------------------------------------
-    std::error_code const& error() const;
+    inline std::error_code const& error() const
+    {
+        return m_error_code;
+    }
 
 private:
 
     struct Impl;
 
-    //! \brief Password used during compression (empty if no password).
-    std::string m_password;
     //! \brief Whether the archive is open.
     bool m_open = false;
     //! \brief Error code.
