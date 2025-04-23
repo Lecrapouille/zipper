@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <ctime>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <system_error>
@@ -33,6 +34,9 @@ namespace zipper {
 // *************************************************************************
 class ZIPPER_EXPORT Zipper
 {
+    // Forward declaration
+    struct Impl;
+
 public:
 
     // -------------------------------------------------------------------------
@@ -96,7 +100,8 @@ public:
     // -------------------------------------------------------------------------
     //! \brief In-memory zip compression (storage inside std::iostream).
     //!
-    //! \param[in,out] p_buffer Stream in which to store zipped files.
+    //! \param[in,out] p_buffer Stream in which to store zipped files. Must
+    //! remain valid for the lifetime of the Zipper object.
     //! \param[in] p_password Optional password (empty for no password
     //! protection).
     //! \throw std::runtime_error if an error occurs during
@@ -108,7 +113,8 @@ public:
     // -------------------------------------------------------------------------
     //! \brief In-memory zip compression (storage inside std::vector).
     //!
-    //! \param[in,out] p_buffer Vector in which to store zipped files.
+    //! \param[in,out] p_buffer Vector in which to store zipped files. Must
+    //! remain valid for the lifetime of the Zipper object.
     //! \param[in] p_password Optional password (empty for no password
     //! protection).
     //! \throw std::runtime_error if an error occurs during
@@ -118,9 +124,15 @@ public:
            const std::string& p_password = std::string());
 
     // -------------------------------------------------------------------------
-    //! \brief Calls close() method.
+    //! \brief Destructor automatically calls close().
     // -------------------------------------------------------------------------
     ~Zipper();
+
+    // Disable copy and move semantics
+    Zipper(const Zipper&) = delete;
+    Zipper& operator=(const Zipper&) = delete;
+    Zipper(Zipper&&) = delete;
+    Zipper& operator=(Zipper&&) = delete;
 
     // -------------------------------------------------------------------------
     //! \brief Compress data from source with a given timestamp in the archive
@@ -130,8 +142,8 @@ public:
     //! \param[in] p_timestamp Desired timestamp for the file.
     //! \param[in] p_nameInZip Desired name for the file inside the archive.
     //! \param[in] p_flags Compression options (faster, better, etc.).
-    //! \return true on success, false on failure.
-    //! \throw std::runtime_error if an error occurs during compression.
+    //! \return true on success, false on failure. Sets internal error code on
+    //! failure.
     // -------------------------------------------------------------------------
     bool add(std::istream& p_source,
              const std::tm& p_timestamp,
@@ -140,13 +152,13 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Compress data from source in the archive with the given name.
-    //! No timestamp will be stored.
+    //! Uses current time as timestamp.
     //!
     //! \param[in,out] p_source Data stream to compress.
     //! \param[in] p_nameInZip Desired name for the file inside the archive.
     //! \param[in] p_flags Compression options (faster, better, etc.).
-    //! \return true on success, false on failure.
-    //! \throw std::runtime_error if an error occurs during compression.
+    //! \return true on success, false on failure. Sets internal error code on
+    //! failure.
     // -------------------------------------------------------------------------
     bool add(std::istream& p_source,
              const std::string& p_nameInZip,
@@ -154,11 +166,12 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Compress data from source in the archive with an empty name.
+    //! Uses current time as timestamp.
     //!
     //! \param[in,out] p_source Data stream to compress.
     //! \param[in] p_flags Compression options (faster, better, etc.).
-    //! \return true on success, false on failure.
-    //! \throw std::runtime_error if an error occurs during compression.
+    //! \return true on success, false on failure. Sets internal error code on
+    //! failure.
     // -------------------------------------------------------------------------
     bool add(std::istream& p_source,
              Zipper::ZipFlags p_flags = Zipper::ZipFlags::Better)
@@ -170,9 +183,11 @@ public:
     //! \brief Compress a folder or a file in the archive.
     //!
     //! \param[in] p_file_or_folder_path Path to the file or folder to compress.
-    //! \param[in] p_flags Compression options (faster, better, etc.).
-    //! \return true on success, false on failure.
-    //! \throw std::runtime_error if an error occurs during compression.
+    //! \param[in] p_flags Compression options (faster, better, etc.). If
+    //! Zipper::ZipFlags::SaveHierarchy is included, the directory structure
+    //! relative to the input path is preserved.
+    //! \return true on success (all files added), false on failure (at least
+    //! one file failed). Sets internal error code on failure.
     // -------------------------------------------------------------------------
     bool add(const std::string& p_file_or_folder_path,
              Zipper::ZipFlags p_flags = Zipper::ZipFlags::Better);
@@ -181,9 +196,11 @@ public:
     //! \brief Compress a folder or a file in the archive.
     //!
     //! \param[in] p_file_or_folder_path Path to the file or folder to compress.
-    //! \param[in] p_flags Compression options (faster, better, etc.).
-    //! \return true on success, false on failure.
-    //! \throw std::runtime_error if an error occurs during compression.
+    //! \param[in] p_flags Compression options (faster, better, etc.). If
+    //! Zipper::ZipFlags::SaveHierarchy is included, the directory structure
+    //! relative to the input path is preserved.
+    //! \return true on success (all files added), false on failure (at least
+    //! one file failed). Sets internal error code on failure.
     // -------------------------------------------------------------------------
     bool add(const char* p_file_or_folder_path,
              Zipper::ZipFlags p_flags = Zipper::ZipFlags::Better)
@@ -195,61 +212,68 @@ public:
     //! \brief Closes the zip archive.
     //!
     //! Depending on the constructor used, this method will close the access to
-    //! the zip file, flush the stream, or release memory.
-    //! \note This method is called by the destructor.
+    //! the zip file, flush the stream, or update the memory vector.
+    //! \note This method is automatically called by the destructor. It's safe
+    //! to call multiple times.
     // -------------------------------------------------------------------------
     void close();
 
     // -------------------------------------------------------------------------
     //! \brief Opens or reopens the zip archive.
     //!
-    //! To be called after a close(). Depending on the constructor used, this
-    //! method will open the zip file or reserve buffers.
+    //! If the archive was previously closed, this re-initializes it for
+    //! appending or overwriting based on the mode it was originally created
+    //! with (file, stream, or vector) and the provided flags.
     //! \param[in] p_flags Overwrite or append (default) to existing zip file.
-    //! \return true on success, false on failure.
-    //! \note This method is not called by the constructor.
+    //! Only relevant for file-based zippers.
+    //! \return true on success, false on failure. Sets internal error code on
+    //! failure.
+    //! \note This method is not called by the constructor. If called on an
+    //! already open zipper, it first closes it.
     // -------------------------------------------------------------------------
     bool open(Zipper::OpenFlags p_flags = Zipper::OpenFlags::Append);
 
     // -------------------------------------------------------------------------
-    //! \brief Check if the zipper is currently open.
+    //! \brief Check if the zipper is currently open and ready for adding files.
     //! \return True if the zipper is open, false otherwise.
     // -------------------------------------------------------------------------
-    bool isOpen() const;
+    inline bool isOpen() const
+    {
+        return m_open;
+    }
 
     // -------------------------------------------------------------------------
     //! \brief Get the error information when a method returned false.
-    //! \return Reference to the error code.
+    //! \return Reference to the error code. The error code is cleared on the
+    //! next successful operation or successful open().
     // -------------------------------------------------------------------------
-    std::error_code const& error() const;
+    inline std::error_code const& error() const
+    {
+        return m_error_code;
+    }
 
 private:
 
-    //! \brief Releases allocated resources.
-    void release();
-
-private:
-
-    struct Impl;
-
-    //! \brief Stream in which to store zipped files.
-    std::iostream& m_output_stream;
-    //! \brief Vector in which to store zipped files.
-    std::vector<unsigned char>& m_output_vector;
-    //! \brief Name of the zip file.
+    //! \brief Stream to store zipped files, if using stream constructor.
+    //! Null otherwise.
+    std::iostream* m_output_stream;
+    //! \brief Vector to store zipped files, if using vector constructor.
+    //! Null otherwise.
+    std::vector<unsigned char>* m_output_vector;
+    //! \brief Name of the zip file, if using file constructor.
     std::string m_zip_name;
     //! \brief Password for the zip file.
     std::string m_password;
-    //! \brief Whether to use a memory vector.
+    //! \brief Whether the zipper was constructed using a memory vector.
     bool m_using_vector;
-    //! \brief Whether to use a stream.
+    //! \brief Whether the zipper was constructed using a stream.
     bool m_using_stream;
-    //! \brief Whether the zip file is open.
+    //! \brief Whether the zip archive is currently open.
     bool m_open = false;
-    //! \brief Error code.
+    //! \brief Stores the last error.
     std::error_code m_error_code;
-    //! \brief Implementation.
-    Impl* m_impl;
+    //! \brief PIMPL implementation detail.
+    std::unique_ptr<Impl> m_impl;
 };
 
 // -------------------------------------------------------------------------
