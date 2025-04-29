@@ -193,28 +193,14 @@ struct Zipper::Impl
 
         int mode = 0;
 
-        /* open the zip file for output */
-        if (Path::exist(p_filename))
+        // Set the minizip mode
+        if (p_flags == Zipper::OpenFlags::Overwrite)
         {
-            if (!Path::isFile(p_filename))
-            {
-                m_error_code = make_error_code(ZipperError::OPENING_ERROR,
-                                               "Is a directory");
-                return false;
-            }
-            if (p_flags == Zipper::OpenFlags::Overwrite)
-            {
-                Path::remove(p_filename);
-                mode = APPEND_STATUS_CREATE;
-            }
-            else
-            {
-                mode = APPEND_STATUS_ADDINZIP;
-            }
+            mode = APPEND_STATUS_CREATE;
         }
         else
         {
-            mode = APPEND_STATUS_CREATE;
+            mode = APPEND_STATUS_ADDINZIP;
         }
 
 #if defined(_WIN32)
@@ -226,8 +212,22 @@ struct Zipper::Impl
 
         if (m_zip_file != nullptr)
             return true;
-        m_error_code =
-            make_error_code(ZipperError::OPENING_ERROR, strerror(errno));
+
+        if (Path::isDir(p_filename))
+        {
+            m_error_code =
+                make_error_code(ZipperError::OPENING_ERROR, "Is a directory");
+        }
+        else if (p_filename.substr(p_filename.find_last_of(".") + 1u) != "zip")
+        {
+            m_error_code =
+                make_error_code(ZipperError::OPENING_ERROR, "Not a zip file");
+        }
+        else
+        {
+            m_error_code =
+                make_error_code(ZipperError::OPENING_ERROR, strerror(errno));
+        }
         return false;
     }
 
@@ -663,19 +663,10 @@ Zipper::Zipper(const std::string& p_zipname,
       m_using_stream(false),
       m_impl(std::make_unique<Impl>(*this, m_error_code))
 {
-    if (m_impl->initFile(p_zipname, p_flags))
+    if ((m_open = m_impl->initFile(p_zipname, p_flags)) == false)
     {
-        m_open = true;
-    }
-    else
-    {
-        std::string error_msg = "Zipper initialization failed";
-        if (m_error_code)
-        {
-            error_msg = m_error_code.message();
-        }
-
-        throw std::runtime_error(error_msg);
+        throw std::runtime_error(m_error_code ? m_error_code.message()
+                                              : "Zipper initialization failed");
     }
 }
 

@@ -15,6 +15,7 @@
 #include "external/minizip/zip.h"
 
 #include <array>
+#include <cstring>
 #include <exception>
 #include <fstream>
 #include <functional>
@@ -33,6 +34,8 @@ enum class unzipper_error
     NO_ERROR_UNZIPPER = 0,
     //! Error when accessing to a info entry
     NO_ENTRY,
+    //! Error when opening a file
+    OPENING_ERROR,
     //! Error inside libraries
     INTERNAL_ERROR,
     //! Zip slip vulnerability
@@ -61,6 +64,8 @@ struct UnzipperErrorCategory: std::error_category
         {
             case unzipper_error::NO_ERROR_UNZIPPER:
                 return "There was no error";
+            case unzipper_error::OPENING_ERROR:
+                return "Opening error";
             case unzipper_error::NO_ENTRY:
                 return "Error, couldn't get the current entry info";
             case unzipper_error::INTERNAL_ERROR:
@@ -114,8 +119,8 @@ private:
         m_zip_file = unzOpen2("__notused__", &p_file_func);
         if (m_zip_file == nullptr)
         {
-            m_error_code = make_error_code(unzipper_error::INTERNAL_ERROR,
-                                           strerror(errno));
+            m_error_code =
+                make_error_code(unzipper_error::OPENING_ERROR, strerror(errno));
             return false;
         }
         return true;
@@ -628,19 +633,6 @@ public:
     // -------------------------------------------------------------------------
     bool initFile(std::string const& p_filename)
     {
-        if (!Path::exist(p_filename))
-        {
-            m_error_code =
-                make_error_code(unzipper_error::NO_ENTRY, "Does not exist");
-            return false;
-        }
-        if (!Path::isFile(p_filename))
-        {
-            m_error_code =
-                make_error_code(unzipper_error::NO_ENTRY, "Not a zip file");
-            return false;
-        }
-
 #if defined(_WIN32)
         zlib_filefunc64_def ffunc;
         fill_win32_filefunc64A(&ffunc);
@@ -652,18 +644,18 @@ public:
         if (m_zip_file != nullptr)
             return true;
 
-        if (p_filename.substr(p_filename.find_last_of(".") + 1u) != "zip")
+        if (Path::isDir(p_filename))
         {
-            m_error_code =
-                make_error_code(unzipper_error::NO_ENTRY, "Not a zip file");
-            return false;
+            m_error_code = make_error_code(unzipper_error::OPENING_ERROR,
+                                           "Is a directory");
+        }
+        else if (p_filename.substr(p_filename.find_last_of(".") + 1u) != "zip")
+        {
+            m_error_code = make_error_code(unzipper_error::OPENING_ERROR,
+                                           "Not a zip file");
         }
 
-        // https://github.com/sebastiandev/zipper/issues/118
-        // Avoid throwing error if the zip is empty. Having a dummy zip file is
-        // probably weird but we may want get a dummy array when calling
-        // Unzipper::entries(); or add files with Zipper::add().
-        return true;
+        return false;
     }
 
     // -------------------------------------------------------------------------
@@ -869,17 +861,11 @@ Unzipper::Unzipper(std::string const& p_zipname, std::string const& p_password)
 {
     if (!m_impl->initFile(p_zipname))
     {
-        if (m_impl->m_error_code)
-        {
-            std::runtime_error exception(m_impl->m_error_code.message());
-            throw exception;
-        }
-        m_open = true;
+        throw std::runtime_error(m_impl->m_error_code
+                                     ? m_impl->m_error_code.message()
+                                     : std::strerror(errno));
     }
-    else
-    {
-        m_open = true;
-    }
+    m_open = true;
 }
 
 // -----------------------------------------------------------------------------
