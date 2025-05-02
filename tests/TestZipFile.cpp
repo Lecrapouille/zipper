@@ -88,13 +88,34 @@ static bool createFile(const std::string& p_file, const std::string& p_content)
 }
 
 /**
+ * @brief Removes a file or directory.
+ * @param[in] p_file Path to the file or directory to remove.
+ * @return true if successful, false otherwise.
+ */
+static bool removeFileOrDir(const std::string& p_file)
+{
+    if (Path::isFile(p_file))
+    {
+        Path::remove(p_file);
+        return checkFileDoesNotExist(p_file);
+    }
+    else if (Path::isDir(p_file))
+    {
+        return Path::remove(p_file);
+        return (!checkDirExists(p_file));
+    }
+    return true;
+}
+
+/**
  * @brief Creates a directory.
  * @param[in] p_dir Path to the directory to create.
  * @return true if successful, false otherwise.
  */
 static bool createDir(const std::string& p_dir)
 {
-    return Path::createDir(p_dir) && checkDirExists(p_dir);
+    return removeFileOrDir(p_dir) && Path::createDir(p_dir) &&
+           checkDirExists(p_dir);
 }
 
 /**
@@ -139,8 +160,7 @@ TEST(ZipperFileOps, NominalOpenings)
     const std::string content3 = "content nominal 3";
 
     // Clean up.
-    Path::remove(zip_filename);
-    ASSERT_FALSE(Path::exist(zip_filename));
+    ASSERT_TRUE(helper::removeFileOrDir(zip_filename));
 
     // Constructor with Overwrite flag.
     {
@@ -201,8 +221,8 @@ TEST(ZipperFileOps, NominalOpenings)
     {
         Zipper zipper(zip_filename, Zipper::OpenFlags::Overwrite);
         // FIXME zipper.open(Zipper::OpenFlags::Append);
-        std::cout << "zipper.error() = " << zipper.error().message()
-                  << std::endl;
+        // std::cout << "zipper.error() = " << zipper.error().message()
+        //          << std::endl;
         ASSERT_TRUE(helper::zipAddFile(zipper, file1, content1, file1));
         ASSERT_FALSE(zipper.error()) << zipper.error().message();
         zipper.close();
@@ -256,7 +276,7 @@ TEST(ZipperFileOps, NominalOpenings)
     }
 
     // Final Clean up
-    Path::remove(zip_filename);
+    ASSERT_TRUE(helper::removeFileOrDir(zip_filename));
 }
 
 //=============================================================================
@@ -266,6 +286,7 @@ TEST(ZipperFileOps, TryOpeningFolderInsteadOfZipFile)
 {
     const std::vector<std::string> folder_paths = {
         "ziptest_folder", "ziptest_folder.zip", "ziptest_folder.zip.txt"};
+
     for (const auto& folder_path : folder_paths)
     {
         std::cout << "Testing folder: " << folder_path << std::endl;
@@ -294,7 +315,7 @@ TEST(ZipperFileOps, TryOpeningFolderInsteadOfZipFile)
         }
 
         // Clean up.
-        Path::remove(folder_path);
+        ASSERT_TRUE(helper::removeFileOrDir(folder_path));
     }
 }
 
@@ -303,8 +324,7 @@ TEST(ZipperFileOps, TryOpeningFolderInsteadOfZipFile)
 //=============================================================================
 TEST(ZipperFileOps, TryOpeningFakeZipFiles)
 {
-    const std::vector<std::string> fake_zip_filenames = {
-        "/home/qq/MyGitHub/zipper/tests/issues/foobar.txt"};
+    const std::vector<std::string> fake_zip_filenames = {"foobar.txt"};
 
     for (const auto& fake_zip_filename : fake_zip_filenames)
     {
@@ -338,7 +358,7 @@ TEST(ZipperFileOps, TryOpeningFakeZipFiles)
         }
 
         // Clean up.
-        Path::remove(fake_zip_filename);
+        ASSERT_TRUE(helper::removeFileOrDir(fake_zip_filename));
     }
 }
 
@@ -347,10 +367,8 @@ TEST(ZipperFileOps, TryOpeningFakeZipFiles)
 //=============================================================================
 TEST(ZipperFileOps, TryOpeningBadZipFiles)
 {
-    const std::string zip_poc0 =
-        "/home/qq/MyGitHub/zipper/tests/issues/poc0.zip";
-    const std::string zip_poc1 =
-        "/home/qq/MyGitHub/zipper/tests/issues/poc1.zip";
+    const std::string zip_poc0 = "issues/poc0.zip";
+    const std::string zip_poc1 = "issues/poc1.zip";
 
     // Try opening the zip file with the Append flag.
     try
@@ -383,7 +401,7 @@ TEST(ZipperFileOps, TryOpeningBadZipFiles)
     }
     catch (const std::runtime_error& e)
     {
-        ASSERT_THAT(e.what(), testing::HasSubstr("Bad file descriptor"));
+        ASSERT_THAT(e.what(), testing::HasSubstr("Not a zip file"));
     }
 
     // Try unzipping the bad zip file.
@@ -391,13 +409,11 @@ TEST(ZipperFileOps, TryOpeningBadZipFiles)
     {
         std::cout << "Testing Unzipper with " << zip_poc1 << std::endl;
         Unzipper unzipper(zip_poc1);
-        unzipper.extractAll("eee/");
-        unzipper.close();
         FAIL() << "Expected std::runtime_error for bad zip file";
     }
     catch (const std::runtime_error& e)
     {
-        ASSERT_THAT(e.what(), testing::HasSubstr("Bad file descriptor"));
+        ASSERT_THAT(e.what(), testing::HasSubstr("Not a zip file"));
     }
 }
 
@@ -442,7 +458,7 @@ TEST(ZipperFileOps, TryOpeningNonExistentFile)
     // Try opening the non-existent file with the Overwrite flag.
     try
     {
-        Path::remove(nonExistentFile);
+        ASSERT_TRUE(helper::removeFileOrDir(nonExistentFile));
         Zipper zipper(nonExistentFile, Zipper::OpenFlags::Append);
         FAIL() << "Expected std::runtime_error for non-existent file";
     }
@@ -454,7 +470,7 @@ TEST(ZipperFileOps, TryOpeningNonExistentFile)
     // Try opening the non-existent file with the Append flag.
     try
     {
-        Path::remove(nonExistentFile);
+        ASSERT_TRUE(helper::removeFileOrDir(nonExistentFile));
         Zipper zipper(nonExistentFile);
         ASSERT_FALSE(helper::checkFileDoesNotExist(nonExistentFile));
     }
@@ -466,7 +482,7 @@ TEST(ZipperFileOps, TryOpeningNonExistentFile)
     // Try opening the non-existent file.
     try
     {
-        Path::remove(nonExistentFile);
+        ASSERT_TRUE(helper::removeFileOrDir(nonExistentFile));
         Unzipper unzipper(nonExistentFile);
         FAIL() << "Expected std::runtime_error for non-existent file";
     }
@@ -476,5 +492,185 @@ TEST(ZipperFileOps, TryOpeningNonExistentFile)
     }
 
     // Clean up.
-    Path::remove(nonExistentFile);
+    ASSERT_TRUE(helper::removeFileOrDir(nonExistentFile));
+}
+
+//=============================================================================
+// Test Suite with Add Operations
+// FIXME: missing dummy folder insertion
+//=============================================================================
+TEST(ZipperFileOps, AddOperations)
+{
+    const std::string zipFilename = "ziptest_add.zip";
+    const std::string file1 = "file1_add.txt";
+    const std::string content1 = "content add 1";
+    const std::string folder1 = "folder1_add/";
+    const std::string fileInFolder = folder1 + "file_in_folder.txt";
+    const std::string contentInFolder = "content in folder";
+    const std::string emptyFolder = "empty_folder_add/";
+    const std::string extractDir = "extract_dir/";
+
+    // Setup directories and files
+    ASSERT_TRUE(helper::removeFileOrDir(zipFilename));
+    ASSERT_TRUE(helper::createDir(folder1));
+    ASSERT_TRUE(helper::createDir(emptyFolder));
+    ASSERT_TRUE(helper::createFile(fileInFolder, contentInFolder));
+    ASSERT_TRUE(helper::createFile(file1, content1));
+
+    // Test adding files to zip
+    {
+        std::cout << "Adding files to zip" << std::endl;
+        Zipper zipper(zipFilename, Zipper::OpenFlags::Overwrite);
+
+        // Add single file (no hierarchy)
+        ASSERT_TRUE(zipper.add(file1)); // Flags default to Better, no hierarchy
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+
+        // Add folder (with hierarchy)
+        ASSERT_TRUE(zipper.add(folder1, Zipper::SaveHierarchy));
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+
+        // Add folder (without hierarchy - should only add files at root)
+        ASSERT_TRUE(zipper.add(folder1)); // No SaveHierarchy flag
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+
+        // Add empty folder (with hierarchy - might add a dir entry or nothing)
+        ASSERT_TRUE(zipper.add(emptyFolder, Zipper::SaveHierarchy));
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+
+        // Add non-existent file (should fail)
+        ASSERT_FALSE(zipper.add("non_existent_file_add.txt"));
+        ASSERT_THAT(zipper.error().message(),
+                    testing::HasSubstr("Cannot open file"));
+
+        zipper.close();
+    }
+
+    // Clean up
+    std::cout << "Cleaning up" << std::endl;
+    ASSERT_TRUE(helper::removeFileOrDir(folder1));
+    ASSERT_TRUE(helper::removeFileOrDir(emptyFolder));
+    ASSERT_TRUE(helper::removeFileOrDir(file1));
+
+    // Verify zip content
+    {
+        std::cout << "Verifying zip content" << std::endl;
+
+        Unzipper unzipper(zipFilename);
+        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+        auto entries = unzipper.entries();
+        unzipper.close();
+
+        ASSERT_EQ(entries.size(), 3u);
+        ASSERT_STREQ(entries[0].name.c_str(), "file1_add.txt");
+        ASSERT_STREQ(entries[1].name.c_str(), "folder1_add/file_in_folder.txt");
+        ASSERT_STREQ(entries[2].name.c_str(), "file_in_folder.txt");
+    }
+
+    // Extract single entry to current dir
+    {
+        std::cout << "Extracting entries to current dir:" << std::endl;
+
+        Unzipper unzipper(zipFilename);
+        auto entries = unzipper.entries();
+
+        for (size_t i = 0; i < entries.size(); ++i)
+        {
+            const auto& entry = entries[i];
+            std::cout << "  - Extracting " << entry.name << std::endl;
+
+            ASSERT_TRUE(unzipper.extractEntry(entry.name, false));
+            ASSERT_TRUE(helper::checkFileExists(
+                entry.name, 0 == i ? content1 : contentInFolder));
+
+            ASSERT_TRUE(unzipper.extractEntry(entry.name, true));
+            ASSERT_TRUE(helper::checkFileExists(
+                entry.name, 0 == i ? content1 : contentInFolder));
+
+            ASSERT_FALSE(unzipper.extractEntry(entry.name, false));
+            ASSERT_THAT(unzipper.error().message(),
+                        testing::HasSubstr("already exists"));
+            ASSERT_TRUE(helper::checkFileExists(
+                entry.name, 0 == i ? content1 : contentInFolder));
+        }
+
+        // Clean up
+        for (const auto& entry : entries)
+        {
+            ASSERT_TRUE(helper::removeFileOrDir(entry.name));
+        }
+
+        unzipper.close();
+    }
+
+    // Extract single entry to specific dir
+    {
+        std::cout << "Extracting entries to specific dir: " << extractDir
+                  << std::endl;
+
+        ASSERT_TRUE(helper::removeFileOrDir(extractDir));
+        Unzipper unzipper(zipFilename);
+        auto entries = unzipper.entries();
+
+        for (size_t i = 0; i < entries.size(); ++i)
+        {
+            const auto& entry = entries[i];
+            std::cout << "  - Extracting " << entry.name << std::endl;
+
+            ASSERT_TRUE(unzipper.extractEntry(entry.name, extractDir, false));
+            ASSERT_TRUE(helper::checkFileExists(
+                extractDir + entry.name, 0 == i ? content1 : contentInFolder));
+
+            ASSERT_TRUE(unzipper.extractEntry(entry.name, extractDir, true));
+            ASSERT_TRUE(helper::checkFileExists(
+                extractDir + entry.name, 0 == i ? content1 : contentInFolder));
+
+            ASSERT_FALSE(unzipper.extractEntry(entry.name, extractDir, false));
+            ASSERT_THAT(unzipper.error().message(),
+                        testing::HasSubstr("already exists"));
+            ASSERT_TRUE(helper::checkFileExists(
+                extractDir + entry.name, 0 == i ? content1 : contentInFolder));
+        }
+
+        unzipper.close();
+
+        // Clean up
+        ASSERT_TRUE(helper::removeFileOrDir(extractDir));
+    }
+
+#if 0
+
+    // Extract all to specific dir
+    {
+        ASSERT_TRUE(unzipper.extractAll(extractDir, false));
+        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+        for (const auto& entry : entries)
+        {
+            ASSERT_TRUE(helper::checkFileExists(extractDir + entry.name,
+                                                entry.content));
+            ASSERT_TRUE(unzipper.extractAll(extractDir, true));
+            ASSERT_THAT(unzipper.error().message(),
+                        testing::HasSubstr("File already exists"));
+        }
+    }
+
+    Path::remove(extractDir); // Clean up
+
+    // Extract all to current dir (default)
+    ASSERT_TRUE(unzipper.extractAll());
+    ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+    for (const auto& entry : entries)
+    {
+        ASSERT_TRUE(helper::checkFileExists(entry.name, entry.content));
+    }
+    // Clean up
+
+    unzipper.close();
+#endif
+
+    // Clean up
+    ASSERT_TRUE(helper::removeFileOrDir(zipFilename));
+    ASSERT_TRUE(helper::removeFileOrDir(folder1));
+    ASSERT_TRUE(helper::removeFileOrDir(emptyFolder));
+    ASSERT_TRUE(helper::removeFileOrDir(file1));
 }

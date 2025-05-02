@@ -218,7 +218,8 @@ struct Zipper::Impl
             m_error_code =
                 make_error_code(ZipperError::OPENING_ERROR, "Is a directory");
         }
-        else if (p_filename.substr(p_filename.find_last_of(".") + 1u) != "zip")
+        else if ((errno == EINVAL) ||
+                 p_filename.substr(p_filename.find_last_of(".") + 1u) != "zip")
         {
             m_error_code =
                 make_error_code(ZipperError::OPENING_ERROR, "Not a zip file");
@@ -775,19 +776,11 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
     if (Path::isDir(p_file_or_folder_path))
     {
         std::vector<std::string> files;
-        try // Add try-catch for filesFromDir allocation
+        try
         {
             files = Path::filesFromDir(p_file_or_folder_path, true);
         }
-        catch (const std::bad_alloc& e)
-        {
-            m_error_code =
-                make_error_code(ZipperError::INTERNAL_ERROR,
-                                "Failed to allocate memory for file list");
-            return false;
-        }
-        catch (
-            const std::exception& e) // Catch other potential errors from Path
+        catch (const std::exception& e)
         {
             m_error_code = make_error_code(
                 ZipperError::INTERNAL_ERROR,
@@ -795,12 +788,10 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
             return false;
         }
 
-        // Get base folder path with separator for relative path calculation
-        // Assuming p_file_or_folder_path is normalized enough or handled by
-        // filesFromDir
-        std::string folder_path = p_file_or_folder_path;
-        // Replace baseName with filename to get the last component
-        std::string base_folder = Path::fileName(folder_path);
+        if (files.empty())
+        {
+            return overall_success;
+        }
 
         for (const auto& file_path : files)
         {
@@ -824,7 +815,8 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
             if ((p_flags & Zipper::SaveHierarchy) == Zipper::SaveHierarchy)
             {
                 // Find the base folder path within the canonical file path
-                size_t base_pos = canonical_file_path.find(folder_path);
+                size_t base_pos =
+                    canonical_file_path.find(p_file_or_folder_path);
                 if (base_pos != std::string::npos)
                 {
                     name_in_zip = canonical_file_path.substr(base_pos);
@@ -858,7 +850,7 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
             m_error_code = make_error_code(ZipperError::OPENING_ERROR,
                                            "Cannot open file: '" +
                                                p_file_or_folder_path + "'");
-            return false; // Fail immediately if single file cannot be opened
+            return false;
         }
 
         std::string nameInZip;

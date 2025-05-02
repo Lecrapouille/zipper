@@ -649,10 +649,16 @@ public:
             m_error_code = make_error_code(unzipper_error::OPENING_ERROR,
                                            "Is a directory");
         }
-        else if (p_filename.substr(p_filename.find_last_of(".") + 1u) != "zip")
+        else if ((errno == EINVAL) ||
+                 p_filename.substr(p_filename.find_last_of(".") + 1u) != "zip")
         {
             m_error_code = make_error_code(unzipper_error::OPENING_ERROR,
                                            "Not a zip file");
+        }
+        else
+        {
+            m_error_code =
+                make_error_code(unzipper_error::OPENING_ERROR, strerror(errno));
         }
 
         return false;
@@ -740,6 +746,7 @@ public:
                const std::map<std::string, std::string>& p_alternativeNames,
                bool const p_replace)
     {
+        m_error_code.clear();
         bool res = true;
 
         // Traverse the zip file sequentially in a single pass
@@ -804,6 +811,7 @@ public:
                 : Path::folderNameWithSeparator(p_destination) + p_name;
         std::string canonOutputFile = Path::canonicalPath(outputFile);
 
+        m_error_code.clear();
         return locateEntry(p_name) && currentEntryInfo(entry) &&
                extractCurrentEntryToFile(entry, canonOutputFile, p_replace);
     }
@@ -813,6 +821,7 @@ public:
     {
         ZipEntry entry;
 
+        m_error_code.clear();
         return locateEntry(p_name) && currentEntryInfo(entry) &&
                extractCurrentEntryToStream(entry, p_stream);
     }
@@ -823,6 +832,7 @@ public:
     {
         ZipEntry entry;
 
+        m_error_code.clear();
         return locateEntry(p_name) && currentEntryInfo(entry) &&
                extractCurrentEntryToMemory(entry, p_vec);
     }
