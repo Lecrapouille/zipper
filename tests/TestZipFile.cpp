@@ -423,12 +423,18 @@ TEST(ZipperFileOps, TryOpeningBadZipFiles)
 #if !defined(_WIN32) // Permission tests are more reliable on Unix-like
 TEST(ZipperFileOps, TryOpeningWithInsufficientPermissions)
 {
-    const std::string protectedPath =
-        "/root/no_permission_test.zip"; // Path likely requiring root
+    const std::string protected_path =
+#    if defined(__APPLE__)
+        "/System/Library/no_permission_test.zip";
+#    elif defined(__linux__)
+        "/root/no_permission_test.zip";
+#    else
+#        error "Unsupported platform"
+#    endif
 
     try
     {
-        Zipper zipper(protectedPath);
+        Zipper zipper(protected_path);
         FAIL() << "Expected std::runtime_error for permission denied";
     }
     catch (const std::runtime_error& e)
@@ -438,7 +444,7 @@ TEST(ZipperFileOps, TryOpeningWithInsufficientPermissions)
 
     try
     {
-        Unzipper unzipper(protectedPath);
+        Unzipper unzipper(protected_path);
         FAIL() << "Expected std::runtime_error for permission denied";
     }
     catch (const std::runtime_error& e)
@@ -638,35 +644,42 @@ TEST(ZipperFileOps, AddOperations)
         ASSERT_TRUE(helper::removeFileOrDir(extractDir));
     }
 
-#if 0
-
     // Extract all to specific dir
     {
+        ASSERT_TRUE(helper::removeFileOrDir(extractDir));
+        Unzipper unzipper(zipFilename);
+        auto entries = unzipper.entries();
+
         ASSERT_TRUE(unzipper.extractAll(extractDir, false));
-        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
-        for (const auto& entry : entries)
+        for (size_t i = 0; i < entries.size(); ++i)
         {
-            ASSERT_TRUE(helper::checkFileExists(extractDir + entry.name,
-                                                entry.content));
-            ASSERT_TRUE(unzipper.extractAll(extractDir, true));
-            ASSERT_THAT(unzipper.error().message(),
-                        testing::HasSubstr("File already exists"));
+            ASSERT_TRUE(
+                helper::checkFileExists(extractDir + entries[i].name,
+                                        0 == i ? content1 : contentInFolder));
         }
+
+        ASSERT_TRUE(unzipper.extractAll(extractDir, true));
+        for (size_t i = 0; i < entries.size(); ++i)
+        {
+            ASSERT_TRUE(
+                helper::checkFileExists(extractDir + entries[i].name,
+                                        0 == i ? content1 : contentInFolder));
+        }
+
+        ASSERT_FALSE(unzipper.extractAll(extractDir, false));
+        ASSERT_THAT(unzipper.error().message(),
+                    testing::HasSubstr("already exists"));
+        for (size_t i = 0; i < entries.size(); ++i)
+        {
+            ASSERT_TRUE(
+                helper::checkFileExists(extractDir + entries[i].name,
+                                        0 == i ? content1 : contentInFolder));
+        }
+
+        ASSERT_TRUE(helper::removeFileOrDir(extractDir));
+
+        unzipper.close();
     }
-
-    Path::remove(extractDir); // Clean up
-
-    // Extract all to current dir (default)
-    ASSERT_TRUE(unzipper.extractAll());
-    ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
-    for (const auto& entry : entries)
-    {
-        ASSERT_TRUE(helper::checkFileExists(entry.name, entry.content));
-    }
-    // Clean up
-
-    unzipper.close();
-#endif
 
     // Clean up
     ASSERT_TRUE(helper::removeFileOrDir(zipFilename));
