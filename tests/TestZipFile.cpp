@@ -919,3 +919,55 @@ TEST(ZipTests, LargeFileWithPassword)
     helper::removeFileOrDir(zip_filename);
     helper::removeFileOrDir(large_filename);
 }
+
+//=============================================================================
+// Test extracting from a closed zip file
+//=============================================================================
+TEST(ZipperFileOps, ExtractClosed)
+{
+    const std::string zipFilename = "ziptest_add.zip";
+    const std::string file1 = "file1_add.txt";
+
+    Zipper zipper(zipFilename);
+    helper::zipAddFile(zipper, file1, "foo", file1);
+    zipper.close();
+
+    Unzipper unzipper(zipFilename);
+    ASSERT_EQ(unzipper.entries().size(), 1u);
+    ASSERT_STREQ(unzipper.entries()[0].name.c_str(), file1.c_str());
+    unzipper.close();
+
+    ASSERT_EQ(unzipper.entries().size(), 0u);
+    ASSERT_FALSE(unzipper.extractAll(true));
+    ASSERT_THAT(unzipper.error().message(),
+                testing::HasSubstr("Unzipper not open"));
+}
+
+//=============================================================================
+//
+//=============================================================================
+TEST(ZipperFileOps, ExtractBadPassword)
+{
+    const std::string zipFilename = "ziptest_add.zip";
+    const std::string file1 = "file1_add.txt";
+
+    Zipper zipper(zipFilename, "correctpass");
+    helper::zipAddFile(zipper, file1, "foo", file1);
+    zipper.close();
+
+    Unzipper unzipper(zipFilename, "badpass");
+    ASSERT_EQ(unzipper.entries().size(), 1u);
+    ASSERT_STREQ(unzipper.entries()[0].name.c_str(), file1.c_str());
+    ASSERT_FALSE(unzipper.extractEntry(file1, false));
+    ASSERT_THAT(unzipper.error().message(), testing::HasSubstr("Bad password"));
+    ASSERT_FALSE(unzipper.extractEntry(file1, true));
+    ASSERT_THAT(unzipper.error().message(), testing::HasSubstr("Bad password"));
+    ASSERT_FALSE(unzipper.extractAll(true));
+    ASSERT_THAT(unzipper.error().message(), testing::HasSubstr("Bad password"));
+    unzipper.close();
+
+    ASSERT_FALSE(helper::checkFileDoesNotExist(file1));
+
+    helper::removeFileOrDir(zipFilename);
+    helper::removeFileOrDir(file1);
+}
