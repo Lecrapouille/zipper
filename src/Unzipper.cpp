@@ -271,8 +271,8 @@ public:
         if (!failIfInvalidEntry(p_entry_info))
             return false;
 
-        // if (!entryinfo.uncompressedSize) was not a good method to distinguish
-        // dummy file from folder. See
+        // if (!entryinfo.uncompressed_size) was not a good method to
+        // distinguish dummy file from folder. See
         // https://github.com/Lecrapouille/zipper/issues/5
         if (Path::hasTrailingSlash(p_entry_info.name))
         {
@@ -479,9 +479,9 @@ public:
 
             // Set the time of the file that has been unzipped
             tm_zip timeaux;
-            memcpy(&timeaux, &p_entry_info.unixdate, sizeof(timeaux));
+            memcpy(&timeaux, &p_entry_info.unix_date, sizeof(timeaux));
 
-            changeFileDate(p_filename.c_str(), p_entry_info.dosdate, timeaux);
+            changeFileDate(p_filename.c_str(), p_entry_info.dos_date, timeaux);
             return err;
         }
         else
@@ -557,7 +557,7 @@ public:
         {
             // Pre-allocation to avoid costly reallocations
             p_out_vec.clear();
-            p_out_vec.reserve(static_cast<size_t>(p_info.uncompressedSize));
+            p_out_vec.reserve(static_cast<size_t>(p_info.uncompressed_size));
 
             do
             {

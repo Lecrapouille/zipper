@@ -159,124 +159,138 @@ TEST(ZipperFileOps, NominalOpenings)
     const std::string content2 = "content nominal 2";
     const std::string content3 = "content nominal 3";
 
-    // Clean up.
-    ASSERT_TRUE(helper::removeFileOrDir(zip_filename));
+    std::vector<std::string> passwords = {"", "1234567890"};
 
-    // Constructor with Overwrite flag.
+    for (const auto& password : passwords)
     {
-        Zipper zipper(zip_filename); // Default is Overwrite
-        ASSERT_TRUE(helper::zipAddFile(zipper, file1, content1, file1));
-        ASSERT_FALSE(zipper.error()) << zipper.error().message();
-        zipper.close();
-    }
+        std::cout << "Testing with password: '" << password << "'" << std::endl;
 
-    // Verify content. Check if file1 is in the zip archive.
-    {
-        Unzipper unzipper(zip_filename);
-        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
-        auto entries = unzipper.entries();
-        unzipper.close();
-        ASSERT_EQ(entries.size(), 1u);
-        ASSERT_EQ(entries[0].name, file1);
-    }
+        // Clean up.
+        ASSERT_TRUE(helper::removeFileOrDir(zip_filename));
 
-    // Reopen with Append
-    {
-        Zipper zipper(zip_filename, Zipper::OpenFlags::Append);
-        ASSERT_TRUE(helper::zipAddFile(zipper, file3, content3, file3));
-        ASSERT_FALSE(zipper.error()) << zipper.error().message();
-        zipper.close();
-    }
+        // Constructor with Overwrite flag.
+        {
+            Zipper zipper(zip_filename, password); // Default is Overwrite
+            ASSERT_TRUE(zipper.isOpen());
+            ASSERT_FALSE(zipper.error()) << zipper.error().message();
+            ASSERT_TRUE(helper::zipAddFile(zipper, file1, content1, file1));
+            ASSERT_FALSE(zipper.error()) << zipper.error().message();
+            zipper.close();
+        }
 
-    // Verify content (file1, file3)
-    {
-        Unzipper unzipper(zip_filename);
-        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
-        auto entries = unzipper.entries();
-        unzipper.close();
-        ASSERT_EQ(entries.size(), 2u);
-        ASSERT_EQ(entries[0].name, file1);
-        ASSERT_EQ(entries[1].name, file3);
-    }
+        // Verify content. Check if file1 is in the zip archive.
+        {
+            Unzipper unzipper(zip_filename, password);
+            ASSERT_TRUE(unzipper.isOpen());
+            ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+            auto entries = unzipper.entries();
+            unzipper.close();
+            ASSERT_EQ(entries.size(), 1u);
+            ASSERT_EQ(entries[0].name, file1);
+        }
 
-    // Constructor with Overwrite flag (second times)
-    {
-        Zipper zipper(zip_filename, Zipper::OpenFlags::Overwrite);
-        ASSERT_TRUE(helper::zipAddFile(zipper, file2, content2, file2));
-        ASSERT_FALSE(zipper.error()) << zipper.error().message();
-        zipper.close();
-    }
+        // Reopen with Append
+        {
+            Zipper zipper(zip_filename, password, Zipper::OpenFlags::Append);
+            ASSERT_TRUE(zipper.isOpen());
+            ASSERT_FALSE(zipper.error()) << zipper.error().message();
+            ASSERT_TRUE(helper::zipAddFile(zipper, file3, content3, file3));
+            ASSERT_FALSE(zipper.error()) << zipper.error().message();
+            zipper.close();
+        }
 
-    // Verify content. Check if file2 is in the zip archive and file1 is not.
-    {
-        Unzipper unzipper(zip_filename);
-        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
-        auto entries = unzipper.entries();
-        unzipper.close();
-        ASSERT_EQ(entries.size(), 1u);
-        ASSERT_EQ(entries[0].name, file2);
-    }
+        // Verify content (file1, file3)
+        {
+            Unzipper unzipper(zip_filename, password);
+            ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+            ASSERT_TRUE(unzipper.isOpen());
+            auto entries = unzipper.entries();
+            unzipper.close();
+            ASSERT_EQ(entries.size(), 2u);
+            ASSERT_EQ(entries[0].name, file1);
+            ASSERT_EQ(entries[1].name, file3);
+        }
 
-    // Reopen with Append flag.
-    {
-        Zipper zipper(zip_filename, Zipper::OpenFlags::Overwrite);
-        // FIXME zipper.open(Zipper::OpenFlags::Append);
-        // std::cout << "zipper.error() = " << zipper.error().message()
-        //          << std::endl;
-        ASSERT_TRUE(helper::zipAddFile(zipper, file1, content1, file1));
-        ASSERT_FALSE(zipper.error()) << zipper.error().message();
-        zipper.close();
-    }
+        // Constructor with Overwrite flag (second times)
+        {
+            Zipper zipper(zip_filename, password, Zipper::OpenFlags::Overwrite);
+            ASSERT_TRUE(helper::zipAddFile(zipper, file2, content2, file2));
+            ASSERT_FALSE(zipper.error()) << zipper.error().message();
+            zipper.close();
+        }
 
-    // Verify content. Check if file1 is in the zip archive.
-    {
-        Unzipper unzipper(zip_filename);
-        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
-        auto entries = unzipper.entries();
-        unzipper.close();
-        ASSERT_EQ(entries.size(), 1u);
-        ASSERT_EQ(entries[0].name, file1);
-    }
+        // Verify content. Check if file2 is in the zip archive and file1 is
+        // not.
+        {
+            Unzipper unzipper(zip_filename, password);
+            ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+            auto entries = unzipper.entries();
+            unzipper.close();
+            ASSERT_EQ(entries.size(), 1u);
+            ASSERT_EQ(entries[0].name, file2);
+        }
 
-    // Reopen with Append
-    {
-        Zipper zipper(zip_filename, Zipper::OpenFlags::Append);
-        ASSERT_TRUE(helper::zipAddFile(zipper, file3, content3, file3));
-        ASSERT_FALSE(zipper.error()) << zipper.error().message();
-        zipper.close();
-    }
+        // Reopen with Append flag.
+        {
+            Zipper zipper(zip_filename, password, Zipper::OpenFlags::Overwrite);
+            // FIXME zipper.open(Zipper::OpenFlags::Append);
+            // std::cout << "zipper.error() = " << zipper.error().message()
+            //          << std::endl;
+            ASSERT_TRUE(helper::zipAddFile(zipper, file1, content1, file1));
+            ASSERT_FALSE(zipper.error()) << zipper.error().message();
+            zipper.close();
+        }
 
-    // Verify content (file1, file3)
-    {
-        Unzipper unzipper(zip_filename);
-        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
-        auto entries = unzipper.entries();
-        unzipper.close();
-        ASSERT_EQ(entries.size(), 2u);
-        ASSERT_EQ(entries[0].name, file1);
-        ASSERT_EQ(entries[1].name, file3);
-    }
+        // Verify content. Check if file1 is in the zip archive.
+        {
+            Unzipper unzipper(zip_filename, password);
+            ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+            auto entries = unzipper.entries();
+            unzipper.close();
+            ASSERT_EQ(entries.size(), 1u);
+            ASSERT_EQ(entries[0].name, file1);
+        }
 
-    // Reopen with Overwrite flag
-    {
-        Zipper zipper(zip_filename, Zipper::OpenFlags::Append);
-        ASSERT_TRUE(zipper.open(Zipper::OpenFlags::Overwrite));
-        ASSERT_TRUE(helper::zipAddFile(zipper, file2, content2, file2));
-        ASSERT_FALSE(zipper.error()) << zipper.error().message();
-        zipper.close();
-    }
-    // Verify content (only file2)
-    {
-        Unzipper unzipper(zip_filename);
-        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
-        auto entries = unzipper.entries();
-        unzipper.close();
-        ASSERT_EQ(entries.size(), 1u);
-        ASSERT_EQ(entries[0].name, file2);
-    }
+        // Reopen with Append
+        {
+            Zipper zipper(zip_filename, password, Zipper::OpenFlags::Append);
+            ASSERT_TRUE(helper::zipAddFile(zipper, file3, content3, file3));
+            ASSERT_FALSE(zipper.error()) << zipper.error().message();
+            zipper.close();
+        }
 
-    // Final Clean up
-    ASSERT_TRUE(helper::removeFileOrDir(zip_filename));
+        // Verify content (file1, file3)
+        {
+            Unzipper unzipper(zip_filename, password);
+            ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+            auto entries = unzipper.entries();
+            unzipper.close();
+            ASSERT_EQ(entries.size(), 2u);
+            ASSERT_EQ(entries[0].name, file1);
+            ASSERT_EQ(entries[1].name, file3);
+        }
+
+        // Reopen with Overwrite flag
+        {
+            Zipper zipper(zip_filename, password, Zipper::OpenFlags::Append);
+            ASSERT_TRUE(zipper.open(Zipper::OpenFlags::Overwrite));
+            ASSERT_TRUE(helper::zipAddFile(zipper, file2, content2, file2));
+            ASSERT_FALSE(zipper.error()) << zipper.error().message();
+            zipper.close();
+        }
+        // Verify content (only file2)
+        {
+            Unzipper unzipper(zip_filename, password);
+            ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+            auto entries = unzipper.entries();
+            unzipper.close();
+            ASSERT_EQ(entries.size(), 1u);
+            ASSERT_EQ(entries[0].name, file2);
+        }
+
+        // Final Clean up
+        ASSERT_TRUE(helper::removeFileOrDir(zip_filename));
+    }
 }
 
 //=============================================================================
@@ -516,174 +530,261 @@ TEST(ZipperFileOps, AddOperations)
     const std::string emptyFolder = "empty_folder_add/";
     const std::string extractDir = "extract_dir/";
 
-    // Setup directories and files
-    ASSERT_TRUE(helper::removeFileOrDir(zipFilename));
-    ASSERT_TRUE(helper::createDir(folder1));
-    ASSERT_TRUE(helper::createDir(emptyFolder));
-    ASSERT_TRUE(helper::createFile(fileInFolder, contentInFolder));
-    ASSERT_TRUE(helper::createFile(file1, content1));
+    std::vector<std::string> passwords = {"", "1234567890"};
 
-    // Test adding files to zip
+    for (const auto& password : passwords)
     {
-        std::cout << "Adding files to zip" << std::endl;
-        Zipper zipper(zipFilename, Zipper::OpenFlags::Overwrite);
+        std::cout << "Testing with password: '" << password << "'" << std::endl;
 
-        // Add single file (no hierarchy)
-        ASSERT_TRUE(zipper.add(file1)); // Flags default to Better, no hierarchy
-        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+        // Setup directories and files
+        ASSERT_TRUE(helper::removeFileOrDir(zipFilename));
+        ASSERT_TRUE(helper::createDir(folder1));
+        ASSERT_TRUE(helper::createDir(emptyFolder));
+        ASSERT_TRUE(helper::createFile(fileInFolder, contentInFolder));
+        ASSERT_TRUE(helper::createFile(file1, content1));
 
-        // Add folder (with hierarchy)
-        ASSERT_TRUE(zipper.add(folder1, Zipper::SaveHierarchy));
-        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+        // Test adding files to zip
+        {
+            std::cout << "Adding files to zip" << std::endl;
+            Zipper zipper(zipFilename, password, Zipper::OpenFlags::Overwrite);
 
-        // Add folder (without hierarchy - should only add files at root)
-        ASSERT_TRUE(zipper.add(folder1)); // No SaveHierarchy flag
-        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+            // Add single file (no hierarchy)
+            ASSERT_TRUE(
+                zipper.add(file1)); // Flags default to Better, no hierarchy
+            ASSERT_FALSE(zipper.error()) << zipper.error().message();
 
-        // Add empty folder (with hierarchy - might add a dir entry or nothing)
-        ASSERT_TRUE(zipper.add(emptyFolder, Zipper::SaveHierarchy));
-        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+            // Add folder (with hierarchy)
+            ASSERT_TRUE(zipper.add(
+                folder1, Zipper::ZipFlags::Better | Zipper::SaveHierarchy));
+            ASSERT_FALSE(zipper.error()) << zipper.error().message();
 
-        // Add non-existent file (should fail)
-        ASSERT_FALSE(zipper.add("non_existent_file_add.txt"));
-        ASSERT_THAT(zipper.error().message(),
-                    testing::HasSubstr("Cannot open file"));
+            // Add folder (without hierarchy - should only add files at root)
+            ASSERT_TRUE(zipper.add(
+                folder1, Zipper::ZipFlags::Store)); // No SaveHierarchy flag
+            ASSERT_FALSE(zipper.error()) << zipper.error().message();
 
+            // Add empty folder (with hierarchy - might add a dir entry or
+            // nothing)
+            ASSERT_TRUE(zipper.add(
+                emptyFolder, Zipper::ZipFlags::Faster | Zipper::SaveHierarchy));
+            ASSERT_FALSE(zipper.error()) << zipper.error().message();
+
+            // Add non-existent file (should fail)
+            ASSERT_FALSE(zipper.add("non_existent_file_add.txt"));
+            ASSERT_THAT(zipper.error().message(),
+                        testing::HasSubstr("Cannot open file"));
+
+            zipper.close();
+        }
+
+        // Clean up
+        std::cout << "Cleaning up" << std::endl;
+        ASSERT_TRUE(helper::removeFileOrDir(folder1));
+        ASSERT_TRUE(helper::removeFileOrDir(emptyFolder));
+        ASSERT_TRUE(helper::removeFileOrDir(file1));
+
+        // Verify zip content
+        {
+            std::cout << "Verifying zip content" << std::endl;
+
+            Unzipper unzipper(zipFilename, password);
+            ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+            auto entries = unzipper.entries();
+            unzipper.close();
+
+            ASSERT_EQ(entries.size(), 3u);
+            ASSERT_STREQ(entries[0].name.c_str(), "file1_add.txt");
+            ASSERT_STREQ(entries[1].name.c_str(),
+                         "folder1_add/file_in_folder.txt");
+            ASSERT_STREQ(entries[2].name.c_str(), "file_in_folder.txt");
+        }
+
+        // Extract single entry to current dir
+        {
+            std::cout << "Extracting entries to current dir:" << std::endl;
+
+            Unzipper unzipper(zipFilename, password);
+            auto entries = unzipper.entries();
+
+            for (size_t i = 0; i < entries.size(); ++i)
+            {
+                const auto& entry = entries[i];
+                std::cout << "  - Extracting " << entry.name << std::endl;
+
+                ASSERT_TRUE(unzipper.extractEntry(entry.name, false));
+                ASSERT_TRUE(helper::checkFileExists(
+                    entry.name, 0 == i ? content1 : contentInFolder));
+
+                ASSERT_TRUE(unzipper.extractEntry(entry.name, true));
+                ASSERT_TRUE(helper::checkFileExists(
+                    entry.name, 0 == i ? content1 : contentInFolder));
+
+                ASSERT_FALSE(unzipper.extractEntry(entry.name, false));
+                ASSERT_THAT(unzipper.error().message(),
+                            testing::HasSubstr("already exists"));
+                ASSERT_TRUE(helper::checkFileExists(
+                    entry.name, 0 == i ? content1 : contentInFolder));
+            }
+
+            // Clean up
+            for (const auto& entry : entries)
+            {
+                ASSERT_TRUE(helper::removeFileOrDir(entry.name));
+            }
+
+            unzipper.close();
+        }
+
+        // Extract single entry to specific dir
+        {
+            std::cout << "Extracting entries to specific dir: " << extractDir
+                      << std::endl;
+
+            ASSERT_TRUE(helper::removeFileOrDir(extractDir));
+            Unzipper unzipper(zipFilename, password);
+            auto entries = unzipper.entries();
+
+            for (size_t i = 0; i < entries.size(); ++i)
+            {
+                const auto& entry = entries[i];
+                std::cout << "  - Extracting " << entry.name << std::endl;
+
+                ASSERT_TRUE(
+                    unzipper.extractEntry(entry.name, extractDir, false));
+                ASSERT_TRUE(helper::checkFileExists(extractDir + entry.name,
+                                                    0 == i ? content1
+                                                           : contentInFolder));
+
+                ASSERT_TRUE(
+                    unzipper.extractEntry(entry.name, extractDir, true));
+                ASSERT_TRUE(helper::checkFileExists(extractDir + entry.name,
+                                                    0 == i ? content1
+                                                           : contentInFolder));
+
+                ASSERT_FALSE(
+                    unzipper.extractEntry(entry.name, extractDir, false));
+                ASSERT_THAT(unzipper.error().message(),
+                            testing::HasSubstr("already exists"));
+                ASSERT_TRUE(helper::checkFileExists(extractDir + entry.name,
+                                                    0 == i ? content1
+                                                           : contentInFolder));
+            }
+
+            unzipper.close();
+
+            // Clean up
+            ASSERT_TRUE(helper::removeFileOrDir(extractDir));
+        }
+
+        // Extract all to specific dir
+        {
+            ASSERT_TRUE(helper::removeFileOrDir(extractDir));
+            Unzipper unzipper(zipFilename, password);
+            auto entries = unzipper.entries();
+
+            ASSERT_TRUE(unzipper.extractAll(extractDir, false));
+            for (size_t i = 0; i < entries.size(); ++i)
+            {
+                ASSERT_TRUE(helper::checkFileExists(
+                    extractDir + entries[i].name,
+                    0 == i ? content1 : contentInFolder));
+            }
+
+            ASSERT_TRUE(unzipper.extractAll(extractDir, true));
+            for (size_t i = 0; i < entries.size(); ++i)
+            {
+                ASSERT_TRUE(helper::checkFileExists(
+                    extractDir + entries[i].name,
+                    0 == i ? content1 : contentInFolder));
+            }
+
+            ASSERT_FALSE(unzipper.extractAll(extractDir, false));
+            ASSERT_THAT(unzipper.error().message(),
+                        testing::HasSubstr("already exists"));
+            for (size_t i = 0; i < entries.size(); ++i)
+            {
+                ASSERT_TRUE(helper::checkFileExists(
+                    extractDir + entries[i].name,
+                    0 == i ? content1 : contentInFolder));
+            }
+
+            ASSERT_TRUE(helper::removeFileOrDir(extractDir));
+
+            unzipper.close();
+        }
+
+        // Clean up
+        ASSERT_TRUE(helper::removeFileOrDir(zipFilename));
+        ASSERT_TRUE(helper::removeFileOrDir(folder1));
+        ASSERT_TRUE(helper::removeFileOrDir(emptyFolder));
+        ASSERT_TRUE(helper::removeFileOrDir(file1));
+    }
+}
+
+//=============================================================================
+// Test adding a large file with a password to trigger chunked CRC
+// calculation.
+//=============================================================================
+TEST(ZipTests, LargeFileWithPassword)
+{
+    const std::string zip_filename = "ziptest_large.zip";
+    const std::string large_filename = "large_test_file.dat";
+    const std::string password = "verysecretpassword";
+    const size_t file_size =
+        110 * 1024 * 1024; // 110 MB to trigger chunked reading in getFileCrc
+
+    // Clean up potential leftovers
+    helper::removeFileOrDir(zip_filename);
+    helper::removeFileOrDir(large_filename);
+
+    // Create a large file
+    {
+        std::ofstream ofs(large_filename, std::ios::binary | std::ios::out);
+        ASSERT_TRUE(ofs.is_open());
+        // Fill with some data, 'A' for simplicity
+        std::vector<char> buffer(1024 * 1024, 'A'); // 1MB buffer
+        size_t bytes_written = 0;
+        while (bytes_written < file_size)
+        {
+            size_t to_write =
+                std::min(buffer.size(), file_size - bytes_written);
+            ofs.write(buffer.data(), std::streamsize(to_write));
+            ASSERT_TRUE(ofs.good());
+            bytes_written += to_write;
+        }
+        ofs.flush();
+        ASSERT_TRUE(ofs.good());
+        ofs.close();
+    }
+    ASSERT_TRUE(Path::exist(large_filename));
+    ASSERT_EQ(Path::getFileSize(large_filename), file_size);
+
+    // Create zipper with password and add the large file
+    {
+        Zipper zipper(zip_filename, password);
+        ASSERT_TRUE(zipper.isOpen());
+        std::ifstream ifs(large_filename, std::ios::binary);
+        ASSERT_TRUE(ifs.is_open());
+        ASSERT_TRUE(zipper.add(ifs, large_filename));
+        ifs.close();
         zipper.close();
+        ASSERT_FALSE(zipper.isOpen());
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
     }
 
-    // Clean up
-    std::cout << "Cleaning up" << std::endl;
-    ASSERT_TRUE(helper::removeFileOrDir(folder1));
-    ASSERT_TRUE(helper::removeFileOrDir(emptyFolder));
-    ASSERT_TRUE(helper::removeFileOrDir(file1));
-
-    // Verify zip content
+    // Verify the zip file
+    ASSERT_TRUE(Path::exist(zip_filename));
     {
-        std::cout << "Verifying zip content" << std::endl;
-
-        Unzipper unzipper(zipFilename);
+        zipper::Unzipper unzipper(zip_filename, password);
         ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
-        auto entries = unzipper.entries();
-        unzipper.close();
-
-        ASSERT_EQ(entries.size(), 3u);
-        ASSERT_STREQ(entries[0].name.c_str(), "file1_add.txt");
-        ASSERT_STREQ(entries[1].name.c_str(), "folder1_add/file_in_folder.txt");
-        ASSERT_STREQ(entries[2].name.c_str(), "file_in_folder.txt");
-    }
-
-    // Extract single entry to current dir
-    {
-        std::cout << "Extracting entries to current dir:" << std::endl;
-
-        Unzipper unzipper(zipFilename);
-        auto entries = unzipper.entries();
-
-        for (size_t i = 0; i < entries.size(); ++i)
-        {
-            const auto& entry = entries[i];
-            std::cout << "  - Extracting " << entry.name << std::endl;
-
-            ASSERT_TRUE(unzipper.extractEntry(entry.name, false));
-            ASSERT_TRUE(helper::checkFileExists(
-                entry.name, 0 == i ? content1 : contentInFolder));
-
-            ASSERT_TRUE(unzipper.extractEntry(entry.name, true));
-            ASSERT_TRUE(helper::checkFileExists(
-                entry.name, 0 == i ? content1 : contentInFolder));
-
-            ASSERT_FALSE(unzipper.extractEntry(entry.name, false));
-            ASSERT_THAT(unzipper.error().message(),
-                        testing::HasSubstr("already exists"));
-            ASSERT_TRUE(helper::checkFileExists(
-                entry.name, 0 == i ? content1 : contentInFolder));
-        }
-
-        // Clean up
-        for (const auto& entry : entries)
-        {
-            ASSERT_TRUE(helper::removeFileOrDir(entry.name));
-        }
-
-        unzipper.close();
-    }
-
-    // Extract single entry to specific dir
-    {
-        std::cout << "Extracting entries to specific dir: " << extractDir
-                  << std::endl;
-
-        ASSERT_TRUE(helper::removeFileOrDir(extractDir));
-        Unzipper unzipper(zipFilename);
-        auto entries = unzipper.entries();
-
-        for (size_t i = 0; i < entries.size(); ++i)
-        {
-            const auto& entry = entries[i];
-            std::cout << "  - Extracting " << entry.name << std::endl;
-
-            ASSERT_TRUE(unzipper.extractEntry(entry.name, extractDir, false));
-            ASSERT_TRUE(helper::checkFileExists(
-                extractDir + entry.name, 0 == i ? content1 : contentInFolder));
-
-            ASSERT_TRUE(unzipper.extractEntry(entry.name, extractDir, true));
-            ASSERT_TRUE(helper::checkFileExists(
-                extractDir + entry.name, 0 == i ? content1 : contentInFolder));
-
-            ASSERT_FALSE(unzipper.extractEntry(entry.name, extractDir, false));
-            ASSERT_THAT(unzipper.error().message(),
-                        testing::HasSubstr("already exists"));
-            ASSERT_TRUE(helper::checkFileExists(
-                extractDir + entry.name, 0 == i ? content1 : contentInFolder));
-        }
-
-        unzipper.close();
-
-        // Clean up
-        ASSERT_TRUE(helper::removeFileOrDir(extractDir));
-    }
-
-    // Extract all to specific dir
-    {
-        ASSERT_TRUE(helper::removeFileOrDir(extractDir));
-        Unzipper unzipper(zipFilename);
-        auto entries = unzipper.entries();
-
-        ASSERT_TRUE(unzipper.extractAll(extractDir, false));
-        for (size_t i = 0; i < entries.size(); ++i)
-        {
-            ASSERT_TRUE(
-                helper::checkFileExists(extractDir + entries[i].name,
-                                        0 == i ? content1 : contentInFolder));
-        }
-
-        ASSERT_TRUE(unzipper.extractAll(extractDir, true));
-        for (size_t i = 0; i < entries.size(); ++i)
-        {
-            ASSERT_TRUE(
-                helper::checkFileExists(extractDir + entries[i].name,
-                                        0 == i ? content1 : contentInFolder));
-        }
-
-        ASSERT_FALSE(unzipper.extractAll(extractDir, false));
-        ASSERT_THAT(unzipper.error().message(),
-                    testing::HasSubstr("already exists"));
-        for (size_t i = 0; i < entries.size(); ++i)
-        {
-            ASSERT_TRUE(
-                helper::checkFileExists(extractDir + entries[i].name,
-                                        0 == i ? content1 : contentInFolder));
-        }
-
-        ASSERT_TRUE(helper::removeFileOrDir(extractDir));
-
+        std::vector<zipper::ZipEntry> entries = unzipper.entries();
+        ASSERT_EQ(entries.size(), 1u);
+        ASSERT_STREQ(entries[0].name.c_str(), large_filename.c_str());
+        ASSERT_EQ(entries[0].uncompressed_size, file_size);
         unzipper.close();
     }
 
     // Clean up
-    ASSERT_TRUE(helper::removeFileOrDir(zipFilename));
-    ASSERT_TRUE(helper::removeFileOrDir(folder1));
-    ASSERT_TRUE(helper::removeFileOrDir(emptyFolder));
-    ASSERT_TRUE(helper::removeFileOrDir(file1));
+    helper::removeFileOrDir(zip_filename);
+    helper::removeFileOrDir(large_filename);
 }

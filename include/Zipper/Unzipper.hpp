@@ -288,6 +288,16 @@ public:
         return m_error_code;
     }
 
+    // -------------------------------------------------------------------------
+    //! \brief Check if the unzipper is currently open and ready for extracting
+    //! files.
+    //! \return True if the unzipper is open, false otherwise.
+    // -------------------------------------------------------------------------
+    inline bool isOpen() const
+    {
+        return m_open;
+    }
+
 private:
 
     struct Impl;
@@ -312,53 +322,53 @@ public:
 
     //! \brief Constructor with entry details.
     //!
-    //! \param[in] name_ Name of the entry in the zip archive.
-    //! \param[in] compressed_size Size of the compressed data in bytes.
-    //! \param[in] uncompressed_size Original size of the data in bytes.
-    //! \param[in] year Year component of the timestamp.
-    //! \param[in] month Month component of the timestamp (1-12).
-    //! \param[in] day Day component of the timestamp (1-31).
-    //! \param[in] hour Hour component of the timestamp (0-23).
-    //! \param[in] minute Minute component of the timestamp (0-59).
-    //! \param[in] second Second component of the timestamp (0-59).
-    //! \param[in] dosdate_ DOS-format date.
-    ZipEntry(std::string const& name_,
-             uint64_t compressed_size,
-             uint64_t uncompressed_size,
-             uint32_t year,
-             uint32_t month,
-             uint32_t day,
-             uint32_t hour,
-             uint32_t minute,
-             uint32_t second,
-             uint32_t dosdate_)
-        : name(name_),
-          compressedSize(compressed_size),
-          uncompressedSize(uncompressed_size),
-          dosdate(dosdate_)
+    //! \param[in] p_name Name of the entry in the zip archive.
+    //! \param[in] p_compressed_size Size of the compressed data in bytes.
+    //! \param[in] p_uncompressed_size Original size of the data in bytes.
+    //! \param[in] p_year Year component of the timestamp.
+    //! \param[in] p_month Month component of the timestamp (1-12).
+    //! \param[in] p_day Day component of the timestamp (1-31).
+    //! \param[in] p_hour Hour component of the timestamp (0-23).
+    //! \param[in] p_minute Minute component of the timestamp (0-59).
+    //! \param[in] p_second Second component of the timestamp (0-59).
+    //! \param[in] p_dos_date DOS-format date.
+    ZipEntry(std::string const& p_name,
+             uint64_t p_compressed_size,
+             uint64_t p_uncompressed_size,
+             uint32_t p_year,
+             uint32_t p_month,
+             uint32_t p_day,
+             uint32_t p_hour,
+             uint32_t p_minute,
+             uint32_t p_second,
+             uint32_t p_dos_date)
+        : name(p_name),
+          compressed_size(p_compressed_size),
+          uncompressed_size(p_uncompressed_size),
+          dos_date(p_dos_date)
     {
         // timestamp YYYY-MM-DD HH:MM:SS
         std::stringstream str;
-        str << year << "-" << month << "-" << day << " " << hour << ":"
-            << minute << ":" << second;
+        str << p_year << "-" << p_month << "-" << p_day << " " << p_hour << ":"
+            << p_minute << ":" << p_second;
         timestamp = str.str();
 
-        unixdate.tm_year = year;
-        unixdate.tm_mon = month;
-        unixdate.tm_mday = day;
-        unixdate.tm_hour = hour;
-        unixdate.tm_min = minute;
-        unixdate.tm_sec = second;
+        unix_date.tm_year = p_year;
+        unix_date.tm_mon = p_month;
+        unix_date.tm_mday = p_day;
+        unix_date.tm_hour = p_hour;
+        unix_date.tm_min = p_minute;
+        unix_date.tm_sec = p_second;
     }
 
     //! \brief Copy constructor.
-    ZipEntry(ZipEntry const& other) = default;
+    ZipEntry(ZipEntry const& p_other) = default;
 
     //! \brief Copy assignment operator.
-    ZipEntry& operator=(ZipEntry const& other) = default;
+    ZipEntry& operator=(ZipEntry const& p_other) = default;
 
     //! \brief Move assignment operator.
-    ZipEntry& operator=(ZipEntry&& other) = default;
+    ZipEntry& operator=(ZipEntry&& p_other) = default;
 
     //! \brief Checks if the entry has a valid name.
     //! \return true if the entry name is not empty.
@@ -382,10 +392,10 @@ public:
 
     std::string name;      //!< Name of the entry in the zip archive
     std::string timestamp; //!< Formatted timestamp string (YYYY-MM-DD HH:MM:SS)
-    uint64_t compressedSize;   //!< Size of the compressed data in bytes
-    uint64_t uncompressedSize; //!< Original size of the data in bytes
-    uint32_t dosdate;          //!< DOS-format date
-    tm_s unixdate;             //!< UNIX-format date and time
+    uint64_t compressed_size;   //!< Size of the compressed data in bytes
+    uint64_t uncompressed_size; //!< Original size of the data in bytes
+    uint32_t dos_date;          //!< DOS-format date
+    tm_s unix_date;             //!< UNIX-format date and time
 };
 
 } // namespace zipper

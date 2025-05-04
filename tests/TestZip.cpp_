@@ -1040,7 +1040,7 @@ TEST(ZipTests, LargeFileWithPassword)
         std::vector<zipper::ZipEntry> entries = unzipper.entries();
         ASSERT_EQ(entries.size(), 1u);
         ASSERT_STREQ(entries[0].name.c_str(), largeFilename.c_str());
-        ASSERT_EQ(entries[0].uncompressedSize, fileSize); // Check original size
+        ASSERT_EQ(entries[0].uncompressed_size, fileSize); // Check original size
         // We could extract and verify content, but for coverage, checking
         // existence is enough
         unzipper.close();
