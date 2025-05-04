@@ -602,7 +602,7 @@ struct Zipper::Impl
         {
             try
             {
-                if (m_outer.m_using_vector && m_outer.m_output_vector)
+                if (m_outer.m_output_vector != nullptr)
                 {
                     // Resize and assign data to the vector
                     m_outer.m_output_vector->resize(m_zip_memory.limit);
@@ -612,7 +612,7 @@ struct Zipper::Impl
                                                     m_zip_memory.base +
                                                         m_zip_memory.limit);
                 }
-                else if (m_outer.m_using_stream && m_outer.m_output_stream)
+                else if (m_outer.m_output_stream != nullptr)
                 {
                     // Write data to the stream
                     m_outer.m_output_stream->write(
@@ -653,67 +653,54 @@ struct Zipper::Impl
 };
 
 // -------------------------------------------------------------------------
+Zipper::Zipper() : m_impl(nullptr) {}
+
+// -------------------------------------------------------------------------
 Zipper::Zipper(const std::string& p_zipname,
                const std::string& p_password,
-               Zipper::OpenFlags p_flags)
-    : m_output_stream(nullptr),
-      m_output_vector(nullptr),
-      m_zip_name(p_zipname),
+               Zipper::OpenFlags p_open_flags)
+    : m_zip_name(p_zipname),
       m_password(p_password),
-      m_using_vector(false),
-      m_using_stream(false),
+      m_open_flags(p_open_flags),
       m_impl(std::make_unique<Impl>(*this, m_error_code))
 {
-    if ((m_open = m_impl->initFile(p_zipname, p_flags)) == false)
+    if (!reopen())
     {
-        throw std::runtime_error(m_error_code ? m_error_code.message()
-                                              : "Zipper initialization failed");
+        throw std::runtime_error(
+            m_error_code ? m_error_code.message()
+                         : "Zipper initialization with file failed");
     }
 }
 
 // -------------------------------------------------------------------------
 Zipper::Zipper(std::iostream& p_buffer, const std::string& p_password)
     : m_output_stream(&p_buffer),
-      m_output_vector(nullptr),
       m_password(p_password),
-      m_using_vector(false),
-      m_using_stream(true),
       m_impl(std::make_unique<Impl>(*this, m_error_code))
 {
-    if (!m_impl->initWithStream(p_buffer))
+    m_open_flags = OpenFlags::Overwrite;
+    if (!reopen())
     {
-        std::string error_msg = "Zipper initialization with stream failed";
-        if (m_error_code)
-        {
-            error_msg = m_error_code.message();
-        }
-
-        throw std::runtime_error(error_msg);
+        throw std::runtime_error(
+            m_error_code ? m_error_code.message()
+                         : "Zipper initialization with stream failed");
     }
-    m_open = true;
 }
 
 // -------------------------------------------------------------------------
 Zipper::Zipper(std::vector<unsigned char>& p_buffer,
                const std::string& p_password)
-    : m_output_stream(nullptr),
-      m_output_vector(&p_buffer),
+    : m_output_vector(&p_buffer),
       m_password(p_password),
-      m_using_vector(true),
-      m_using_stream(false),
       m_impl(std::make_unique<Impl>(*this, m_error_code))
 {
-    if (!m_impl->initWithVector(p_buffer))
+    m_open_flags = OpenFlags::Overwrite;
+    if (!reopen())
     {
-        std::string error_msg = "Zipper initialization with vector failed";
-        if (m_error_code)
-        {
-            error_msg = m_error_code.message();
-        }
-
-        throw std::runtime_error(error_msg);
+        throw std::runtime_error(
+            m_error_code ? m_error_code.message()
+                         : "Zipper initialization with vector failed");
     }
-    m_open = true;
 }
 
 // -------------------------------------------------------------------------
@@ -885,7 +872,53 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
 }
 
 // -------------------------------------------------------------------------
-bool Zipper::open(Zipper::OpenFlags p_flags)
+bool Zipper::open(const std::string& p_zip_name,
+                  const std::string& p_password,
+                  Zipper::OpenFlags p_open_flags)
+{
+    m_zip_name = p_zip_name;
+    m_password = p_password;
+    m_open_flags = p_open_flags;
+    m_output_stream = nullptr;
+    m_output_vector = nullptr;
+
+    m_impl = std::make_unique<Impl>(*this, m_error_code);
+    return reopen();
+}
+
+// -------------------------------------------------------------------------
+bool Zipper::open(const std::string& p_zip_name, Zipper::OpenFlags p_open_flags)
+{
+    return open(p_zip_name, "", p_open_flags);
+}
+
+// -------------------------------------------------------------------------
+bool Zipper::open(std::iostream& p_buffer, const std::string& p_password)
+{
+    m_zip_name.clear();
+    m_password = p_password;
+    m_output_stream = &p_buffer;
+    m_output_vector = nullptr;
+
+    m_impl = std::make_unique<Impl>(*this, m_error_code);
+    return reopen();
+}
+
+// -------------------------------------------------------------------------
+bool Zipper::open(std::vector<unsigned char>& p_buffer,
+                  const std::string& p_password)
+{
+    m_zip_name.clear();
+    m_password = p_password;
+    m_output_stream = nullptr;
+    m_output_vector = &p_buffer;
+
+    m_impl = std::make_unique<Impl>(*this, m_error_code);
+    return reopen();
+}
+
+// -------------------------------------------------------------------------
+bool Zipper::reopen()
 {
     // Ensure impl is created if it wasn't (e.g., after default constructor if
     // added) For now, assuming constructor always creates impl or throws.
@@ -908,17 +941,17 @@ bool Zipper::open(Zipper::OpenFlags p_flags)
     bool success = false;
 
     // Re-initialize based on the original construction mode
-    if (m_using_vector && m_output_vector)
+    if (!m_zip_name.empty())
+    {
+        success = m_impl->initFile(m_zip_name, m_open_flags);
+    }
+    else if (m_output_vector != nullptr)
     {
         success = m_impl->initWithVector(*m_output_vector);
     }
-    else if (m_using_stream && m_output_stream)
+    else if (m_output_stream != nullptr)
     {
         success = m_impl->initWithStream(*m_output_stream);
-    }
-    else if (!m_using_vector && !m_using_stream)
-    {
-        success = m_impl->initFile(m_zip_name, p_flags);
     }
     else
     {

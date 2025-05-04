@@ -147,6 +147,65 @@ static bool zipAddFile(Zipper& p_zipper,
 } // namespace helper
 
 //=============================================================================
+// Test Suite for opening and closing zip files.
+//=============================================================================
+TEST(ZipperFileOps, OpenAndClose)
+{
+    // Opening from a dummy constructor.
+    Zipper zipper1;
+    ASSERT_FALSE(zipper1.isOpen());
+    zipper1.close();
+    ASSERT_FALSE(zipper1.isOpen());
+    zipper1.reopen();
+    ASSERT_FALSE(zipper1.isOpen());
+
+    // Opening from a non existing zip file.
+    zipper1.open("ziptest_nominal.zip");
+    ASSERT_TRUE(zipper1.isOpen());
+    zipper1.close();
+    ASSERT_FALSE(zipper1.isOpen());
+
+    // Opening from an existing zip file.
+    ASSERT_TRUE(Path::exist("ziptest_nominal.zip"));
+    ASSERT_TRUE(Path::isFile("ziptest_nominal.zip"));
+    Zipper zipper2("ziptest_nominal.zip");
+    ASSERT_TRUE(zipper2.isOpen());
+    zipper2.close();
+    ASSERT_FALSE(zipper2.isOpen());
+    zipper2.reopen();
+    ASSERT_TRUE(zipper2.isOpen());
+    zipper2.close();
+    ASSERT_FALSE(zipper2.isOpen());
+
+    // Opening an existent zipfile.
+    ASSERT_TRUE(Path::exist("ziptest_nominal.zip"));
+    ASSERT_TRUE(Path::isFile("ziptest_nominal.zip"));
+    Unzipper unzipper2("ziptest_nominal.zip");
+    ASSERT_TRUE(unzipper2.isOpen());
+    unzipper2.close();
+    ASSERT_FALSE(unzipper2.isOpen());
+    // TODO: to implement
+    // unzipper2.open();
+    // ASSERT_TRUE(zipper2.isOpen());
+    // unzipper2.close();
+
+    // Opening from a non-existent zip file.
+    helper::removeFileOrDir("ziptest_nominal.zip");
+    try
+    {
+        Unzipper unzipper("ziptest_nominal.zip");
+        FAIL() << "Expected exception for opening a non-existent zip file";
+    }
+    catch (const std::runtime_error& e)
+    {
+        ASSERT_THAT(e.what(), testing::HasSubstr("No such file or directory"));
+    }
+
+    // Clean up.
+    helper::removeFileOrDir("ziptest_nominal.zip");
+}
+
+//=============================================================================
 // Test Suite for basic opening and closing of zip files.
 //=============================================================================
 TEST(ZipperFileOps, NominalOpenings)
@@ -233,9 +292,8 @@ TEST(ZipperFileOps, NominalOpenings)
         // Reopen with Append flag.
         {
             Zipper zipper(zip_filename, password, Zipper::OpenFlags::Overwrite);
-            // FIXME zipper.open(Zipper::OpenFlags::Append);
-            // std::cout << "zipper.error() = " << zipper.error().message()
-            //          << std::endl;
+            ASSERT_TRUE(
+                zipper.open(zip_filename, password, Zipper::OpenFlags::Append));
             ASSERT_TRUE(helper::zipAddFile(zipper, file1, content1, file1));
             ASSERT_FALSE(zipper.error()) << zipper.error().message();
             zipper.close();
@@ -273,7 +331,8 @@ TEST(ZipperFileOps, NominalOpenings)
         // Reopen with Overwrite flag
         {
             Zipper zipper(zip_filename, password, Zipper::OpenFlags::Append);
-            ASSERT_TRUE(zipper.open(Zipper::OpenFlags::Overwrite));
+            ASSERT_TRUE(zipper.open(
+                zip_filename, password, Zipper::OpenFlags::Overwrite));
             ASSERT_TRUE(helper::zipAddFile(zipper, file2, content2, file2));
             ASSERT_FALSE(zipper.error()) << zipper.error().message();
             zipper.close();
@@ -516,6 +575,32 @@ TEST(ZipperFileOps, TryOpeningNonExistentFile)
 
     // Clean up.
     ASSERT_TRUE(helper::removeFileOrDir(nonExistentFile));
+}
+
+//=============================================================================
+// Dummy zip files, Dummy file, Dummy directory
+//=============================================================================
+TEST(ZipperFileOps, DummyStuffs)
+{
+    Zipper zipper1("issues/dummy.zip", Zipper::OpenFlags::Append);
+    ASSERT_TRUE(zipper1.isOpen());
+    zipper1.close();
+
+    Unzipper unzipper1("issues/dummy.zip");
+    ASSERT_TRUE(unzipper1.isOpen());
+    unzipper1.close();
+
+    Zipper zipper2("foo.zip");
+    ASSERT_TRUE(zipper2.isOpen());
+    ASSERT_TRUE(helper::zipAddFile(zipper2, "dummy.txt", "", "dummy.txt"));
+
+    helper::createDir("dummy_dir");
+    // TODO
+    // ASSERT_TRUE(zipper2.addDir("dummy_dir"));
+    zipper2.close();
+
+    helper::removeFileOrDir("foo.zip");
+    helper::removeFileOrDir("dummy_dir");
 }
 
 //=============================================================================

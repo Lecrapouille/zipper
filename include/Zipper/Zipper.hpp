@@ -68,32 +68,39 @@ public:
     };
 
     // -------------------------------------------------------------------------
+    //! \brief Default constructor. You shall use open() method to initialize
+    //! the zipper.
+    // -------------------------------------------------------------------------
+    Zipper();
+
+    // -------------------------------------------------------------------------
     //! \brief Regular zip compression (inside a disk zip archive file) with a
     //! password.
     //!
     //! \param[in] p_zip_name Path where to create the zip file.
     //! \param[in] p_password Optional password (empty for no password
     //! protection).
-    //! \param[in] p_flags Overwrite (default) or append to existing
+    //! \param[in] p_open_flags Overwrite (default) or append to existing
     //! zip file.
     //! \throw std::runtime_error if an error occurs during
     //! initialization.
     // -------------------------------------------------------------------------
     Zipper(const std::string& p_zip_name,
            const std::string& p_password,
-           Zipper::OpenFlags p_flags = Zipper::OpenFlags::Overwrite);
+           Zipper::OpenFlags p_open_flags = Zipper::OpenFlags::Overwrite);
 
     // -------------------------------------------------------------------------
     //! \brief Regular zip compression (inside a disk zip archive file) without
     //! password.
     //!
     //! \param[in] p_zipname Path where to create the zip file.
-    //! \param[in] p_flags Overwrite (default) or append to existing zip file.
-    //! \throw std::runtime_error if an error occurs during initialization.
+    //! \param[in] p_open_flags Overwrite (default) or append to existing zip
+    //! file. \throw std::runtime_error if an error occurs during
+    //! initialization.
     // -------------------------------------------------------------------------
     Zipper(const std::string& p_zipname,
-           Zipper::OpenFlags p_flags = Zipper::OpenFlags::Overwrite)
-        : Zipper(p_zipname, std::string(), p_flags)
+           Zipper::OpenFlags p_open_flags = Zipper::OpenFlags::Overwrite)
+        : Zipper(p_zipname, std::string(), p_open_flags)
     {
     }
 
@@ -231,7 +238,34 @@ public:
     //! \note This method is not called by the constructor. If called on an
     //! already open zipper, it first closes it.
     // -------------------------------------------------------------------------
-    bool open(Zipper::OpenFlags p_flags = Zipper::OpenFlags::Append);
+    bool open(const std::string& p_zip_name,
+              const std::string& p_password,
+              Zipper::OpenFlags p_open_flags = Zipper::OpenFlags::Overwrite);
+
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    bool open(const std::string& p_zipname,
+              Zipper::OpenFlags p_open_flags = Zipper::OpenFlags::Overwrite);
+
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    bool open(std::iostream& p_buffer,
+              const std::string& p_password = std::string());
+
+    // -------------------------------------------------------------------------
+    //! \brief
+    // -------------------------------------------------------------------------
+    bool open(std::vector<unsigned char>& p_buffer,
+              const std::string& p_password = std::string());
+
+    // -------------------------------------------------------------------------
+    //! \brief Close and reopen the zipper.
+    //! \return true on success, false on failure. Sets internal error code on
+    //! failure.
+    // -------------------------------------------------------------------------
+    bool reopen();
 
     // -------------------------------------------------------------------------
     //! \brief Check if the zipper is currently open and ready for adding files.
@@ -256,18 +290,16 @@ private:
 
     //! \brief Stream to store zipped files, if using stream constructor.
     //! Null otherwise.
-    std::iostream* m_output_stream;
+    std::iostream* m_output_stream = nullptr;
     //! \brief Vector to store zipped files, if using vector constructor.
     //! Null otherwise.
-    std::vector<unsigned char>* m_output_vector;
+    std::vector<unsigned char>* m_output_vector = nullptr;
     //! \brief Name of the zip file, if using file constructor.
     std::string m_zip_name;
     //! \brief Password for the zip file.
     std::string m_password;
-    //! \brief Whether the zipper was constructed using a memory vector.
-    bool m_using_vector;
-    //! \brief Whether the zipper was constructed using a stream.
-    bool m_using_stream;
+    //! \brief Overwrite or append (default) to existing zip file.
+    OpenFlags m_open_flags = OpenFlags::Overwrite;
     //! \brief Whether the zip archive is currently open.
     bool m_open = false;
     //! \brief Stores the last error.
