@@ -444,7 +444,7 @@ public:
         }
 
         // Avoid replacing the file. Prevent Zip Slip attack (See ticket #33)
-        if (!p_replace && Path::exist(p_filename))
+        if ((!p_replace) && Path::exist(p_filename))
         {
             std::stringstream str;
             str << "Security Error: '" << Path::toNativeSeparators(p_filename)
@@ -539,7 +539,8 @@ public:
         }
         else
         {
-            m_error_code = make_error_code(UnzipperError::INTERNAL_ERROR);
+            m_error_code =
+                make_error_code(UnzipperError::INTERNAL_ERROR, "Bad password");
         }
         return err;
     }
