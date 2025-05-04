@@ -529,6 +529,8 @@ TEST(ZipperFileOps, AddOperations)
     const std::string content1 = "content add 1";
     const std::string folder1 = "folder1_add/";
     const std::string fileInFolder = folder1 + "file_in_folder.txt";
+    const std::string fileNotInFolder =
+        "file_in_folder.txt"; // Because of SaveHierarchy
     const std::string contentInFolder = "content in folder";
     const std::string emptyFolder = "empty_folder_add/";
     const std::string extractDir = "extract_dir/";
@@ -545,6 +547,7 @@ TEST(ZipperFileOps, AddOperations)
         ASSERT_TRUE(helper::createDir(emptyFolder));
         ASSERT_TRUE(helper::createFile(fileInFolder, contentInFolder));
         ASSERT_TRUE(helper::createFile(file1, content1));
+        ASSERT_TRUE(helper::removeFileOrDir(fileNotInFolder));
 
         // Test adding files to zip
         {
@@ -585,6 +588,7 @@ TEST(ZipperFileOps, AddOperations)
         ASSERT_TRUE(helper::removeFileOrDir(folder1));
         ASSERT_TRUE(helper::removeFileOrDir(emptyFolder));
         ASSERT_TRUE(helper::removeFileOrDir(file1));
+        ASSERT_TRUE(helper::removeFileOrDir(fileNotInFolder));
 
         // Verify zip content
         {
@@ -719,11 +723,47 @@ TEST(ZipperFileOps, AddOperations)
             unzipper.close();
         }
 
-        // Clean up
-        ASSERT_TRUE(helper::removeFileOrDir(zipFilename));
-        ASSERT_TRUE(helper::removeFileOrDir(folder1));
-        ASSERT_TRUE(helper::removeFileOrDir(emptyFolder));
-        ASSERT_TRUE(helper::removeFileOrDir(file1));
+        // Extract all to current dir
+        {
+            std::cout << "Extracting all to current dir" << std::endl;
+
+            Unzipper unzipper(zipFilename, password);
+            auto entries = unzipper.entries();
+
+            ASSERT_TRUE(unzipper.extractAll(false));
+            std::cout << unzipper.error().message() << std::endl;
+
+            for (size_t i = 0; i < entries.size(); ++i)
+            {
+                ASSERT_TRUE(helper::checkFileExists(
+                    entries[i].name, 0 == i ? content1 : contentInFolder));
+            }
+
+            ASSERT_TRUE(unzipper.extractAll(true));
+            for (size_t i = 0; i < entries.size(); ++i)
+            {
+                ASSERT_TRUE(helper::checkFileExists(
+                    entries[i].name, 0 == i ? content1 : contentInFolder));
+            }
+
+            ASSERT_FALSE(unzipper.extractAll(false));
+            ASSERT_THAT(unzipper.error().message(),
+                        testing::HasSubstr("already exists"));
+            for (size_t i = 0; i < entries.size(); ++i)
+            {
+                ASSERT_TRUE(helper::checkFileExists(
+                    entries[i].name, 0 == i ? content1 : contentInFolder));
+            }
+
+            unzipper.close();
+
+            // Clean up
+            ASSERT_TRUE(helper::removeFileOrDir(zipFilename));
+            ASSERT_TRUE(helper::removeFileOrDir(folder1));
+            ASSERT_TRUE(helper::removeFileOrDir(emptyFolder));
+            ASSERT_TRUE(helper::removeFileOrDir(file1));
+            ASSERT_TRUE(helper::removeFileOrDir(fileNotInFolder));
+        }
     }
 }
 
