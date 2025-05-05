@@ -461,7 +461,8 @@ TEST(MemoryZipTests, Issue83)
     EXPECT_FALSE(
         unzipper.extractEntry("data/somefolder/test.txt", does_not_exist));
     error = "Cannot create the folder '" +
-            Path::toNativeSeparators(does_not_exist + "/data/somefolder") + "'";
+            Path::toNativeSeparators(does_not_exist + "/data/somefolder") +
+            "'. Reason: Permission denied";
     EXPECT_STREQ(unzipper.error().message().c_str(), error.c_str());
 
     // Test extractAll to non-existent path
@@ -480,7 +481,8 @@ TEST(MemoryZipTests, Issue83)
     EXPECT_FALSE(
         unzipper.extractEntry("data/somefolder/test.txt", no_permissions));
     error = "Cannot create the folder '" +
-            Path::toNativeSeparators(no_permissions + "/data/somefolder") + "'";
+            Path::toNativeSeparators(no_permissions + "/data/somefolder") +
+            "'. Reason: Permission denied";
     EXPECT_STREQ(unzipper.error().message().c_str(), error.c_str());
 
     // Test extractAll to system path without permissions

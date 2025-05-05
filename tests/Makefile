@@ -21,7 +21,6 @@ SRC_FILES := $(call rwildcard,$(P)/src,*.cpp)
 SRC_FILES += $(call rwildcard,$(P)/tests,*.cpp)
 INCLUDES := $(P) $(P)/include $(P)/src
 VPATH := $(P) $(P)/src $(P)/src/utils
-USER_CXXFLAGS := -Wno-undef
 DEFINES += -DPWD=\"$(shell pwd)\"
 DEFINES += -DHAVE_AES
 ifeq ($(ARCHI),Windows)

@@ -146,8 +146,10 @@ TEST(TestDir, createDir)
     EXPECT_EQ(Path::isWritable(c_fooBar), true);
     EXPECT_EQ(Path::isReadable(c_fooBar), true);
 
-    EXPECT_EQ(Path::createDir("foo/bar", "doesnotexist"), false);
-    EXPECT_EQ(Path::exist("doesnotexist/foo/bar"), false);
+    std::remove("doesnotexist");
+    EXPECT_EQ(Path::createDir("foo/bar", "doesnotexist"), true);
+    EXPECT_EQ(Path::exist("doesnotexist/foo/bar"), true);
+    std::remove("doesnotexist");
 
     EXPECT_EQ(Path::createDir("foo", "/usr/bin"), false);
     EXPECT_EQ(Path::exist("/usr/bin/foo"), false);

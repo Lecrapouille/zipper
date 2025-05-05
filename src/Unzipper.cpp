@@ -435,7 +435,8 @@ public:
             {
                 std::stringstream str;
                 str << "Cannot create the folder '"
-                    << Path::toNativeSeparators(folder) << "'";
+                    << Path::toNativeSeparators(folder)
+                    << "'. Reason: " << strerror(errno);
 
                 m_error_code =
                     make_error_code(UnzipperError::INTERNAL_ERROR, str.str());
@@ -985,14 +986,14 @@ bool Unzipper::checkValid()
     if (!m_impl)
     {
         m_error_code = make_error_code(UnzipperError::INTERNAL_ERROR,
-                                       "Unzipper not initialized");
+                                       "Unzipper is not initialized");
         return false;
     }
 
     if (!m_open)
     {
-        m_error_code =
-            make_error_code(UnzipperError::NO_ENTRY, "Unzipper not open");
+        m_error_code = make_error_code(UnzipperError::NO_ENTRY,
+                                       "Zip archive is not opened");
         return false;
     }
 

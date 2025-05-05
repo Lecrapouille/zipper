@@ -1,50 +1,45 @@
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-copy"
+#pragma GCC diagnostic ignored "-Wundef"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#pragma GCC diagnostic pop
 
-#include "utils/Path.hpp" // May be needed for entry names
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <vector>
-
-// Hack - Copy for now, remove later
 #define protected public
 #define private public
-#include "Zipper/Zipper.hpp"
-// Need Unzipper to verify memory content
 #include "Zipper/Unzipper.hpp"
+#include "Zipper/Zipper.hpp"
 #undef protected
 #undef private
 
+#include "TestHelper.hpp"
+
 using namespace zipper;
 
-// --- Helpers (if needed, e.g., for creating input streams) ---
-static bool createFile(const std::string& file, const std::string& content)
-{
-    std::ofstream ofs(file);
-    if (!ofs)
-        return false;
-    ofs << content;
-    ofs.flush();
-    ofs.close();
-    return Path::exist(file) && Path::isFile(file);
-}
-
+//=============================================================================
+// Tests for memory zip operations
+//=============================================================================
 TEST(ZipperMemoryOps, ZipToVector)
 {
     std::vector<unsigned char> zipData;
     const std::string entryName = "vector_entry.txt";
     const std::string content = "vector content";
 
+    // Constructor for vector
     {
-        Zipper zipper(zipData); // Constructor for vector
+        ASSERT_TRUE(zipData.empty());
+
+        Zipper zipper(zipData);
+        ASSERT_TRUE(zipData.empty());
+
         std::stringstream contentStream(content);
         ASSERT_TRUE(zipper.add(contentStream, entryName));
         ASSERT_FALSE(zipper.error()) << zipper.error().message();
-        zipper.close(); // Vector is updated on close
-    }
+        ASSERT_TRUE(zipData.empty());
 
-    ASSERT_FALSE(zipData.empty()); // Check vector is not empty
+        zipper.close();
+        ASSERT_FALSE(zipData.empty());
+    }
 
     // Verify content using Unzipper
     {
@@ -61,8 +56,25 @@ TEST(ZipperMemoryOps, ZipToVector)
         ASSERT_EQ(extractedString, content);
         unzipper.close();
     }
+
+    // Open with the same non empty vector
+    {
+        Zipper zipper(zipData);
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+        zipper.close();
+
+        Unzipper unzipper(zipData);
+        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+        auto entries = unzipper.entries();
+        ASSERT_EQ(entries.size(), 1);
+        ASSERT_EQ(entries[0].name, entryName);
+        unzipper.close();
+    }
 }
 
+//=============================================================================
+// Tests for zip multiple entries to vector
+//=============================================================================
 TEST(ZipperMemoryOps, ZipMultipleToVector)
 {
     std::vector<unsigned char> zipData;
@@ -71,19 +83,25 @@ TEST(ZipperMemoryOps, ZipMultipleToVector)
     const std::string entryName2 = "folder/multi_vec2.dat";
     const std::string content2 = "multi vec content 2";
 
+    // Constructor for vector
     {
+        ASSERT_TRUE(zipData.empty());
+
         Zipper zipper(zipData);
+        ASSERT_TRUE(zipData.empty());
+
         std::stringstream stream1(content1);
         std::stringstream stream2(content2);
         ASSERT_TRUE(zipper.add(stream1, entryName1));
         ASSERT_TRUE(zipper.add(stream2, entryName2));
         ASSERT_FALSE(zipper.error()) << zipper.error().message();
+        ASSERT_TRUE(zipData.empty());
+
         zipper.close();
+        ASSERT_FALSE(zipData.empty());
     }
 
-    ASSERT_FALSE(zipData.empty());
-
-    // Verify
+    // Verify content using Unzipper
     {
         Unzipper unzipper(zipData);
         ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
@@ -99,6 +117,9 @@ TEST(ZipperMemoryOps, ZipMultipleToVector)
     }
 }
 
+//=============================================================================
+// Tests for zip with password to vector
+//=============================================================================
 TEST(ZipperMemoryOps, ZipWithPasswordToVector)
 {
     std::vector<unsigned char> zipData;
@@ -106,8 +127,9 @@ TEST(ZipperMemoryOps, ZipWithPasswordToVector)
     const std::string content = "pwd vec content";
     const std::string password = "memory_password";
 
+    // Use password constructor
     {
-        Zipper zipper(zipData, password); // Use password constructor
+        Zipper zipper(zipData, password);
         std::stringstream contentStream(content);
         ASSERT_TRUE(zipper.add(contentStream, entryName));
         ASSERT_FALSE(zipper.error()) << zipper.error().message();
@@ -124,6 +146,7 @@ TEST(ZipperMemoryOps, ZipWithPasswordToVector)
         ASSERT_EQ(std::string(data.begin(), data.end()), content);
         unzipper.close();
     }
+
     // Verify with Unzipper (wrong password)
     {
         Unzipper unzipper(zipData, "wrong_pwd");
@@ -138,6 +161,9 @@ TEST(ZipperMemoryOps, ZipWithPasswordToVector)
     }
 }
 
+//=============================================================================
+// Tests for zip from external file to vector
+//=============================================================================
 TEST(ZipperMemoryOps, ZipFromExternalFileToVector)
 {
     // Test adding a file from disk when zipper target is memory
@@ -146,24 +172,23 @@ TEST(ZipperMemoryOps, ZipFromExternalFileToVector)
     const std::string content = "disk file to memory zip";
     const std::string entryName = "disk_file_entry.txt";
 
-    ASSERT_TRUE(createFile(tempFileName, content));
+    ASSERT_TRUE(helper::createFile(tempFileName, content));
 
     {
         Zipper zipper(zipData);
-        std::ifstream ifs(tempFileName,
-                          std::ios::binary); // Open the file stream
+        std::ifstream ifs(tempFileName, std::ios::binary);
         ASSERT_TRUE(ifs.is_open())
             << "Failed to open temporary file: " << tempFileName;
-        // Add using the stream and the desired entry name
-        ASSERT_TRUE(zipper.add(ifs, entryName)); // Use specific name in zip
-        ifs.close();                             // Close the stream
+        ASSERT_TRUE(zipper.add(ifs, entryName));
+        ifs.close();
         ASSERT_FALSE(zipper.error()) << zipper.error().message();
         zipper.close();
     }
-    Path::remove(tempFileName);
+
+    ASSERT_TRUE(helper::removeFileOrDir(tempFileName));
     ASSERT_FALSE(zipData.empty());
 
-    // Verify
+    // Verify content using Unzipper
     {
         Unzipper unzipper(zipData);
         ASSERT_FALSE(unzipper.error()) << unzipper.error().message();

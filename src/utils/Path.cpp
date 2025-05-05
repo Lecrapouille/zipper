@@ -246,23 +246,42 @@ bool Path::createDir(const std::string& p_dir, const std::string& p_parent)
     if (isDir(dir) && isWritable(dir))
         return true;
 
-    // Check whether the parent directory exists and is writable.
-    if (!p_parent.empty() && (!isDir(p_parent) || !isWritable(p_parent)))
-    {
-        return false;
-    }
-
     dir = normalize(dir);
 
-    // ensure we have parent
+    // Ensure we have parent
     std::string actual_parent = dirName(dir);
 
-    if (!actual_parent.empty() && (!exist(actual_parent)))
+    // Check whether the parent directory exists and is writable
+    if (!actual_parent.empty())
     {
-        createDir(actual_parent);
+        if (!exist(actual_parent))
+        {
+            if (!createDir(actual_parent))
+            {
+                // errno is already defined by the recursive call
+                return false;
+            }
+        }
+        else if (!isDir(actual_parent))
+        {
+            errno = ENOTDIR;
+            return false;
+        }
+        else if (!isWritable(actual_parent))
+        {
+            errno = EACCES;
+            return false;
+        }
     }
 
-    return (OS_MKDIR(dir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO) == 0);
+    int result = OS_MKDIR(dir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+    if (result != 0 && errno == 0)
+    {
+        // If OS_MKDIR fails but does not define errno, we define it
+        errno = EACCES;
+    }
+
+    return (result == 0);
 }
 
 #if 0

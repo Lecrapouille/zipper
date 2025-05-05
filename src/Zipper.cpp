@@ -28,7 +28,8 @@ enum class ZipperError
     OPENING_ERROR,
     INTERNAL_ERROR,
     NO_ENTRY,
-    SECURITY_ERROR
+    SECURITY_ERROR,
+    ADDING_ERROR
 };
 
 // *************************************************************************
@@ -43,26 +44,7 @@ struct ZipperErrorCategory: std::error_category
 
     virtual std::string message(int ev) const override
     {
-        if (!custom_message.empty())
-        {
-            return custom_message;
-        }
-
-        switch (static_cast<ZipperError>(ev))
-        {
-            case ZipperError::NO_ERROR_ZIPPER:
-                return "There was no error";
-            case ZipperError::OPENING_ERROR:
-                return "Opening error";
-            case ZipperError::INTERNAL_ERROR:
-                return "Internal error";
-            case ZipperError::NO_ENTRY:
-                return "Error, couldn't get the current entry info";
-            case ZipperError::SECURITY_ERROR:
-                return "ZipSlip security";
-            default:
-                return "Unkown Error";
-        }
+        return custom_message;
     }
 
     std::string custom_message;
@@ -408,7 +390,7 @@ struct Zipper::Impl
         if (!m_zip_file)
         {
             m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
-                                           "Zip archive not open");
+                                           "Zip archive is not opened");
             return false;
         }
 
@@ -589,14 +571,8 @@ struct Zipper::Impl
     }
 
     // -------------------------------------------------------------------------
-    void close()
+    void updateOutput()
     {
-        if (m_zip_file != nullptr)
-        {
-            zipClose(m_zip_file, nullptr);
-            m_zip_file = nullptr;
-        }
-
         // Check if memory mode was used and data needs to be transferred
         if (m_zip_memory.base && m_zip_memory.limit > 0)
         {
@@ -635,6 +611,20 @@ struct Zipper::Impl
                                     "Error writing to output stream in close");
             }
         }
+    }
+
+    // -------------------------------------------------------------------------
+    void close()
+    {
+        // Close the zip file first
+        if (m_zip_file != nullptr)
+        {
+            zipClose(m_zip_file, nullptr);
+            m_zip_file = nullptr;
+        }
+
+        // Update the output vector or stream with the data in the memory buffer
+        updateOutput();
 
         // Free the memory allocated by minizip for memory mode
         if (m_zip_memory.base != nullptr)
@@ -751,8 +741,8 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
 
     if (!m_open)
     {
-        m_error_code =
-            make_error_code(ZipperError::OPENING_ERROR, "Zipper not open");
+        m_error_code = make_error_code(ZipperError::OPENING_ERROR,
+                                       "Zip archive is not opened");
         return false;
     }
 
@@ -777,7 +767,14 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
 
         if (files.empty())
         {
-            return overall_success;
+            if (!Path::isReadable(p_file_or_folder_path))
+            {
+                m_error_code = make_error_code(ZipperError::ADDING_ERROR,
+                                               "Permission denied: '" +
+                                                   p_file_or_folder_path + "'");
+                return false;
+            }
+            return true;
         }
 
         for (const auto& file_path : files)

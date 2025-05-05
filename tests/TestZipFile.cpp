@@ -1,5 +1,6 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-copy"
+#pragma GCC diagnostic ignored "-Wundef"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #pragma GCC diagnostic pop
@@ -11,9 +12,7 @@
 #undef protected
 #undef private
 
-#include "utils/Path.hpp"
-#include <chrono>
-#include <fstream>
+#include "TestHelper.hpp"
 
 using namespace zipper;
 
@@ -21,102 +20,6 @@ using namespace zipper;
 // Helper functions for tests
 //=============================================================================
 namespace helper {
-
-/**
- * @brief Reads and returns the content of a file.
- * @param[in] p_file Path to the file to read.
- * @return The content of the file as a string.
- */
-static std::string readFileContent(const std::string& p_file)
-{
-    std::ifstream ifs(p_file);
-    std::string str((std::istreambuf_iterator<char>(ifs)),
-                    std::istreambuf_iterator<char>());
-    return str.c_str();
-}
-
-/**
- * @brief Checks if a file exists and has the expected content.
- * @param[in] p_file Path to the file to check.
- * @param[in] p_content Content to check in the file.
- * @return true if the file exists and has the expected content, false
- * otherwise.
- */
-static bool checkFileExists(const std::string& p_file,
-                            const std::string& p_content)
-{
-    return Path::exist(p_file) && Path::isFile(p_file) &&
-           readFileContent(p_file) == p_content;
-}
-
-/**
- * @brief Checks if a file does not exist.
- * @param[in] p_file Path to the file to check.
- * @return true if the file does not exist, false otherwise.
- */
-static bool checkFileDoesNotExist(const std::string& p_file)
-{
-    return !Path::exist(p_file) || !Path::isFile(p_file);
-}
-
-/**
- * @brief Checks if a directory exists.
- * @param[in] p_dir Path to the directory to check.
- * @return true if the directory exists, false otherwise.
- */
-static bool checkDirExists(const std::string& p_dir)
-{
-    return Path::exist(p_dir) && Path::isDir(p_dir);
-}
-
-/**
- * @brief Creates a file with content.
- * @param[in] p_file Path to the file to create.
- * @param[in] p_content Content to write in the file.
- * @return true if successful, false otherwise.
- */
-static bool createFile(const std::string& p_file, const std::string& p_content)
-{
-    Path::remove(p_file);
-
-    std::ofstream ofs(p_file);
-    ofs << p_content;
-    ofs.flush();
-    ofs.close();
-
-    return checkFileExists(p_file, p_content);
-}
-
-/**
- * @brief Removes a file or directory.
- * @param[in] p_file Path to the file or directory to remove.
- * @return true if successful, false otherwise.
- */
-static bool removeFileOrDir(const std::string& p_file)
-{
-    if (Path::isFile(p_file))
-    {
-        Path::remove(p_file);
-        return checkFileDoesNotExist(p_file);
-    }
-    else if (Path::isDir(p_file))
-    {
-        return Path::remove(p_file);
-        return (!checkDirExists(p_file));
-    }
-    return true;
-}
-
-/**
- * @brief Creates a directory.
- * @param[in] p_dir Path to the directory to create.
- * @return true if successful, false otherwise.
- */
-static bool createDir(const std::string& p_dir)
-{
-    return removeFileOrDir(p_dir) && Path::createDir(p_dir) &&
-           checkDirExists(p_dir);
-}
 
 /**
  * @brief Creates a file with content and adds it to the zipper.
@@ -496,18 +399,17 @@ TEST(ZipperFileOps, TryOpeningBadZipFiles)
 #if !defined(_WIN32) // Permission tests are more reliable on Unix-like
 TEST(ZipperFileOps, TryOpeningWithInsufficientPermissions)
 {
-    const std::string protected_path =
 #    if defined(__APPLE__)
-        "/System/Library/no_permission_test.zip";
+    const std::string protected_path = "/System/Library/";
 #    elif defined(__linux__)
-        "/root/no_permission_test.zip";
+    const std::string protected_path = "/root/";
 #    else
 #        error "Unsupported platform"
 #    endif
 
     try
     {
-        Zipper zipper(protected_path);
+        Zipper zipper(protected_path + "no_permission_test.zip");
         FAIL() << "Expected std::runtime_error for permission denied";
     }
     catch (const std::runtime_error& e)
@@ -520,13 +422,37 @@ TEST(ZipperFileOps, TryOpeningWithInsufficientPermissions)
 
     try
     {
-        Unzipper unzipper(protected_path);
+        Unzipper unzipper(protected_path + "no_permission_test.zip");
         FAIL() << "Expected std::runtime_error for permission denied";
     }
     catch (const std::runtime_error& e)
     {
         ASSERT_THAT(e.what(), testing::HasSubstr("Permission denied"));
     }
+
+    // Try adding a protected file to the zip archive.
+    {
+        Zipper zipper("foo.zip");
+        ASSERT_FALSE(zipper.add(protected_path));
+        ASSERT_THAT(zipper.error().message(),
+                    testing::HasSubstr("Permission denied"));
+        zipper.close();
+    }
+
+    // Try extracting a file to a protected directory.
+    {
+        Zipper zipper("foo.zip");
+        helper::zipAddFile(zipper, "file.txt", "content", "file.txt");
+        zipper.close();
+
+        Unzipper unzipper("foo.zip");
+        ASSERT_FALSE(unzipper.extractAll(protected_path, true));
+        ASSERT_THAT(unzipper.error().message(),
+                    testing::HasSubstr("Permission denied"));
+        unzipper.close();
+    }
+
+    helper::removeFileOrDir("foo.zip");
 }
 #endif
 
@@ -916,21 +842,28 @@ TEST(ZipTests, LargeFileWithPassword)
     }
 
     // Clean up
-    helper::removeFileOrDir(zip_filename);
-    helper::removeFileOrDir(large_filename);
+    ASSERT_TRUE(helper::removeFileOrDir(zip_filename));
+    ASSERT_TRUE(helper::removeFileOrDir(large_filename));
 }
 
 //=============================================================================
 // Test extracting from a closed zip file
 //=============================================================================
-TEST(ZipperFileOps, ExtractClosed)
+TEST(ZipperFileOps, AddAndExtractClosed)
 {
     const std::string zipFilename = "ziptest_add.zip";
     const std::string file1 = "file1_add.txt";
 
     Zipper zipper(zipFilename);
-    helper::zipAddFile(zipper, file1, "foo", file1);
+    ASSERT_TRUE(helper::zipAddFile(zipper, file1, "foo", file1));
     zipper.close();
+
+    ASSERT_FALSE(helper::zipAddFile(zipper, file1, "foo", file1));
+    ASSERT_THAT(zipper.error().message(),
+                testing::HasSubstr("Zip archive is not opened"));
+    ASSERT_FALSE(zipper.add(file1));
+    ASSERT_THAT(zipper.error().message(),
+                testing::HasSubstr("Zip archive is not opened"));
 
     Unzipper unzipper(zipFilename);
     ASSERT_EQ(unzipper.entries().size(), 1u);
@@ -940,7 +873,7 @@ TEST(ZipperFileOps, ExtractClosed)
     ASSERT_EQ(unzipper.entries().size(), 0u);
     ASSERT_FALSE(unzipper.extractAll(true));
     ASSERT_THAT(unzipper.error().message(),
-                testing::HasSubstr("Unzipper not open"));
+                testing::HasSubstr("Zip archive is not opened"));
 }
 
 //=============================================================================
@@ -951,11 +884,11 @@ TEST(ZipperFileOps, ExtractBadPassword)
     const std::string zipFilename = "ziptest_add.zip";
     const std::string file1 = "file1_add.txt";
 
-    Zipper zipper(zipFilename, "correctpass");
+    Zipper zipper(zipFilename, "correct_pass");
     helper::zipAddFile(zipper, file1, "foo", file1);
     zipper.close();
 
-    Unzipper unzipper(zipFilename, "badpass");
+    Unzipper unzipper(zipFilename, "bad_pass");
     ASSERT_EQ(unzipper.entries().size(), 1u);
     ASSERT_STREQ(unzipper.entries()[0].name.c_str(), file1.c_str());
     ASSERT_FALSE(unzipper.extractEntry(file1, false));
@@ -968,6 +901,6 @@ TEST(ZipperFileOps, ExtractBadPassword)
 
     ASSERT_FALSE(helper::checkFileDoesNotExist(file1));
 
-    helper::removeFileOrDir(zipFilename);
-    helper::removeFileOrDir(file1);
+    ASSERT_TRUE(helper::removeFileOrDir(zipFilename));
+    ASSERT_TRUE(helper::removeFileOrDir(file1));
 }
