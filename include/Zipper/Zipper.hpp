@@ -147,14 +147,14 @@ public:
     //!
     //! \param[in,out] p_source Data stream to compress.
     //! \param[in] p_timestamp Desired timestamp for the file.
-    //! \param[in] p_nameInZip Desired name for the file inside the archive.
+    //! \param[in] p_name_in_zip Desired name for the file inside the archive.
     //! \param[in] p_flags Compression options (faster, better, etc.).
     //! \return true on success, false on failure. Sets internal error code on
     //! failure.
     // -------------------------------------------------------------------------
     bool add(std::istream& p_source,
              const std::tm& p_timestamp,
-             const std::string& p_nameInZip,
+             const std::string& p_name_in_zip,
              Zipper::ZipFlags p_flags = Zipper::ZipFlags::Better);
 
     // -------------------------------------------------------------------------
@@ -162,13 +162,13 @@ public:
     //! Uses current time as timestamp.
     //!
     //! \param[in,out] p_source Data stream to compress.
-    //! \param[in] p_nameInZip Desired name for the file inside the archive.
+    //! \param[in] p_name_in_zip Desired name for the file inside the archive.
     //! \param[in] p_flags Compression options (faster, better, etc.).
     //! \return true on success, false on failure. Sets internal error code on
     //! failure.
     // -------------------------------------------------------------------------
     bool add(std::istream& p_source,
-             const std::string& p_nameInZip,
+             const std::string& p_name_in_zip,
              Zipper::ZipFlags p_flags = Zipper::ZipFlags::Better);
 
     // -------------------------------------------------------------------------
