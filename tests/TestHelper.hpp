@@ -3,8 +3,10 @@
 
 #include "utils/Path.hpp"
 
+#include <filesystem>
 #include <fstream>
 #include <string>
+#include <vector>
 
 //=============================================================================
 // Helper functions for tests
@@ -59,6 +61,16 @@ inline bool checkDirExists(const std::string& p_dir)
 }
 
 /**
+ * @brief Checks if a directory does not exist.
+ * @param[in] p_dir Path to the directory to check.
+ * @return true if the directory does not exist, false otherwise.
+ */
+inline bool checkDirDoesNotExist(const std::string& p_dir)
+{
+    return !zipper::Path::exist(p_dir) && !zipper::Path::isDir(p_dir);
+}
+
+/**
  * @brief Creates a file with content.
  * @param[in] p_file Path to the file to create.
  * @param[in] p_content Content to write in the file.
@@ -105,6 +117,20 @@ inline bool createDir(const std::string& p_dir)
 {
     return removeFileOrDir(p_dir) && zipper::Path::createDir(p_dir) &&
            checkDirExists(p_dir);
+}
+
+/**
+ * @brief Checks if a directory is empty.
+ * @param[in] p_dir Path to the directory to check.
+ * @return true if the directory is empty, false otherwise.
+ */
+inline bool isDirEmpty(const std::string& p_dir)
+{
+    if (!zipper::Path::isDir(p_dir))
+        return false;
+
+    std::vector<std::string> entries = zipper::Path::filesFromDir(p_dir, false);
+    return entries.empty();
 }
 } // namespace helper
 
