@@ -328,3 +328,163 @@ TEST(ZipperMemoryOps, ZipToStream)
         unzipper.close();
     }
 }
+
+//=============================================================================
+// Tests for multiple open sequences
+//=============================================================================
+TEST(ZipperMemoryOps, MultipleOpenSequence)
+{
+    const std::string zipFileName = "test_multiple_open.zip";
+    const std::string entryName = "test_entry.txt";
+    const std::string content = "test content for multiple open sequence";
+
+    // Create initial zip file
+    {
+        Zipper zipper(zipFileName);
+        std::stringstream contentStream(content);
+        ASSERT_TRUE(zipper.add(contentStream, entryName));
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+        zipper.close();
+    }
+
+    // Test sequence: file -> vector -> stream
+    {
+        // 1. Open from file
+        Unzipper unzipper(zipFileName);
+        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+        std::vector<unsigned char> data1;
+        ASSERT_TRUE(unzipper.extractEntryToMemory(entryName, data1));
+        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+        std::string extracted1(data1.begin(), data1.end());
+        ASSERT_EQ(extracted1, content);
+        unzipper.close();
+
+        // 2. Open from vector
+        std::vector<unsigned char> zipData;
+        {
+            std::ifstream ifs(zipFileName, std::ios::binary);
+            ASSERT_TRUE(ifs.is_open());
+            zipData = std::vector<unsigned char>(
+                (std::istreambuf_iterator<char>(ifs)),
+                std::istreambuf_iterator<char>());
+        }
+        ASSERT_FALSE(zipData.empty());
+
+        Unzipper unzipper2(zipData);
+        ASSERT_FALSE(unzipper2.error()) << unzipper2.error().message();
+        std::vector<unsigned char> data2;
+        ASSERT_TRUE(unzipper2.extractEntryToMemory(entryName, data2));
+        ASSERT_FALSE(unzipper2.error()) << unzipper2.error().message();
+        std::string extracted2(data2.begin(), data2.end());
+        ASSERT_EQ(extracted2, content);
+        unzipper2.close();
+
+        // 3. Open from stream
+        std::stringstream zipStream;
+        zipStream.write(reinterpret_cast<const char*>(zipData.data()),
+                        std::streamsize(zipData.size()));
+        zipStream.seekg(0);
+
+        Unzipper unzipper3(zipStream);
+        ASSERT_FALSE(unzipper3.error()) << unzipper3.error().message();
+        std::vector<unsigned char> data3;
+        ASSERT_TRUE(unzipper3.extractEntryToMemory(entryName, data3));
+        ASSERT_FALSE(unzipper3.error()) << unzipper3.error().message();
+        std::string extracted3(data3.begin(), data3.end());
+        ASSERT_EQ(extracted3, content);
+        unzipper3.close();
+    }
+
+    // Cleanup
+    ASSERT_TRUE(helper::removeFileOrDir(zipFileName));
+}
+
+//=============================================================================
+// Tests for multiple open with same Zipper instance
+//=============================================================================
+TEST(ZipperMemoryOps, MultipleOpenWithSameZipper)
+{
+    const std::string zipFileName = "test_multiple_open_same.zip";
+    const std::string entryName1 = "test_entry1.txt";
+    const std::string entryName2 = "test_entry2.txt";
+    const std::string entryName3 = "test_entry3.txt";
+    const std::string content1 = "test content for file";
+    const std::string content2 = "test content for vector";
+    const std::string content3 = "test content for stream";
+
+    // Create Zipper instance
+    Zipper zipper(zipFileName);
+    ASSERT_FALSE(zipper.error()) << zipper.error().message();
+
+    // 1. Add content to file
+    {
+        std::stringstream contentStream(content1);
+        ASSERT_TRUE(zipper.add(contentStream, entryName1));
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+        zipper.close();
+    }
+
+    // Verify file content
+    {
+        Unzipper unzipper(zipFileName);
+        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+        std::vector<unsigned char> data;
+        ASSERT_TRUE(unzipper.extractEntryToMemory(entryName1, data));
+        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+        std::string extracted(data.begin(), data.end());
+        ASSERT_EQ(extracted, content1);
+        unzipper.close();
+    }
+
+    // 2. Open with vector and add content
+    std::vector<unsigned char> zipData;
+    {
+        ASSERT_TRUE(zipper.open(zipData));
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+
+        std::stringstream contentStream(content2);
+        ASSERT_TRUE(zipper.add(contentStream, entryName2));
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+        zipper.close();
+    }
+
+    // Verify vector content
+    {
+        Unzipper unzipper(zipData);
+        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+        std::vector<unsigned char> data;
+        ASSERT_TRUE(unzipper.extractEntryToMemory(entryName2, data));
+        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+        std::string extracted(data.begin(), data.end());
+        ASSERT_EQ(extracted, content2);
+        unzipper.close();
+    }
+
+    // 3. Open with stream and add content
+    std::stringstream zipStream;
+    {
+        ASSERT_TRUE(zipper.open(zipStream));
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+
+        std::stringstream contentStream(content3);
+        ASSERT_TRUE(zipper.add(contentStream, entryName3));
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+        zipper.close();
+    }
+
+    // Verify stream content
+    {
+        zipStream.seekg(0);
+        Unzipper unzipper(zipStream);
+        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+        std::vector<unsigned char> data;
+        ASSERT_TRUE(unzipper.extractEntryToMemory(entryName3, data));
+        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+        std::string extracted(data.begin(), data.end());
+        ASSERT_EQ(extracted, content3);
+        unzipper.close();
+    }
+
+    // Cleanup
+    ASSERT_TRUE(helper::removeFileOrDir(zipFileName));
+}

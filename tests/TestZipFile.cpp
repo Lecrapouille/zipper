@@ -27,12 +27,14 @@ namespace helper {
  * @param[in] p_file_path Path of the temporary file to create.
  * @param[in] p_content Content to write in the file.
  * @param[in] p_entry_path Path of the entry in the zip archive.
+ * @param[in] p_flags Compression flags for the file.
  * @return true if successful, false otherwise.
  */
 static bool zipAddFile(Zipper& p_zipper,
                        const std::string& p_file_path,
                        const std::string& p_content,
-                       const std::string& p_entry_path)
+                       const std::string& p_entry_path,
+                       Zipper::ZipFlags p_flags = Zipper::ZipFlags::Better)
 {
     if (!helper::createFile(p_file_path, p_content))
     {
@@ -40,7 +42,7 @@ static bool zipAddFile(Zipper& p_zipper,
     }
 
     std::ifstream ifs(p_file_path);
-    bool res = p_zipper.add(ifs, p_entry_path, Zipper::SaveHierarchy);
+    bool res = p_zipper.add(ifs, p_entry_path, p_flags);
     ifs.close();
 
     Path::remove(p_file_path);
@@ -915,4 +917,368 @@ TEST(ZipperFileOps, ExtractBadPassword)
 
     ASSERT_TRUE(helper::removeFileOrDir(zipFilename));
     ASSERT_TRUE(helper::removeFileOrDir(file1));
+}
+
+//=============================================================================
+// Test Suite for Unzipper error handling
+//=============================================================================
+TEST(UnzipperFileOps, ErrorHandling)
+{
+    const std::string zipFilename = "ziptest_errors.zip";
+    const std::string file1 = "file1_errors.txt";
+    const std::string content1 = "content errors 1";
+    const std::string file2 = "file2_errors.txt";
+    const std::string content2 = "content errors 2";
+
+    // Create a zip file with two entries
+    {
+        Zipper zipper(zipFilename);
+        ASSERT_TRUE(helper::zipAddFile(zipper, file1, content1, file1));
+        ASSERT_TRUE(helper::zipAddFile(zipper, file2, content2, file2));
+        zipper.close();
+    }
+
+    // Test invalid entry name
+    {
+        Unzipper unzipper(zipFilename);
+        ASSERT_FALSE(unzipper.extractEntry("non_existent_entry.txt"));
+        ASSERT_THAT(unzipper.error().message(),
+                    testing::HasSubstr("Invalid info entry"));
+        unzipper.close();
+    }
+
+    // Test extract to stream with invalid entry
+    {
+        Unzipper unzipper(zipFilename);
+        std::stringstream output;
+        ASSERT_FALSE(
+            unzipper.extractEntryToStream("non_existent_entry.txt", output));
+        ASSERT_THAT(unzipper.error().message(),
+                    testing::HasSubstr("Invalid info entry"));
+        unzipper.close();
+    }
+
+    // Test extract to memory with invalid entry
+    {
+        Unzipper unzipper(zipFilename);
+        std::vector<unsigned char> output;
+        ASSERT_FALSE(
+            unzipper.extractEntryToMemory("non_existent_entry.txt", output));
+        ASSERT_THAT(unzipper.error().message(),
+                    testing::HasSubstr("Invalid info entry"));
+        unzipper.close();
+    }
+
+    // Test extract all with alternative names
+    {
+        Unzipper unzipper(zipFilename);
+        std::map<std::string, std::string> alternative_names;
+        alternative_names[file1] = "renamed1.txt";
+        alternative_names[file2] = "renamed2.txt";
+        ASSERT_TRUE(
+            unzipper.extractAll("extract_dir", alternative_names, true));
+        ASSERT_TRUE(
+            helper::checkFileExists("extract_dir/renamed1.txt", content1));
+        ASSERT_TRUE(
+            helper::checkFileExists("extract_dir/renamed2.txt", content2));
+        unzipper.close();
+        helper::removeFileOrDir("extract_dir");
+    }
+
+    // Test extract all to current directory
+    {
+        Unzipper unzipper(zipFilename);
+        ASSERT_TRUE(unzipper.extractAll(true));
+        ASSERT_TRUE(helper::checkFileExists(file1, content1));
+        ASSERT_TRUE(helper::checkFileExists(file2, content2));
+        unzipper.close();
+        helper::removeFileOrDir(file1);
+        helper::removeFileOrDir(file2);
+    }
+
+    // Test extract all to specific directory
+    {
+        Unzipper unzipper(zipFilename);
+        ASSERT_TRUE(unzipper.extractAll("extract_dir", true));
+        ASSERT_TRUE(helper::checkFileExists("extract_dir/" + file1, content1));
+        ASSERT_TRUE(helper::checkFileExists("extract_dir/" + file2, content2));
+        unzipper.close();
+        helper::removeFileOrDir("extract_dir");
+    }
+
+    // Test checkValid() with uninitialized Unzipper
+    {
+        Unzipper unzipper;
+        ASSERT_FALSE(unzipper.extractAll(true));
+        ASSERT_THAT(unzipper.error().message(),
+                    testing::HasSubstr("not initialized"));
+    }
+
+    // Test checkValid() with closed Unzipper
+    {
+        Unzipper unzipper(zipFilename);
+        unzipper.close();
+        ASSERT_FALSE(unzipper.extractAll(true));
+        ASSERT_THAT(unzipper.error().message(),
+                    testing::HasSubstr("not opened"));
+    }
+
+    // Clean up
+    helper::removeFileOrDir(zipFilename);
+}
+
+//=============================================================================
+// Test Suite for Unzipper with empty zip files
+//=============================================================================
+TEST(UnzipperFileOps, EmptyZipHandling)
+{
+    const std::string emptyZipFilename = "empty_zip.zip";
+
+    // Create an empty zip file
+    {
+        Zipper zipper(emptyZipFilename);
+        zipper.close();
+    }
+
+    // Test entries() on empty zip
+    {
+        Unzipper unzipper(emptyZipFilename);
+        auto entries = unzipper.entries();
+        ASSERT_TRUE(entries.empty());
+        unzipper.close();
+    }
+
+    // Test extractAll() on empty zip
+    {
+        Unzipper unzipper(emptyZipFilename);
+        ASSERT_FALSE(unzipper.extractAll(true));
+        ASSERT_THAT(unzipper.error().message(),
+                    testing::HasSubstr("Failed to go to first file"));
+        unzipper.close();
+    }
+
+    // Clean up
+    helper::removeFileOrDir(emptyZipFilename);
+}
+
+//=============================================================================
+// Test Suite for Unzipper with password protected files
+//=============================================================================
+TEST(UnzipperFileOps, PasswordProtectedFiles)
+{
+    const std::string zipFilename = "password_protected.zip";
+    const std::string file1 = "file1_pwd.txt";
+    const std::string content1 = "content pwd 1";
+    const std::string password = "test_password";
+
+    // Create a password protected zip file
+    {
+        Zipper zipper(zipFilename, password);
+        ASSERT_TRUE(helper::zipAddFile(zipper, file1, content1, file1));
+        zipper.close();
+    }
+
+    // Test with correct password
+    {
+        Unzipper unzipper(zipFilename, password);
+        std::vector<unsigned char> output;
+        ASSERT_TRUE(unzipper.extractEntryToMemory(file1, output));
+        std::string extracted(output.begin(), output.end());
+        ASSERT_EQ(extracted, content1);
+        unzipper.close();
+    }
+
+    // Test with wrong password
+    {
+        Unzipper unzipper(zipFilename, "wrong_password");
+        std::vector<unsigned char> output;
+        ASSERT_FALSE(unzipper.extractEntryToMemory(file1, output));
+        ASSERT_THAT(unzipper.error().message(),
+                    testing::HasSubstr("Bad password"));
+        unzipper.close();
+    }
+
+    // Clean up
+    helper::removeFileOrDir(zipFilename);
+}
+
+//=============================================================================
+// Test Suite for different compression flags
+//=============================================================================
+TEST(ZipperFileOps, CompressionFlags)
+{
+    const std::string zipFilename = "ziptest_compression.zip";
+    const std::string file1 = "file1_comp.txt";
+    const std::string file2 = "file2_comp.txt";
+    const std::string file3 = "file3_comp.txt";
+    const std::string file4 = "file4_comp.txt";
+    const std::string content =
+        "This is a test content for compression testing. "
+        "We need enough content to see compression effects. "
+        "Repeating this text multiple times to ensure we "
+        "have enough data to compress... ";
+
+    // Create a file with repeated content to ensure compression effects
+    std::string repeatedContent;
+    for (int i = 0; i < 100;
+         ++i) // Increased from 10 to 100 for better compression effects
+    {
+        repeatedContent += content;
+    }
+
+    // Test different compression flags
+    {
+        Zipper zipper(zipFilename);
+        ASSERT_TRUE(zipper.isOpen());
+
+        // Store (no compression)
+        ASSERT_TRUE(helper::zipAddFile(
+            zipper, file1, repeatedContent, file1, Zipper::ZipFlags::Store));
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+
+        // Faster compression
+        ASSERT_TRUE(helper::zipAddFile(
+            zipper, file2, repeatedContent, file2, Zipper::ZipFlags::Faster));
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+
+        // Medium compression
+        ASSERT_TRUE(helper::zipAddFile(
+            zipper, file3, repeatedContent, file3, Zipper::ZipFlags::Medium));
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+
+        // Better compression
+        ASSERT_TRUE(helper::zipAddFile(
+            zipper, file4, repeatedContent, file4, Zipper::ZipFlags::Better));
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+
+        zipper.close();
+    }
+
+    // Verify the compressed files
+    {
+        Unzipper unzipper(zipFilename);
+        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+        auto entries = unzipper.entries();
+        ASSERT_EQ(entries.size(), 4u);
+
+        // Verify each file's content
+        for (const auto& entry : entries)
+        {
+            std::vector<unsigned char> output;
+            ASSERT_TRUE(unzipper.extractEntryToMemory(entry.name, output));
+            ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+            std::string extracted(output.begin(), output.end());
+            ASSERT_EQ(extracted, repeatedContent);
+        }
+
+        // Verify Store has no compression (compressed_size ==
+        // uncompressed_size)
+        ASSERT_EQ(entries[0].compressed_size, entries[0].uncompressed_size);
+
+        // Verify that compressed sizes are different from Store
+        ASSERT_NE(entries[1].compressed_size, entries[0].compressed_size);
+        ASSERT_NE(entries[2].compressed_size, entries[0].compressed_size);
+        ASSERT_NE(entries[3].compressed_size, entries[0].compressed_size);
+
+        // Verify that compressed sizes are smaller than uncompressed size
+        for (size_t i = 1; i < entries.size(); ++i)
+        {
+            ASSERT_LT(entries[i].compressed_size, entries[i].uncompressed_size);
+        }
+
+        // Verify that compression levels are ordered (Better <= Medium <=
+        // Faster)
+        ASSERT_LE(entries[3].compressed_size, entries[2].compressed_size);
+        ASSERT_LE(entries[2].compressed_size, entries[1].compressed_size);
+
+        unzipper.close();
+    }
+
+    // Clean up
+    ASSERT_TRUE(helper::removeFileOrDir(zipFilename));
+}
+
+//=============================================================================
+// Test Suite for compression flags with hierarchy
+//=============================================================================
+TEST(ZipperFileOps, CompressionFlagsWithHierarchy)
+{
+    const std::string zipFilename = "ziptest_compression_hierarchy.zip";
+    const std::string folder1 = "folder1_comp/";
+    const std::string folder2 = "folder2_comp/";
+    const std::string file1 = folder1 + "file1_comp.txt";
+    const std::string file2 = folder2 + "file2_comp.txt";
+    const std::string content =
+        "This is a test content for compression testing with hierarchy. "
+        "We need enough content to see compression effects. "
+        "Repeating this text multiple times to ensure we "
+        "have enough data to compress... ";
+
+    // Create a file with repeated content
+    std::string repeatedContent;
+    for (int i = 0; i < 10; ++i)
+    {
+        repeatedContent += content;
+    }
+
+    // Create directories
+    ASSERT_TRUE(helper::createDir(folder1));
+    ASSERT_TRUE(helper::createDir(folder2));
+
+    // Test different compression flags with hierarchy
+    {
+        Zipper zipper(zipFilename);
+        ASSERT_TRUE(zipper.isOpen());
+
+        // Store with hierarchy
+        ASSERT_TRUE(helper::zipAddFile(zipper,
+                                       file1,
+                                       repeatedContent,
+                                       file1,
+                                       Zipper::ZipFlags::Store |
+                                           Zipper::ZipFlags::SaveHierarchy));
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+
+        // Better with hierarchy
+        ASSERT_TRUE(helper::zipAddFile(zipper,
+                                       file2,
+                                       repeatedContent,
+                                       file2,
+                                       Zipper::ZipFlags::Better |
+                                           Zipper::ZipFlags::SaveHierarchy));
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+
+        zipper.close();
+    }
+
+    // Verify the compressed files with hierarchy
+    {
+        Unzipper unzipper(zipFilename);
+        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+        auto entries = unzipper.entries();
+        ASSERT_EQ(entries.size(), 2u);
+
+        // Verify each file's content and path
+        for (const auto& entry : entries)
+        {
+            std::vector<unsigned char> output;
+            ASSERT_TRUE(unzipper.extractEntryToMemory(entry.name, output));
+            ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+            std::string extracted(output.begin(), output.end());
+            ASSERT_EQ(extracted, repeatedContent);
+            ASSERT_TRUE(entry.name.find("folder") != std::string::npos);
+        }
+
+        // Verify compression differences
+        ASSERT_NE(entries[0].compressed_size, entries[1].compressed_size);
+        ASSERT_EQ(entries[0].compressed_size, entries[0].uncompressed_size);
+        ASSERT_LT(entries[1].compressed_size, entries[0].compressed_size);
+
+        unzipper.close();
+    }
+
+    // Clean up
+    ASSERT_TRUE(helper::removeFileOrDir(zipFilename));
+    ASSERT_TRUE(helper::removeFileOrDir(folder1));
+    ASSERT_TRUE(helper::removeFileOrDir(folder2));
 }

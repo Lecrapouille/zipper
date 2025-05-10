@@ -38,6 +38,9 @@ class ZIPPER_EXPORT Unzipper
 {
 public:
 
+    //! \brief Default constructor. Creates an uninitialized Unzipper.
+    Unzipper();
+
     // -------------------------------------------------------------------------
     //! \brief Regular zip decompressor (from zip archive file).
     //!

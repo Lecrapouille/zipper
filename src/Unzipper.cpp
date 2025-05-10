@@ -540,7 +540,7 @@ public:
         else
         {
             m_error_code =
-                make_error_code(UnzipperError::INTERNAL_ERROR, "Bad password");
+                make_error_code(UnzipperError::OPENING_ERROR, "Bad password");
         }
         return err;
     }
@@ -584,7 +584,8 @@ public:
         }
         else
         {
-            m_error_code = make_error_code(UnzipperError::INTERNAL_ERROR);
+            m_error_code =
+                make_error_code(UnzipperError::OPENING_ERROR, "Bad password");
         }
 
         return err;
@@ -839,6 +840,9 @@ public:
                extractCurrentEntryToMemory(entry, p_vec);
     }
 };
+
+// -----------------------------------------------------------------------------
+Unzipper::Unzipper() : m_open(false), m_error_code(), m_impl(nullptr) {}
 
 // -----------------------------------------------------------------------------
 Unzipper::Unzipper(std::istream& p_zipped_buffer, std::string const& p_password)
