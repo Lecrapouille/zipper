@@ -11,68 +11,11 @@
 #undef protected
 #undef private
 
-#include "utils/Path.hpp"
-#include <chrono>
-#include <fstream>
+#include "TestHelper.hpp"
 
 using namespace zipper;
 
-//=============================================================================
-// Helper functions for tests
-//=============================================================================
 namespace helper {
-
-/**
- * @brief Checks if a file exists.
- * @param[in] p_file Path to the file to check.
- * @return true if the file exists, false otherwise.
- */
-static bool checkFileExists(const std::string& p_file)
-{
-    return Path::exist(p_file) && Path::isFile(p_file);
-}
-
-/**
- * @brief Checks if a directory exists.
- * @param[in] p_dir Path to the directory to check.
- * @return true if the directory exists, false otherwise.
- */
-static bool checkDirExists(const std::string& p_dir)
-{
-    return Path::exist(p_dir) && Path::isDir(p_dir);
-}
-
-/**
- * @brief Creates a file with content.
- * @param[in] p_file Path to the file to create.
- * @param[in] p_content Content to write in the file.
- * @return true if successful, false otherwise.
- */
-static bool createFile(const char* p_file, const char* p_content)
-{
-    Path::remove(p_file);
-
-    std::ofstream ofs(p_file);
-    ofs << p_content;
-    ofs.flush();
-    ofs.close();
-
-    return checkFileExists(p_file);
-}
-
-/**
- * @brief Reads and returns the content of a file.
- * @param[in] p_file Path to the file to read.
- * @return The content of the file as a string.
- */
-static std::string readFileContent(const char* p_file)
-{
-    std::ifstream ifs(p_file);
-    std::string str((std::istreambuf_iterator<char>(ifs)),
-                    std::istreambuf_iterator<char>());
-    return str.c_str();
-}
-
 /**
  * @brief Creates a file with content and adds it to the zipper.
  * @param[in] p_zipper The zipper instance.
@@ -119,8 +62,8 @@ TEST(MemoryZipTests, Issue05_1)
 
     // Check can be extracted
     ASSERT_TRUE(unzipper.extractAll(temp_dir, false));
-    ASSERT_TRUE(helper::checkFileExists(temp_dir + "sim.sedml"));
-    ASSERT_TRUE(helper::checkFileExists(temp_dir + "model.xml"));
+    ASSERT_TRUE(helper::checkFileExists(temp_dir + "sim.sedml", ""));
+    ASSERT_TRUE(helper::checkFileExists(temp_dir + "model.xml", ""));
     ASSERT_TRUE(helper::checkFileExists(temp_dir + "manifest.xml"));
 
     // Check cannot be extracted a second time, by security: files already
@@ -137,8 +80,8 @@ TEST(MemoryZipTests, Issue05_1)
 
     // Check can be extracted, when security is disabled.
     ASSERT_TRUE(unzipper.extractAll(temp_dir, true));
-    ASSERT_TRUE(helper::checkFileExists(temp_dir + "sim.sedml"));
-    ASSERT_TRUE(helper::checkFileExists(temp_dir + "model.xml"));
+    ASSERT_TRUE(helper::checkFileExists(temp_dir + "sim.sedml", ""));
+    ASSERT_TRUE(helper::checkFileExists(temp_dir + "model.xml", ""));
     ASSERT_TRUE(helper::checkFileExists(temp_dir + "manifest.xml"));
 
     unzipper.close();
@@ -169,10 +112,9 @@ TEST(MemoryZipTests, Issue05_nopassword)
     // Check files and directories were created
     ASSERT_TRUE(helper::checkDirExists("issue_05/"));
     ASSERT_TRUE(helper::checkDirExists("issue_05/Nouveau dossier/"));
-    ASSERT_TRUE(helper::checkFileExists("issue_05/Nouveau fichier "
-                                        "vide"));
+    ASSERT_TRUE(helper::checkFileExists("issue_05/Nouveau fichier vide", ""));
     ASSERT_TRUE(helper::checkDirExists("issue_05/foo/"));
-    ASSERT_TRUE(helper::checkFileExists("issue_05/foo/bar"));
+    ASSERT_TRUE(helper::checkFileExists("issue_05/foo/bar", ""));
 
     Path::remove("issue_05");
 }
@@ -201,10 +143,9 @@ TEST(MemoryZipTests, Issue05_password)
     // Check files and directories were created
     ASSERT_TRUE(helper::checkDirExists("issue_05/"));
     ASSERT_TRUE(helper::checkDirExists("issue_05/Nouveau dossier/"));
-    ASSERT_TRUE(helper::checkFileExists("issue_05/Nouveau fichier "
-                                        "vide"));
+    ASSERT_TRUE(helper::checkFileExists("issue_05/Nouveau fichier vide", ""));
     ASSERT_TRUE(helper::checkDirExists("issue_05/foo/"));
-    ASSERT_TRUE(helper::checkFileExists("issue_05/foo/bar"));
+    ASSERT_TRUE(helper::checkFileExists("issue_05/foo/bar", ""));
 
     Path::remove("issue_05");
 }
@@ -526,3 +467,45 @@ TEST(MemoryZipTests, Issue118)
 
     Path::remove("ziptest.zip");
 }
+
+//=============================================================================
+// Tests for issue #1: Unicode file names
+//=============================================================================
+TEST(ZipTests, Issue1_01)
+{
+    const std::string zipFilename(PWD "/issues/unicode2.zip");
+    const std::string file1 = "😊";
+
+    std::cout << "zipFilename: " << zipFilename << std::endl;
+
+    Unzipper unzipper(zipFilename);
+    EXPECT_EQ(unzipper.entries().size(), 1u);
+    EXPECT_STREQ(unzipper.entries()[0].name.c_str(), file1.c_str());
+
+    ASSERT_TRUE(unzipper.extractEntry(file1));
+    ASSERT_TRUE(helper::checkFileExists(file1, "Hello World!"));
+
+    unzipper.close();
+    ASSERT_TRUE(helper::removeFileOrDir(file1));
+}
+
+#if 0
+//=============================================================================
+// Tests for issue #1: Unicode file names
+//=============================================================================
+TEST(ZipTests, Issue1_02)
+{
+    const std::string zipFilename(PWD "/issues/unicode.zip");
+    const std::string file1 = "😊";
+
+    Unzipper unzipper(zipFilename);
+    EXPECT_EQ(unzipper.entries().size(), 1u);
+    EXPECT_STREQ(unzipper.entries()[0].name.c_str(), file1.c_str());
+
+    ASSERT_TRUE(unzipper.extractEntry(file1));
+    ASSERT_TRUE(helper::checkFileExists(file1, "Hello World!"));
+
+    unzipper.close();
+    ASSERT_TRUE(helper::removeFileOrDir(file1));
+}
+#endif

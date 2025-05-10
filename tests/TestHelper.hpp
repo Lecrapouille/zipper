@@ -40,6 +40,11 @@ inline bool checkFileExists(const std::string& p_file,
            readFileContent(p_file) == p_content;
 }
 
+inline bool checkFileExists(const std::string& p_file)
+{
+    return zipper::Path::exist(p_file) && zipper::Path::isFile(p_file);
+}
+
 /**
  * @brief Checks if a file does not exist.
  * @param[in] p_file Path to the file to check.
