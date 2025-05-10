@@ -109,13 +109,41 @@ public:
     //!
     //! \param[in,out] p_buffer Stream in which to store zipped files. Must
     //! remain valid for the lifetime of the Zipper object.
+    //! \param[in] p_open_flags Optional flags to control how the zip is opened.
+    //! \throw std::runtime_error if an error occurs during
+    //! initialization.
+    // -------------------------------------------------------------------------
+    Zipper(std::iostream& p_buffer, Zipper::OpenFlags p_open_flags)
+        : Zipper(p_buffer, std::string(), p_open_flags)
+    {
+    }
+
+    // -------------------------------------------------------------------------
+    //! \brief In-memory zip compression (storage inside std::iostream).
+    //!
+    //! \param[in,out] p_buffer Stream in which to store zipped files. Must
+    //! remain valid for the lifetime of the Zipper object.
+    //! \param[in] p_password Optional password (empty for no password
+    //! protection).
+    //! \param[in] p_open_flags Optional flags to control how the zip is opened.
+    //! \throw std::runtime_error if an error occurs during
+    //! initialization.
+    // -------------------------------------------------------------------------
+    Zipper(std::iostream& p_buffer,
+           const std::string& p_password,
+           Zipper::OpenFlags p_open_flags);
+
+    // -------------------------------------------------------------------------
+    //! \brief In-memory zip compression (storage inside std::iostream).
+    //!
+    //! \param[in,out] p_buffer Stream in which to store zipped files. Must
+    //! remain valid for the lifetime of the Zipper object.
     //! \param[in] p_password Optional password (empty for no password
     //! protection).
     //! \throw std::runtime_error if an error occurs during
     //! initialization.
     // -------------------------------------------------------------------------
-    Zipper(std::iostream& p_buffer,
-           const std::string& p_password = std::string());
+    Zipper(std::iostream& p_buffer, const std::string& p_password);
 
     // -------------------------------------------------------------------------
     //! \brief In-memory zip compression (storage inside std::vector).
@@ -128,7 +156,7 @@ public:
     //! initialization.
     // -------------------------------------------------------------------------
     Zipper(std::vector<unsigned char>& p_buffer,
-           const std::string& p_password = std::string());
+           const std::string& p_password = "");
 
     // -------------------------------------------------------------------------
     //! \brief Destructor automatically calls close().
@@ -243,19 +271,55 @@ public:
               Zipper::OpenFlags p_open_flags = Zipper::OpenFlags::Overwrite);
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Open the zip archive from a file.
+    //!
+    //! \param[in] p_zipname Path to the zip file.
+    //! \param[in] p_open_flags Overwrite (default) or append to existing zip
+    //! file.
+    //! \return true on success, false on failure. Sets internal error code on
+    //! failure.
     // -------------------------------------------------------------------------
     bool open(const std::string& p_zipname,
               Zipper::OpenFlags p_open_flags = Zipper::OpenFlags::Overwrite);
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Open the zip archive from a stream.
+    //!
+    //! \param[in,out] p_buffer Stream in which to store zipped files. Must
+    //! remain valid for the lifetime of the Zipper object.
+    //! \param[in] p_password Optional password (empty for no password
+    //! protection).
+    //! \param[in] p_open_flags Overwrite (default) or append to existing zip
+    //! file.
+    //! \return true on success, false on failure. Sets internal error code on
+    //! failure.
+    // -------------------------------------------------------------------------
+    bool open(std::iostream& p_buffer,
+              const std::string& p_password,
+              Zipper::OpenFlags p_open_flags);
+
+    // -------------------------------------------------------------------------
+    //! \brief Open the zip archive from a stream.
+    //!
+    //! \param[in,out] p_buffer Stream in which to store zipped files. Must
+    //! remain valid for the lifetime of the Zipper object.
+    //! \param[in] p_password Optional password (empty for no password
+    //! protection).
+    //! \return true on success, false on failure. Sets internal error code on
+    //! failure.
     // -------------------------------------------------------------------------
     bool open(std::iostream& p_buffer,
               const std::string& p_password = std::string());
 
     // -------------------------------------------------------------------------
-    //! \brief
+    //! \brief Open the zip archive from a vector.
+    //!
+    //! \param[in,out] p_buffer Vector in which to store zipped files. Must
+    //! remain valid for the lifetime of the Zipper object.
+    //! \param[in] p_password Optional password (empty for no password
+    //! protection).
+    //! \return true on success, false on failure. Sets internal error code on
+    //! failure.
     // -------------------------------------------------------------------------
     bool open(std::vector<unsigned char>& p_buffer,
               const std::string& p_password = std::string());

@@ -42,9 +42,30 @@ struct ZipperErrorCategory: std::error_category
         return "zipper";
     }
 
-    virtual std::string message(int ev) const override
+    virtual std::string message(int p_error) const override
     {
-        return custom_message;
+        if (!custom_message.empty())
+        {
+            return custom_message;
+        }
+
+        switch (static_cast<ZipperError>(p_error))
+        {
+            case ZipperError::NO_ERROR_ZIPPER:
+                return "There was no error";
+            case ZipperError::OPENING_ERROR:
+                return "Opening error";
+            case ZipperError::INTERNAL_ERROR:
+                return "Internal error";
+            case ZipperError::NO_ENTRY:
+                return "Error, couldn't get the current entry info";
+            case ZipperError::SECURITY_ERROR:
+                return "ZipSlip security";
+            case ZipperError::ADDING_ERROR:
+                return "Error adding file to zip";
+            default:
+                return "Unkown Error";
+        }
     }
 
     std::string custom_message;
@@ -57,7 +78,6 @@ static ZipperErrorCategory theZipperErrorCategory;
 static std::error_code make_error_code(ZipperError p_error,
                                        std::string const& p_message)
 {
-    // std::cerr << message << std::endl;
     theZipperErrorCategory.custom_message = p_message;
     return {static_cast<int>(p_error), theZipperErrorCategory};
 }
@@ -231,100 +251,93 @@ struct Zipper::Impl
         size_t size = static_cast<size_t>(s);
         p_stream.seekg(0);
 
+        // Free existing memory if any
         if (m_zip_memory.base != nullptr)
         {
             free(m_zip_memory.base);
             memset(&m_zip_memory, 0, sizeof(m_zip_memory));
         }
 
-        // Allocate memory directly
-        m_zip_memory.base = reinterpret_cast<char*>(malloc(size));
-        if (m_zip_memory.base == nullptr)
+        // Allocate memory directly. For empty streams, we don't need to
+        // allocate memory.
+        if (size > 0)
         {
-            m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
-                                           "Failed to allocate memory");
-            return false;
-        }
-
-        // Use the member buffer for reading
-        constexpr size_t CHUNK_SIZE = 1024 * 1024; // 1 Mo per chunk
-        try                                        // Add try-catch for resize
-        {
-            size_t required_buffer_size = std::min(CHUNK_SIZE, size);
-            if (m_buffer.size() < required_buffer_size)
+            m_zip_memory.base = reinterpret_cast<char*>(malloc(size));
+            if (m_zip_memory.base == nullptr)
             {
-                m_buffer.resize(required_buffer_size);
+                m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
+                                               "Failed to allocate memory");
+                return false;
             }
-        }
-        catch (const std::bad_alloc& e)
-        {
-            m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
-                                           "Failed to allocate read buffer");
-            // Need to free the malloc'd base buffer before returning
-            if (m_zip_memory.base)
-                free(m_zip_memory.base);
-            memset(&m_zip_memory, 0, sizeof(m_zip_memory));
-            return false;
-        }
 
-        char* dest = m_zip_memory.base;
-        size_t remaining = size;
-
-        // Read by chunks to avoid memory issues with large files
-        while (remaining > 0 && p_stream.good())
-        {
-            size_t to_read = std::min(m_buffer.size(), remaining);
-            p_stream.read(m_buffer.data(), std::streamsize(to_read));
-            size_t actually_read = static_cast<size_t>(p_stream.gcount());
-
-            if (actually_read == 0)
-                break;
-
-            memcpy(dest, m_buffer.data(), actually_read);
-            dest += actually_read;
-            remaining -= actually_read;
-        }
-
-        // If we couldn't read all the content, adjust the size
-        if (remaining > 0)
-        {
-            size_t actual_size = size - remaining;
-            // Reallocate to free unused memory
-            char* reallocated_base = reinterpret_cast<char*>(
-                realloc(m_zip_memory.base, actual_size));
-
-            // Check if realloc succeeded
-            if (reallocated_base != nullptr ||
-                actual_size == 0) // realloc(ptr, 0) might return NULL
+            // Use the member buffer for reading. 1 Mo per chunk.
+            constexpr size_t CHUNK_SIZE = 1024 * 1024;
+            try
             {
-                m_zip_memory.base =
-                    reallocated_base; // Update pointer only on success
-                size = actual_size;   // Update size only on success
+                size_t required_buffer_size = std::min(CHUNK_SIZE, size);
+                if (m_buffer.size() < required_buffer_size)
+                {
+                    m_buffer.resize(required_buffer_size);
+                }
             }
-            else
+            catch (const std::bad_alloc& e)
             {
-                // Realloc failed: base still points to the old (larger) block.
-                // The data is still there, but we have extra unused memory.
-                // This is not critical, but good to be aware of.
-                // We keep the original 'size' value associated with the old
-                // block. Or, we could set an error if freeing unused memory is
-                // critical. Let's keep the old block for now. Size remains the
-                // original malloc'd size. So no change needed here if failure
-                // is acceptable. size = size; // Keep original size if realloc
-                // fails
+                m_error_code =
+                    make_error_code(ZipperError::INTERNAL_ERROR,
+                                    "Failed to allocate read buffer");
+                if (m_zip_memory.base)
+                {
+                    free(m_zip_memory.base);
+                }
+                memset(&m_zip_memory, 0, sizeof(m_zip_memory));
+                return false;
+            }
+
+            char* dest = m_zip_memory.base;
+            size_t remaining = size;
+
+            // Read by chunks to avoid memory issues with large files
+            while ((remaining > 0) && (p_stream.good()))
+            {
+                size_t to_read = std::min(m_buffer.size(), remaining);
+                p_stream.read(m_buffer.data(), std::streamsize(to_read));
+                size_t actually_read = static_cast<size_t>(p_stream.gcount());
+
+                if (actually_read == 0)
+                    break;
+
+                memcpy(dest, m_buffer.data(), actually_read);
+                dest += actually_read;
+                remaining -= actually_read;
+            }
+
+            // If we couldn't read all the content, adjust the size
+            if (remaining > 0)
+            {
+                size_t actual_size = size - remaining;
+                char* reallocated_base = reinterpret_cast<char*>(
+                    realloc(m_zip_memory.base, actual_size));
+
+                // Check if realloc succeeded
+                if ((reallocated_base != nullptr) && (actual_size > 0))
+                {
+                    m_zip_memory.base = reallocated_base;
+                    size = actual_size;
+                }
             }
         }
 
-        m_zip_memory.size =
-            static_cast<uint32_t>(size); // Use potentially updated size
-
+        m_zip_memory.size = static_cast<uint32_t>(size);
         fill_memory_filefunc(&m_file_func, &m_zip_memory);
-        // Use actual_size for mode check? If realloc failed, size is
-        // original... Let's base mode on whether actual_size > 0
-        size_t final_size = m_zip_memory.size;
-        return initMemory(final_size > 0 ? APPEND_STATUS_CREATE
-                                         : APPEND_STATUS_ADDINZIP,
-                          m_file_func);
+
+        // For empty streams or Overwrite flag, we should use
+        // APPEND_STATUS_CREATE.
+        int mode = ((size == 0) ||
+                    (m_outer.m_open_flags == Zipper::OpenFlags::Overwrite))
+                       ? APPEND_STATUS_CREATE
+                       : APPEND_STATUS_ADDINZIP;
+
+        return initMemory(mode, m_file_func);
     }
 
     // -------------------------------------------------------------------------
@@ -663,12 +676,29 @@ Zipper::Zipper(const std::string& p_zipname,
 }
 
 // -------------------------------------------------------------------------
+Zipper::Zipper(std::iostream& p_buffer,
+               const std::string& p_password,
+               Zipper::OpenFlags p_open_flags)
+    : m_output_stream(&p_buffer),
+      m_password(p_password),
+      m_open_flags(p_open_flags),
+      m_impl(std::make_unique<Impl>(*this, m_error_code))
+{
+    if (!reopen())
+    {
+        throw std::runtime_error(
+            m_error_code ? m_error_code.message()
+                         : "Zipper initialization with stream failed");
+    }
+}
+
+// -------------------------------------------------------------------------
 Zipper::Zipper(std::iostream& p_buffer, const std::string& p_password)
     : m_output_stream(&p_buffer),
       m_password(p_password),
+      m_open_flags(OpenFlags::Overwrite),
       m_impl(std::make_unique<Impl>(*this, m_error_code))
 {
-    m_open_flags = OpenFlags::Overwrite;
     if (!reopen())
     {
         throw std::runtime_error(
@@ -682,9 +712,9 @@ Zipper::Zipper(std::vector<unsigned char>& p_buffer,
                const std::string& p_password)
     : m_output_vector(&p_buffer),
       m_password(p_password),
+      m_open_flags(OpenFlags::Overwrite),
       m_impl(std::make_unique<Impl>(*this, m_error_code))
 {
-    m_open_flags = OpenFlags::Overwrite;
     if (!reopen())
     {
         throw std::runtime_error(
@@ -890,10 +920,26 @@ bool Zipper::open(const std::string& p_zip_name, Zipper::OpenFlags p_open_flags)
 }
 
 // -------------------------------------------------------------------------
+bool Zipper::open(std::iostream& p_buffer,
+                  const std::string& p_password,
+                  Zipper::OpenFlags p_open_flags)
+{
+    m_zip_name.clear();
+    m_password = p_password;
+    m_open_flags = p_open_flags;
+    m_output_stream = &p_buffer;
+    m_output_vector = nullptr;
+
+    m_impl = std::make_unique<Impl>(*this, m_error_code);
+    return reopen();
+}
+
+// -------------------------------------------------------------------------
 bool Zipper::open(std::iostream& p_buffer, const std::string& p_password)
 {
     m_zip_name.clear();
     m_password = p_password;
+    m_open_flags = Zipper::OpenFlags::Overwrite;
     m_output_stream = &p_buffer;
     m_output_vector = nullptr;
 

@@ -202,19 +202,25 @@ TEST(ZipperMemoryOps, ZipFromExternalFileToVector)
     }
 }
 
-#if 0
+//=============================================================================
+// Tests for zip to stream
+//=============================================================================
 TEST(ZipperMemoryOps, ZipToStream)
 {
+    std::stringstream zipDataStream;
     const std::string entryName = "stream_entry.txt";
     const std::string content = "stream content";
-    std::stringstream zipDataStream;
 
+    std::stringstream inputStream2("append content");
+    const std::string appendEntryName = "append_entry.txt";
+
+    // Constructor for stream
     {
-        Zipper zipper(zipDataStream); // Constructor for stream
-        std::ifstream input1(entryName);
-        ASSERT_TRUE(zipper.add(input1, content));
+        Zipper zipper(zipDataStream, Zipper::OpenFlags::Overwrite);
+        std::stringstream inputStream(content);
+        ASSERT_TRUE(zipper.add(inputStream, entryName));
         ASSERT_FALSE(zipper.error()) << zipper.error().message();
-        zipper.close(); // Stream is updated on close
+        zipper.close();
     }
 
     // Check stream content exists
@@ -222,13 +228,32 @@ TEST(ZipperMemoryOps, ZipToStream)
     ASSERT_GT(zipDataStream.tellg(), 0);
     zipDataStream.seekg(0, std::ios::beg); // Reset for unzipper
 
+    // Append to stream
+    {
+        Zipper zipper(zipDataStream, Zipper::OpenFlags::Append);
+        ASSERT_TRUE(zipper.add(inputStream2, appendEntryName));
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+        zipper.close();
+    }
+
+    // Reopen the stream
+    {
+        Zipper zipper;
+        zipper.open(zipDataStream, "password", Zipper::OpenFlags::Append);
+        ASSERT_TRUE(zipper.add(inputStream2, appendEntryName));
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+        zipper.close();
+    }
+
     // Verify content using Unzipper
     {
         Unzipper unzipper(zipDataStream);
         ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
         auto entries = unzipper.entries();
-        ASSERT_EQ(entries.size(), 1);
+        ASSERT_EQ(entries.size(), 3);
         ASSERT_EQ(entries[0].name, entryName);
+        ASSERT_EQ(entries[1].name, appendEntryName);
+        ASSERT_EQ(entries[2].name, appendEntryName);
 
         std::stringstream extractedStream;
         ASSERT_TRUE(unzipper.extractEntryToStream(entryName, extractedStream));
@@ -236,5 +261,70 @@ TEST(ZipperMemoryOps, ZipToStream)
         ASSERT_EQ(extractedStream.str(), content);
         unzipper.close();
     }
+
+    // Test with empty stream
+    {
+        Zipper zipper(zipDataStream, Zipper::OpenFlags::Overwrite);
+        zipper.close();
+
+        Unzipper unzipper(zipDataStream);
+        auto entries = unzipper.entries();
+        ASSERT_EQ(entries.size(), 0);
+        unzipper.close();
+    }
+
+    // Test open() with stream and password
+    {
+        Zipper zipper;
+        ASSERT_TRUE(zipper.open(zipDataStream, "test_password"));
+        std::stringstream inputStream("password protected content");
+        ASSERT_TRUE(zipper.add(inputStream, "password_entry.txt"));
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+        zipper.close();
+
+        // Verify with Unzipper using password
+        Unzipper unzipper(zipDataStream, "test_password");
+        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+        auto entries = unzipper.entries();
+        ASSERT_EQ(entries.size(), 1);
+        ASSERT_EQ(entries[0].name, "password_entry.txt");
+        unzipper.close();
+    }
+
+    // Test open() with stream, password and flags
+    {
+        Zipper zipper;
+        ASSERT_TRUE(zipper.open(
+            zipDataStream, "test_password2", Zipper::OpenFlags::Append));
+        std::stringstream inputStream("another password protected content");
+        ASSERT_TRUE(zipper.add(inputStream, "password_entry2.txt"));
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+        zipper.close();
+
+        // Verify with Unzipper using password
+        Unzipper unzipper(zipDataStream, "test_password2");
+        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+        auto entries = unzipper.entries();
+        ASSERT_EQ(entries.size(), 2); // Should have both password entries
+        unzipper.close();
+    }
+
+    // Test open() with stream and flags (no password)
+    {
+        Zipper zipper;
+        ASSERT_TRUE(
+            zipper.open(zipDataStream, "", Zipper::OpenFlags::Overwrite));
+        std::stringstream inputStream("content without password");
+        ASSERT_TRUE(zipper.add(inputStream, "no_password_entry.txt"));
+        ASSERT_FALSE(zipper.error()) << zipper.error().message();
+        zipper.close();
+
+        // Verify with Unzipper (no password needed)
+        Unzipper unzipper(zipDataStream);
+        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+        auto entries = unzipper.entries();
+        ASSERT_EQ(entries.size(), 1);
+        ASSERT_EQ(entries[0].name, "no_password_entry.txt");
+        unzipper.close();
+    }
 }
-#endif

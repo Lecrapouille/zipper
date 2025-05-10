@@ -332,14 +332,16 @@ zipper.close();
 - Creating a zip in-memory stream with files:
 
 ```c++
-std::stringstream ss;
-std::ifstream input1("some file");
+// Example of using stringstream
+std::stringstream zipStream;
+std::stringstream inputStream("content to zip");
 
-Zipper zipper(ss); // You can pass password
-zipper.add(input1, "Test1");
+Zipper zipper(zipStream); // You can pass password
+zipper.add(inputStream, "Test1");
 zipper.close();
 
-zipper::Unzipper unzipper(ss);
+// Example of extracting
+zipper::Unzipper unzipper(zipData); // or unzipper(zipStream) for stringstream
 unzipper.extractEntry(...
 ```
 

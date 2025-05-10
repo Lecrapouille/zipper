@@ -508,23 +508,35 @@ TEST(ZipperFileOps, TryOpeningNonExistentFile)
 //=============================================================================
 TEST(ZipperFileOps, DummyStuffs)
 {
+    // Append to a dummy zip file: allowed
     Zipper zipper1("issues/dummy.zip", Zipper::OpenFlags::Append);
     ASSERT_TRUE(zipper1.isOpen());
     zipper1.close();
 
+    // Open a dummy zip file: allowed
     Unzipper unzipper1("issues/dummy.zip");
     ASSERT_TRUE(unzipper1.isOpen());
     unzipper1.close();
 
+    //
     Zipper zipper2("foo.zip");
     ASSERT_TRUE(zipper2.isOpen());
+
+    // Empty file content: allowed
     ASSERT_TRUE(helper::zipAddFile(zipper2, "dummy.txt", "", "dummy.txt"));
 
+    // Empty entry zip name: forbidden
+    ASSERT_FALSE(helper::zipAddFile(zipper2, "dummy.txt", "", ""));
+    ASSERT_THAT(zipper2.error().message(),
+                testing::HasSubstr("Entry name cannot be empty"));
+
+    // Add a dummy directory: allowed
     helper::createDir("dummy_dir");
     // TODO
     // ASSERT_TRUE(zipper2.addDir("dummy_dir"));
     zipper2.close();
 
+    // Clean up
     helper::removeFileOrDir("foo.zip");
     helper::removeFileOrDir("dummy_dir");
 }

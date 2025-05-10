@@ -93,7 +93,6 @@ static std::error_code make_error_code(UnzipperError p_error)
 static std::error_code make_error_code(UnzipperError p_error,
                                        std::string const& p_message)
 {
-    // std::cerr << message << std::endl;
     theUnzipperErrorCategory.custom_message = p_message;
     return {static_cast<int>(p_error), theUnzipperErrorCategory};
 }
