@@ -226,15 +226,8 @@ public:
                                  const std::string& absoluteTo);
 #endif
 
-    //! \brief This method normalizes the path, i.e.,
-    //! it converts all '\' to '/' (only on WIN32)
-    //! and collapses '^./' to '^', '/./' to '/', and '[^/]+/../' to '/'
-    //! \param[in] path
-    //! \return std::string normalizedPath
-    static std::string normalize(const std::string& path);
-
     //! \brief This substitute ../ ie foo/../bar will return bar
-    static std::string canonicalPath(const std::string& path);
+    static std::string normalize(const std::string& path);
 
     static bool isLargeFile(std::istream& input_stream);
 

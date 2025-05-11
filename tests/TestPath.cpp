@@ -189,111 +189,177 @@ TEST(TestDir, createTempName)
     EXPECT_EQ(Path::isReadable(dir), true);
 }
 
-TEST(TestDir, canonicalPath)
-{
-    EXPECT_STREQ(Path::canonicalPath("/foo/bar/file.txt").c_str(),
-                 "/foo/bar/file.txt");
-    EXPECT_STREQ(Path::canonicalPath("./foo/bar/file.txt").c_str(),
-                 "./foo/bar/file.txt");
-    EXPECT_STREQ(Path::canonicalPath("/foo/../bar/file.txt").c_str(),
-                 "/bar/file.txt");
-    EXPECT_STREQ(Path::canonicalPath("./foo/../bar/file.txt").c_str(),
-                 "./bar/file.txt");
-    EXPECT_STREQ(Path::canonicalPath("").c_str(), "");
-    EXPECT_STREQ(Path::canonicalPath("..").c_str(), "..");
-    EXPECT_STREQ(Path::canonicalPath("/").c_str(), "/");
-    EXPECT_STREQ(Path::canonicalPath("//").c_str(), "/");
-    EXPECT_STREQ(Path::canonicalPath("////").c_str(), "/");
-    EXPECT_STREQ(Path::canonicalPath("///.///").c_str(), "/");
-    EXPECT_STREQ(Path::canonicalPath("//.").c_str(), "/");
-    EXPECT_STREQ(Path::canonicalPath("/..").c_str(), "/");
-    EXPECT_STREQ(Path::canonicalPath("/out").c_str(), "/out");
-    EXPECT_STREQ(Path::canonicalPath("./out").c_str(), "./out");
-    EXPECT_STREQ(Path::canonicalPath("./././out").c_str(), "./out");
-    EXPECT_STREQ(Path::canonicalPath("./out/./bin").c_str(), "./out/bin");
-    EXPECT_STREQ(Path::canonicalPath("./out/./././bin").c_str(), "./out/bin");
-    EXPECT_STREQ(Path::canonicalPath("out/../../bin").c_str(), "../bin");
-    EXPECT_STREQ(Path::canonicalPath("../../bin").c_str(), "../../bin");
-    EXPECT_STREQ(Path::canonicalPath("../..//bin").c_str(), "../../bin");
-    EXPECT_STREQ(Path::canonicalPath("../.././bin").c_str(), "../../bin");
-    EXPECT_STREQ(Path::canonicalPath("/../out/../in").c_str(), "/in");
-    EXPECT_STREQ(Path::canonicalPath("/../out/../in/").c_str(), "/in");
-    EXPECT_STREQ(
-        Path::canonicalPath("/does/not/exist//data/somefolder").c_str(),
-        "/does/not/exist/data/somefolder");
-    EXPECT_STREQ(
-        Path::canonicalPath("/does/not/exist//data/somefolder/").c_str(),
-        "/does/not/exist/data/somefolder");
-    EXPECT_STREQ(
-        Path::canonicalPath("/does/not/exist//data/somefolder//").c_str(),
-        "/does/not/exist/data/somefolder");
-}
-
-TEST(TestDir, canonicalPathExtended)
-{
-    // Additional base tests
-    EXPECT_STREQ(Path::canonicalPath("./").c_str(), ".");
-    EXPECT_STREQ(Path::canonicalPath("././").c_str(), ".");
-    EXPECT_STREQ(Path::canonicalPath("./.").c_str(), ".");
-    EXPECT_STREQ(Path::canonicalPath("./../").c_str(), "..");
-    EXPECT_STREQ(Path::canonicalPath("../..").c_str(), "../..");
-
-    // Case with multiple separators and cleaning
-    EXPECT_STREQ(Path::canonicalPath("/foo//bar").c_str(), "/foo/bar");
-    EXPECT_STREQ(Path::canonicalPath("/foo///bar").c_str(), "/foo/bar");
-    EXPECT_STREQ(Path::canonicalPath("/foo/./bar").c_str(), "/foo/bar");
-    EXPECT_STREQ(Path::canonicalPath("/./foo/bar").c_str(), "/foo/bar");
-
-    // Handling consecutive '..'
-    EXPECT_STREQ(Path::canonicalPath("/foo/bar/../..").c_str(), "/");
-    EXPECT_STREQ(Path::canonicalPath("/foo/bar/../../baz").c_str(), "/baz");
-    EXPECT_STREQ(Path::canonicalPath("../../../foo").c_str(), "../../../foo");
-
-    // Tests with mixed separators (Windows/Unix)
-    EXPECT_STREQ(Path::canonicalPath("/foo/bar\\/baz").c_str(), "/foo/bar/baz");
-    EXPECT_STREQ(Path::canonicalPath("/foo\\bar/baz").c_str(), "/foo/bar/baz");
-
-    // Special cases with dots
-    EXPECT_STREQ(Path::canonicalPath("/foo/./bar/.").c_str(), "/foo/bar");
-    EXPECT_STREQ(Path::canonicalPath("/foo/././bar").c_str(), "/foo/bar");
-    EXPECT_STREQ(Path::canonicalPath("/foo/./../bar").c_str(), "/bar");
-
-    // Case with empty segments
-    EXPECT_STREQ(Path::canonicalPath("//foo///bar//").c_str(), "/foo/bar");
-    EXPECT_STREQ(Path::canonicalPath("foo//bar//").c_str(), "foo/bar");
-
-    // Tests with Windows paths
-    EXPECT_STREQ(Path::canonicalPath("C:\\foo\\..\\bar").c_str(), "C:\\bar");
-    EXPECT_STREQ(Path::canonicalPath("C:/foo/../bar").c_str(), "C:\\bar");
-    EXPECT_STREQ(Path::canonicalPath("C:\\..\\foo").c_str(), "C:\\foo");
-    EXPECT_STREQ(Path::canonicalPath("C:\\.\\foo\\.\\bar").c_str(),
-                 "C:\\foo\\bar");
-}
-
-#if 0
 TEST(TestDir, normalize)
 {
-   EXPECT_STREQ(Path::normalize("A//B").c_str(), "A/B");
-   EXPECT_STREQ(Path::normalize("A/B/").c_str(), "A/B");
-   EXPECT_STREQ(Path::normalize("A/B//").c_str(), "A/B");
-   EXPECT_STREQ(Path::normalize("A/./B").c_str(), "A/B");
-   EXPECT_STREQ(Path::normalize("A/foo/../B").c_str(), "A/B");
-   EXPECT_STREQ(Path::normalize("./A/B").c_str(), "A/B");
-   EXPECT_STREQ(Path::normalize("A/B/.").c_str(), "A/B");
-   EXPECT_STREQ(Path::normalize("A/B/./").c_str(), "A/B");
-   EXPECT_STREQ(Path::normalize("A/B/./C").c_str(), "A/B/C");
-   EXPECT_STREQ(Path::normalize("A/B/./C/").c_str(), "A/B/C");
+    // Tests de base pour la normalisation des chemins
+    EXPECT_STREQ(Path::normalize("A//B").c_str(), "A/B");
+    EXPECT_STREQ(Path::normalize("A/B/").c_str(), "A/B");
+    EXPECT_STREQ(Path::normalize("A/B//").c_str(), "A/B");
+    EXPECT_STREQ(Path::normalize("A/./B").c_str(), "A/B");
+    EXPECT_STREQ(Path::normalize("A/foo/../B").c_str(), "A/B");
+    EXPECT_STREQ(Path::normalize("./A/B").c_str(), "A/B");
+    EXPECT_STREQ(Path::normalize("A/B/.").c_str(), "A/B");
+    EXPECT_STREQ(Path::normalize("A/B/./").c_str(), "A/B");
+    EXPECT_STREQ(Path::normalize("A/B/./C").c_str(), "A/B/C");
+    EXPECT_STREQ(Path::normalize("A/B/./C/").c_str(), "A/B/C");
 }
 
 TEST(TestDir, normalizeSpecialCase)
 {
-   EXPECT_STREQ(Path::normalize("/../foo").c_str(), "/foo");
-   EXPECT_STREQ(Path::normalize("/../../foo").c_str(), "/foo");
-   EXPECT_STREQ(Path::normalize("bar/../foo").c_str(), "bar/../foo");
-   EXPECT_STREQ(Path::normalize("bar/../../foo").c_str(), "../foo");
-   EXPECT_STREQ(Path::normalize("/../").c_str(), "/");
-   EXPECT_STREQ(Path::normalize("/a/../../").c_str(), "/");
-   EXPECT_STREQ(Path::normalize("/a/b/../../").c_str(), "/");
+    // Tests pour les chemins avec ".."
+    EXPECT_STREQ(Path::normalize("/../foo").c_str(), "/foo");
+    EXPECT_STREQ(Path::normalize("/../../foo").c_str(), "/foo");
+    EXPECT_STREQ(Path::normalize("bar/../foo").c_str(), "foo");
+    EXPECT_STREQ(Path::normalize("bar/../../foo").c_str(), "../foo");
+    EXPECT_STREQ(Path::normalize("/../").c_str(), "/");
+    EXPECT_STREQ(Path::normalize("/a/../../").c_str(), "/");
+    EXPECT_STREQ(Path::normalize("/a/b/../../").c_str(), "/");
+}
+
+TEST(TestDir, canonicalPath)
+{
+    // Tests pour les chemins canoniques
+    EXPECT_STREQ(Path::normalize("/foo/bar/file.txt").c_str(),
+                 "/foo/bar/file.txt");
+    EXPECT_STREQ(Path::normalize("./foo/bar/file.txt").c_str(),
+                 "foo/bar/file.txt");
+    EXPECT_STREQ(Path::normalize("/foo/../bar/file.txt").c_str(),
+                 "/bar/file.txt");
+    EXPECT_STREQ(Path::normalize("./foo/../bar/file.txt").c_str(),
+                 "bar/file.txt");
+    EXPECT_STREQ(Path::normalize("").c_str(), "");
+    EXPECT_STREQ(Path::normalize("..").c_str(), "..");
+    EXPECT_STREQ(Path::normalize("/").c_str(), "/");
+    EXPECT_STREQ(Path::normalize("//").c_str(), "/");
+    EXPECT_STREQ(Path::normalize("////").c_str(), "/");
+    EXPECT_STREQ(Path::normalize("///.///").c_str(), "/");
+    EXPECT_STREQ(Path::normalize("//.").c_str(), "/");
+    EXPECT_STREQ(Path::normalize("/..").c_str(), "/");
+    EXPECT_STREQ(Path::normalize("/out").c_str(), "/out");
+    EXPECT_STREQ(Path::normalize("./out").c_str(), "out");
+    EXPECT_STREQ(Path::normalize("./././out").c_str(), "out");
+    EXPECT_STREQ(Path::normalize("./out/./bin").c_str(), "out/bin");
+    EXPECT_STREQ(Path::normalize("./out/./././bin").c_str(), "out/bin");
+    EXPECT_STREQ(Path::normalize("out/../../bin").c_str(), "../bin");
+    EXPECT_STREQ(Path::normalize("../../bin").c_str(), "../../bin");
+    EXPECT_STREQ(Path::normalize("../..//bin").c_str(), "../../bin");
+    EXPECT_STREQ(Path::normalize("../.././bin").c_str(), "../../bin");
+    EXPECT_STREQ(Path::normalize("/../out/../in").c_str(), "/in");
+    EXPECT_STREQ(Path::normalize("/../out/../in/").c_str(), "/in");
+    EXPECT_STREQ(Path::normalize("/does/not/exist//data/somefolder").c_str(),
+                 "/does/not/exist/data/somefolder");
+    EXPECT_STREQ(Path::normalize("/does/not/exist//data/somefolder/").c_str(),
+                 "/does/not/exist/data/somefolder");
+    EXPECT_STREQ(Path::normalize("/does/not/exist//data/somefolder//").c_str(),
+                 "/does/not/exist/data/somefolder");
+}
+
+TEST(TestDir, canonicalPathExtended)
+{
+    // Additional tests for base cases
+    EXPECT_STREQ(Path::normalize("./").c_str(), ".");
+    EXPECT_STREQ(Path::normalize("././").c_str(), ".");
+    EXPECT_STREQ(Path::normalize("./.").c_str(), ".");
+    EXPECT_STREQ(Path::normalize("./../").c_str(), "..");
+    EXPECT_STREQ(Path::normalize("../..").c_str(), "../..");
+
+    // Cases with multiple separators and cleaning
+    EXPECT_STREQ(Path::normalize("/foo//bar").c_str(), "/foo/bar");
+    EXPECT_STREQ(Path::normalize("/foo///bar").c_str(), "/foo/bar");
+    EXPECT_STREQ(Path::normalize("/foo/./bar").c_str(), "/foo/bar");
+    EXPECT_STREQ(Path::normalize("/./foo/bar").c_str(), "/foo/bar");
+
+    // Gestion des ".." consécutifs
+    EXPECT_STREQ(Path::normalize("/foo/bar/../..").c_str(), "/");
+    EXPECT_STREQ(Path::normalize("/foo/bar/../../baz").c_str(), "/baz");
+    EXPECT_STREQ(Path::normalize("../../../foo").c_str(), "../../../foo");
+
+    // Tests avec séparateurs mixtes (Windows/Unix)
+    EXPECT_STREQ(Path::normalize("/foo/bar\\/baz").c_str(), "/foo/bar/baz");
+    EXPECT_STREQ(Path::normalize("/foo\\bar/baz").c_str(), "/foo/bar/baz");
+
+    // Cas spéciaux avec des points
+    EXPECT_STREQ(Path::normalize("/foo/./bar/.").c_str(), "/foo/bar");
+    EXPECT_STREQ(Path::normalize("/foo/././bar").c_str(), "/foo/bar");
+    EXPECT_STREQ(Path::normalize("/foo/./../bar").c_str(), "/bar");
+
+    // Cas avec segments vides
+    EXPECT_STREQ(Path::normalize("//foo///bar//").c_str(), "/foo/bar");
+    EXPECT_STREQ(Path::normalize("foo//bar//").c_str(), "foo/bar");
+
+    // Tests avec chemins Windows
+    EXPECT_STREQ(Path::normalize("C:\\foo\\..\\bar").c_str(), "C:\\bar");
+    EXPECT_STREQ(Path::normalize("C:/foo/../bar").c_str(), "C:\\bar");
+    EXPECT_STREQ(Path::normalize("C:\\..\\foo").c_str(), "C:\\foo");
+    EXPECT_STREQ(Path::normalize("C:\\.\\foo\\.\\bar").c_str(), "C:\\foo\\bar");
+}
+
+TEST(TestWindowsPaths, canonicalPathWindows)
+{
+    EXPECT_STREQ(Path::normalize("C:\\foo\\..\\bar\\file.txt").c_str(),
+                 "C:\\bar\\file.txt");
+    EXPECT_STREQ(Path::normalize("C:\\foo\\.\\bar\\..\\baz").c_str(),
+                 "C:\\foo\\baz");
+    EXPECT_STREQ(Path::normalize("C:\\foo\\bar\\..\\..\\baz").c_str(),
+                 "C:\\baz");
+    EXPECT_STREQ(Path::normalize("C:\\.\\foo\\.\\bar").c_str(), "C:\\foo\\bar");
+    EXPECT_STREQ(Path::normalize("C:\\foo\\\\bar").c_str(), "C:\\foo\\bar");
+    EXPECT_STREQ(Path::normalize("C:\\foo\\.\\bar").c_str(), "C:\\foo\\bar");
+    EXPECT_STREQ(Path::normalize("C:\\foo\\bar\\..\\baz").c_str(),
+                 "C:\\foo\\baz");
+}
+
+TEST(TestMixedPaths, normalizeMixed)
+{
+    EXPECT_STREQ(Path::normalize("C:/foo\\bar//\\file.txt").c_str(),
+                 "C:\\foo\\bar\\file.txt");
+    EXPECT_STREQ(Path::normalize("/usr\\local/./bin\\\\app").c_str(),
+                 "/usr/local/bin/app");
+}
+
+#if 0 // hard to distinguish with Linux paths
+// -----------------------------------------------------------------------------
+// Tests for UNC paths normalization
+// -----------------------------------------------------------------------------
+TEST(TestUNCPaths, normalizeUNC)
+{
+    // Simple UNC root
+    EXPECT_STREQ(Path::normalize("\\\\server\\share").c_str(),
+                 "\\\\server\\share");
+    EXPECT_STREQ(Path::normalize("//server/share").c_str(),
+                 "\\\\server\\share");
+
+    // UNC with subfolders
+    EXPECT_STREQ(Path::normalize("\\\\server\\share\\folder\\file.txt").c_str(),
+                 "\\\\server\\share\\folder\\file.txt");
+    EXPECT_STREQ(Path::normalize("//server/share/folder/file.txt").c_str(),
+                 "\\\\server\\share\\folder\\file.txt");
+
+    // UNC with mixed separators
+    EXPECT_STREQ(Path::normalize("\\\\server/share\\folder//file.txt").c_str(),
+                 "\\\\server\\share\\folder\\file.txt");
+
+    // UNC with parent directory navigation
+    EXPECT_STREQ(
+        Path::normalize("\\\\server\\share\\folder\\..\\other").c_str(),
+        "\\\\server\\other");
+    EXPECT_STREQ(Path::normalize("//server/share/folder/../other").c_str(),
+                 "\\\\server\\other");
+
+    // UNC with current directory navigation
+    EXPECT_STREQ(
+        Path::normalize("\\\\server\\share\\.\\folder\\.\\file.txt").c_str(),
+        "\\\\server\\share\\folder\\file.txt");
+
+    // UNC with multiple consecutive slashes
+    EXPECT_STREQ(
+        Path::normalize("\\\\server\\\\share\\\\folder\\\\file.txt").c_str(),
+        "\\\\server\\share\\folder\\file.txt");
+
+    // UNC root only
+    EXPECT_STREQ(Path::normalize("\\\\server\\share\\..").c_str(),
+                 "\\\\server");
+    EXPECT_STREQ(Path::normalize("//server/share/..").c_str(), "/server");
 }
 #endif
 
@@ -335,31 +401,6 @@ TEST(TestWindowsPaths, suffixWindows)
     EXPECT_STREQ(Path::extension("C:\\foo\\bar\\file").c_str(), "");
 }
 
-TEST(TestWindowsPaths, canonicalPathWindows)
-{
-    EXPECT_STREQ(Path::canonicalPath("C:\\foo\\..\\bar\\file.txt").c_str(),
-                 "C:\\bar\\file.txt");
-    EXPECT_STREQ(Path::canonicalPath("C:\\foo\\.\\bar\\..\\baz").c_str(),
-                 "C:\\foo\\baz");
-    EXPECT_STREQ(Path::canonicalPath("C:\\foo\\bar\\..\\..\\baz").c_str(),
-                 "C:\\baz");
-    EXPECT_STREQ(Path::canonicalPath("C:\\.\\foo\\.\\bar").c_str(),
-                 "C:\\foo\\bar");
-    // TODO
-    // EXPECT_STREQ(Path::canonicalPath("\\\\server\\share\\..\\other").c_str(),
-    // "\\\\server\\other");
-}
-
-TEST(TestWindowsPaths, normalizeWindows)
-{
-    EXPECT_STREQ(Path::normalize("C:\\foo\\\\bar").c_str(), "C:\\foo\\bar");
-    EXPECT_STREQ(Path::normalize("C:\\foo\\.\\bar").c_str(), "C:\\foo\\bar");
-    EXPECT_STREQ(Path::normalize("C:\\foo\\bar\\..\\baz").c_str(),
-                 "C:\\foo\\baz");
-    EXPECT_STREQ(Path::normalize("\\\\server\\\\share").c_str(),
-                 "\\\\server\\share");
-}
-
 // -----------------------------------------------------------------------------
 // Tests for mixed paths (with both Windows and Unix separators)
 // -----------------------------------------------------------------------------
@@ -382,14 +423,6 @@ TEST(TestMixedPaths, dirNameMixed)
     EXPECT_STREQ(Path::dirName("C:/foo\\bar/file.txt").c_str(), "C:/foo\\bar");
     EXPECT_STREQ(Path::dirName("/usr\\local/bin\\app").c_str(),
                  "/usr\\local/bin");
-}
-
-TEST(TestMixedPaths, normalizeMixed)
-{
-    EXPECT_STREQ(Path::normalize("C:/foo\\bar//\\file.txt").c_str(),
-                 "C:\\foo\\bar\\file.txt");
-    EXPECT_STREQ(Path::normalize("/usr\\local/./bin\\\\app").c_str(),
-                 "/usr/local/bin/app");
 }
 
 // -----------------------------------------------------------------------------

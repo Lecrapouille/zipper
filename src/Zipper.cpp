@@ -437,7 +437,7 @@ struct Zipper::Impl
             return false;
         }
 
-        std::string canon_name_in_zip = Path::canonicalPath(p_name_in_zip);
+        std::string canon_name_in_zip = Path::normalize(p_name_in_zip);
 
         // Prevent Zip Slip attack (See ticket #33)
         if (canon_name_in_zip.find_first_of("..") == 0u)

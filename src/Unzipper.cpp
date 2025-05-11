@@ -417,7 +417,7 @@ public:
         std::string folder = Path::dirName(p_filename);
         if (!folder.empty())
         {
-            std::string canon = Path::canonicalPath(folder);
+            std::string canon = Path::normalize(folder);
             if (!canon.empty() && canon.find("..") != std::string::npos)
             {
                 // Prevent Zip Slip attack (See ticket #33)
@@ -456,7 +456,7 @@ public:
         }
 
         // Check if the filename is valid
-        std::string canon = Path::canonicalPath(p_filename);
+        std::string canon = Path::normalize(p_filename);
         if (!canon.empty() && canon.find("..") != std::string::npos)
         {
             std::stringstream str;
@@ -812,7 +812,7 @@ public:
             p_destination.empty()
                 ? p_name
                 : Path::folderNameWithSeparator(p_destination) + p_name;
-        std::string canonOutputFile = Path::canonicalPath(outputFile);
+        std::string canonOutputFile = Path::normalize(outputFile);
 
         m_error_code.clear();
         return locateEntry(p_name) && currentEntryInfo(entry) &&
@@ -949,9 +949,8 @@ bool Unzipper::extractAll(
     if (!checkValid())
         return false;
 
-    return m_impl->extractAll(Path::canonicalPath(p_folder_destination),
-                              p_alternative_names,
-                              p_replace);
+    return m_impl->extractAll(
+        Path::normalize(p_folder_destination), p_alternative_names, p_replace);
 }
 
 // -----------------------------------------------------------------------------
@@ -971,7 +970,7 @@ bool Unzipper::extractAll(std::string const& p_destination,
     if (!checkValid())
         return false;
 
-    return m_impl->extractAll(Path::canonicalPath(p_destination),
+    return m_impl->extractAll(Path::normalize(p_destination),
                               std::map<std::string, std::string>(),
                               p_replace);
 }
