@@ -341,8 +341,8 @@ TEST(ZipperFileOps, TryOpeningFakeZipFiles)
 //=============================================================================
 TEST(ZipperFileOps, TryOpeningBadZipFiles)
 {
-    const std::string zip_poc0 = "issues/poc0.zip";
-    const std::string zip_poc1 = "issues/poc1.zip";
+    const std::string zip_poc0 = PWD "/issues/poc0.zip";
+    const std::string zip_poc1 = PWD "/issues/poc1.zip";
 
     // Try opening the zip file with the Append flag.
     try
@@ -508,12 +508,12 @@ TEST(ZipperFileOps, TryOpeningNonExistentFile)
 TEST(ZipperFileOps, DummyStuffs)
 {
     // Append to a dummy zip file: allowed
-    Zipper zipper1("issues/dummy.zip", Zipper::OpenFlags::Append);
+    Zipper zipper1(PWD "/issues/dummy.zip", Zipper::OpenFlags::Append);
     ASSERT_TRUE(zipper1.isOpened());
     zipper1.close();
 
     // Open a dummy zip file: allowed
-    Unzipper unzipper1("issues/dummy.zip");
+    Unzipper unzipper1(PWD "/issues/dummy.zip");
     ASSERT_TRUE(unzipper1.isOpened());
     unzipper1.close();
 

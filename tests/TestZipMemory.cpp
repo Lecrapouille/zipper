@@ -501,9 +501,10 @@ TEST(ZipperMemoryOps, AddFileWithTimestamp)
     timestamp.tm_min = 1;
     timestamp.tm_sec = 2;
 
-    Zipper zipper("ziptest.zip");
+    Zipper zipper("ziptest.zip", Zipper::OpenFlags::Overwrite);
     zipper.add(input, timestamp, "somefile.txt");
     zipper.close();
+    input.close();
 
     Unzipper unzipper("ziptest.zip");
     auto entries = unzipper.entries();

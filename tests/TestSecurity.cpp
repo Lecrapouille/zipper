@@ -14,32 +14,32 @@ using namespace zipper;
 
 //=============================================================================
 // Tests for zip-slip vulnerability
+// From https://github.com/snyk/zip-slip-vulnerability/tree/master
 //=============================================================================
-TEST(ZipSlipTests, LinuxZipSlip)
+TEST(ZipSlipTests, ZipSlip)
 {
-#ifdef _WIN32
-    zipper::Unzipper unzipper("issues/zip-slip-win.zip");
+#if defined(_WIN32)
+    std::string zip_path(PWD "/issues/zip-slip-win.zip");
 #else
-    zipper::Unzipper unzipper("issues/zip-slip-linux.zip");
+    std::string zip_path(PWD "/issues/zip-slip-linux.zip");
 #endif
-
     std::string temp_dir = "zip-slip-test/";
+
     ASSERT_TRUE(helper::removeFileOrDir(temp_dir));
 
+    Unzipper unzipper(zip_path);
     ASSERT_FALSE(unzipper.extractAll(temp_dir));
     ASSERT_THAT(unzipper.error().message(),
                 testing::HasSubstr("Security error"));
     unzipper.close();
 
-#ifdef _WIN32
-    ASSERT_TRUE(helper::checkFileExists("zip-slip-test/good.txt",
-                                        "this is a good one\r\n"));
-#else
+    // Check that the good file is present.
+    // Check that the evil file is not present.
     ASSERT_TRUE(helper::checkFileExists("zip-slip-test/good.txt",
                                         "this is a good one\n"));
-#endif
-
     ASSERT_TRUE(helper::checkFileDoesNotExist("zip-slip-test/evil.txt"));
+
+    // Clean up
     ASSERT_TRUE(helper::removeFileOrDir(temp_dir));
 }
 

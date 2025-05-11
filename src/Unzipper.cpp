@@ -875,7 +875,7 @@ Unzipper::Unzipper(std::string const& p_zipname, std::string const& p_password)
     {
         throw std::runtime_error(m_impl->m_error_code
                                      ? m_impl->m_error_code.message()
-                                     : std::OS_STRERROR(errno));
+                                     : OS_STRERROR(errno));
     }
     m_open = true;
 }
@@ -975,6 +975,10 @@ bool Unzipper::extractAll(std::string const& p_destination,
 // -----------------------------------------------------------------------------
 void Unzipper::close()
 {
+    if (m_open && m_impl)
+    {
+        m_impl->close();
+    }
     m_open = false;
     m_error_code.clear();
 }

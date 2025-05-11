@@ -19,7 +19,7 @@ TEST(MemoryZipTests, Issue05_1)
 {
     zipper::Unzipper unzipper(PWD "/issues/issue_05_1.zip");
     std::string temp_dir = "issue_05_1/";
-    Path::remove(temp_dir);
+    ASSERT_TRUE(helper::removeFileOrDir(temp_dir));
 
     // Check the zip file given in the GitHub issue
     std::vector<zipper::ZipEntry> entries = unzipper.entries();
@@ -56,7 +56,7 @@ TEST(MemoryZipTests, Issue05_1)
     ASSERT_TRUE(helper::checkFileExists(temp_dir + "manifest.xml"));
 
     unzipper.close();
-    Path::remove(temp_dir);
+    ASSERT_TRUE(helper::removeFileOrDir(temp_dir));
 }
 
 //=============================================================================
@@ -65,7 +65,7 @@ TEST(MemoryZipTests, Issue05_1)
 TEST(MemoryZipTests, Issue05_nopassword)
 {
     zipper::Unzipper unzipper(PWD "/issues/issue_05_nopassword.zip");
-    Path::remove("issue_05");
+    ASSERT_TRUE(helper::removeFileOrDir("issue_05"));
 
     // Check the zip file given in the GitHub issue
     std::vector<zipper::ZipEntry> entries = unzipper.entries();
@@ -88,7 +88,7 @@ TEST(MemoryZipTests, Issue05_nopassword)
     ASSERT_TRUE(helper::checkDirExists("issue_05/foo/"));
     ASSERT_TRUE(helper::checkFileExists("issue_05/foo/bar", ""));
 
-    Path::remove("issue_05");
+    ASSERT_TRUE(helper::removeFileOrDir("issue_05"));
 }
 
 //=============================================================================
@@ -97,7 +97,7 @@ TEST(MemoryZipTests, Issue05_nopassword)
 TEST(MemoryZipTests, Issue05_password)
 {
     zipper::Unzipper unzipper(PWD "/issues/issue_05_password.zip", "1234");
-    Path::remove("issue_05");
+    ASSERT_TRUE(helper::removeFileOrDir("issue_05"));
 
     // Check the zip file given in the GitHub issue
     std::vector<zipper::ZipEntry> entries = unzipper.entries();
@@ -120,7 +120,7 @@ TEST(MemoryZipTests, Issue05_password)
     ASSERT_TRUE(helper::checkDirExists("issue_05/foo/"));
     ASSERT_TRUE(helper::checkFileExists("issue_05/foo/bar", ""));
 
-    Path::remove("issue_05");
+    ASSERT_TRUE(helper::removeFileOrDir("issue_05"));
 }
 
 //=============================================================================
@@ -130,14 +130,13 @@ TEST(MemoryZipTests, Issue05_password)
 TEST(ZipTests, Issue21)
 {
     // Create folder
-    Path::remove("data");
-    Path::createDir("data/somefolder/");
+    ASSERT_TRUE(helper::removeFileOrDir("data"));
+    ASSERT_TRUE(helper::createDir("data/somefolder/"));
     ASSERT_TRUE(helper::createFile("data/somefolder/test.txt",
                                    "test file2 compression"));
 
     // Test with the '/' with and without the option Zipper::SaveHierarchy
     {
-        Path::remove("ziptest.zip");
         Zipper zipper("ziptest.zip", Zipper::OpenFlags::Overwrite);
         EXPECT_EQ(zipper.add("data/somefolder/", Zipper::SaveHierarchy), true);
         EXPECT_EQ(zipper.add("data/somefolder/", Zipper::SaveHierarchy), true);
@@ -152,14 +151,14 @@ TEST(ZipTests, Issue21)
         EXPECT_EQ(unzipper.entries()[1].name, "data/somefolder/test.txt");
         EXPECT_EQ(unzipper.entries()[2].name, "test.txt");
         EXPECT_EQ(unzipper.entries()[3].name, "test.txt");
+        unzipper.close();
 
-        Path::remove("ziptest.zip");
-        Path::remove("data");
+        ASSERT_TRUE(helper::removeFileOrDir("ziptest.zip"));
+        ASSERT_TRUE(helper::removeFileOrDir("data"));
     }
 
     // Test without the '/' with and without the option Zipper::SaveHierarchy
     {
-        Path::remove("ziptest.zip");
         Zipper zipper("ziptest.zip", Zipper::OpenFlags::Overwrite);
         EXPECT_EQ(zipper.add("data/somefolder", Zipper::SaveHierarchy), false);
         std::string error =
@@ -176,8 +175,8 @@ TEST(ZipTests, Issue21)
         EXPECT_EQ(unzipper.entries().size(), 0u);
         unzipper.close();
 
-        Path::remove("ziptest.zip");
-        Path::remove("data");
+        ASSERT_TRUE(helper::removeFileOrDir("ziptest.zip"));
+        ASSERT_TRUE(helper::removeFileOrDir("data"));
     }
 }
 
@@ -204,12 +203,11 @@ TEST(ZipTests, Issue33_zipping)
         EXPECT_EQ(unzipper.entries().size(), 0u);
         unzipper.close();
 
-        Path::remove("ziptest.zip");
+        ASSERT_TRUE(helper::removeFileOrDir("ziptest.zip"));
     }
 
     // Test with normalized path (foo/../Test1 -> Test1) is allowed.
     {
-        Path::remove("ziptest.zip");
         Zipper zipper("ziptest.zip", Zipper::OpenFlags::Overwrite);
         EXPECT_TRUE(
             helper::zipAddFile(zipper, "Test1.txt", "world", "foo/../Test1"));
@@ -221,7 +219,7 @@ TEST(ZipTests, Issue33_zipping)
         EXPECT_STREQ(unzipper.entries()[0].name.c_str(), "Test1");
         unzipper.close();
 
-        Path::remove("ziptest.zip");
+        ASSERT_TRUE(helper::removeFileOrDir("ziptest.zip"));
     }
 }
 
@@ -257,7 +255,7 @@ TEST(ZipTests, Issue33_unzipping)
     // Test with normalized path within zip (foo/../Test1 -> Test1). Check
     // that the file is created.
     {
-        Path::remove("Test1");
+        ASSERT_TRUE(helper::removeFileOrDir("Test1"));
 
         Unzipper unzipper(PWD "/issues/issue33_2.zip");
         EXPECT_EQ(unzipper.entries().size(), 1u);
@@ -268,7 +266,7 @@ TEST(ZipTests, Issue33_unzipping)
         EXPECT_TRUE(Path::isFile("Test1"));
         EXPECT_STREQ(helper::readFileContent("Test1").c_str(), "hello");
 
-        Path::remove("Test1");
+        ASSERT_TRUE(helper::removeFileOrDir("Test1"));
     }
 }
 
@@ -297,7 +295,7 @@ TEST(ZipTests, Issue34)
 
     // Test extracting to temp directory
     std::string temp_dir = Path::getTempDirectory();
-    Path::remove(temp_dir + "issue34");
+    ASSERT_TRUE(helper::removeFileOrDir(temp_dir + "issue34"));
     EXPECT_TRUE(unzipper.extractAll(temp_dir));
 
     // Verify all directories and files were correctly extracted
@@ -339,6 +337,7 @@ TEST(ZipTests, Issue34)
     EXPECT_STREQ(helper::readFileContent(f3.c_str()).c_str(), "");
 }
 
+#if !defined(_WIN32)
 //=============================================================================
 // Tests for issue #83: Error handling for non-existent paths
 // https://github.com/sebastiandev/zipper/issues/83
@@ -362,15 +361,9 @@ TEST(MemoryZipTests, Issue83)
     // Test extraction to various invalid paths
     zipper::Unzipper unzipper("ziptest.zip");
 
-#if defined(_WIN32)
-    std::string does_not_exist = "C:\\does\\not\\exist";
-    std::string no_permissions = Path::getTempDirectory(); // Why on CI ?
-#else
     std::string does_not_exist = "/does/not/exist";
     std::string no_permissions = "/usr/bin";
-#endif
 
-#if !defined(_WIN32)
     // Test extraction to non-existent path
     EXPECT_FALSE(unzipper.extract("data/somefolder/test.txt", does_not_exist));
     error = "Cannot create the folder '" +
@@ -381,13 +374,6 @@ TEST(MemoryZipTests, Issue83)
     // Test extractAll to non-existent path
     EXPECT_FALSE(unzipper.extractAll(does_not_exist));
     EXPECT_STREQ(unzipper.error().message().c_str(), error.c_str());
-#else
-    // Test extraction to non-existent path
-    EXPECT_TRUE(unzipper.extract("data/somefolder/test.txt", does_not_exist));
-
-    // Test extractAll to non-existent path
-    EXPECT_TRUE(unzipper.extractAll(does_not_exist));
-#endif
 
     // Test extraction to system path without permissions
     EXPECT_FALSE(unzipper.extract("data/somefolder/test.txt", no_permissions));
@@ -401,9 +387,10 @@ TEST(MemoryZipTests, Issue83)
     EXPECT_STREQ(unzipper.error().message().c_str(), error.c_str());
 
     // Clean up
-    Path::remove("data");
-    Path::remove("ziptest.zip");
+    ASSERT_TRUE(helper::removeFileOrDir("data"));
+    ASSERT_TRUE(helper::removeFileOrDir("ziptest.zip"));
 }
+#endif
 
 //=============================================================================
 // Tests for issue #118: Empty zip file handling
@@ -411,31 +398,69 @@ TEST(MemoryZipTests, Issue83)
 //=============================================================================
 TEST(MemoryZipTests, Issue118)
 {
-    Path::remove("ziptest.zip");
+    ASSERT_TRUE(helper::removeFileOrDir("ziptest.zip"));
 
     // Create a dummy zip file
-    Zipper zipper("ziptest.zip", Zipper::OpenFlags::Overwrite);
-    zipper.close();
+    {
+        Zipper zipper("ziptest.zip", Zipper::OpenFlags::Overwrite);
+        zipper.close();
+    }
 
-    // Check there is no entries in empty zip
-    zipper::Unzipper unzipper("ziptest.zip");
-    EXPECT_EQ(unzipper.entries().size(), 0u);
-    unzipper.close();
+    // Check there is no entries in empty zip and that extraction fails
+    {
+        zipper::Unzipper unzipper("ziptest.zip");
+        EXPECT_EQ(unzipper.entries().size(), 0u);
+
+        ASSERT_FALSE(
+            unzipper.extractAll(Unzipper::OverwriteMode::DoNotOverwrite));
+        ASSERT_THAT(unzipper.error().message(),
+                    testing::HasSubstr("Failed to go to first file"));
+        ASSERT_FALSE(unzipper.extractAll(Unzipper::OverwriteMode::Overwrite));
+        ASSERT_THAT(unzipper.error().message(),
+                    testing::HasSubstr("Failed to go to first file"));
+        ASSERT_FALSE(
+            unzipper.extract("test1.txt", Unzipper::OverwriteMode::Overwrite));
+        ASSERT_THAT(unzipper.error().message(),
+                    testing::HasSubstr("Invalid info entry"));
+        unzipper.close();
+    }
 
     // Add file to the previously empty zip using Append mode
-    Zipper zipper2("ziptest.zip", Zipper::OpenFlags::Append);
-    EXPECT_TRUE(helper::zipAddFile(
-        zipper2, "test1.txt", "test1 file compression", "test1.txt"));
-    zipper2.close();
+    {
+        Zipper zipper("ziptest.zip", Zipper::OpenFlags::Append);
+        EXPECT_TRUE(helper::zipAddFile(
+            zipper, "test1.txt", "test1 file compression", "test1.txt"));
+        zipper.close();
+    }
 
     // Verify entry was added successfully
-    zipper::Unzipper unzipper2("ziptest.zip");
-    std::vector<zipper::ZipEntry> entries2 = unzipper2.entries();
-    unzipper2.close();
-    EXPECT_EQ(entries2.size(), 1u);
-    EXPECT_STREQ(entries2[0].name.c_str(), "test1.txt");
+    {
+        zipper::Unzipper unzipper("ziptest.zip");
+        std::vector<zipper::ZipEntry> entries = unzipper.entries();
+        unzipper.close();
+        EXPECT_EQ(entries.size(), 1u);
+        EXPECT_STREQ(entries[0].name.c_str(), "test1.txt");
+    }
 
-    Path::remove("ziptest.zip");
+    // Add file to the previously empty zip using Append mode
+    {
+        Zipper zipper("ziptest.zip", Zipper::OpenFlags::Append);
+        EXPECT_TRUE(helper::zipAddFile(
+            zipper, "test2.txt", "test2 file compression", "test2.txt"));
+        zipper.close();
+    }
+
+    // Verify entry was added successfully
+    {
+        zipper::Unzipper unzipper("ziptest.zip");
+        std::vector<zipper::ZipEntry> entries = unzipper.entries();
+        unzipper.close();
+        EXPECT_EQ(entries.size(), 2u);
+        EXPECT_STREQ(entries[0].name.c_str(), "test1.txt");
+        EXPECT_STREQ(entries[1].name.c_str(), "test2.txt");
+    }
+
+    ASSERT_TRUE(helper::removeFileOrDir("ziptest.zip"));
 }
 
 //=============================================================================

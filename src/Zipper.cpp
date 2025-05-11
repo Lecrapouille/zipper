@@ -280,7 +280,7 @@ struct Zipper::Impl
                     m_buffer.resize(required_buffer_size);
                 }
             }
-            catch (const std::bad_alloc& e)
+            catch (const std::bad_alloc&)
             {
                 m_error_code =
                     make_error_code(ZipperError::INTERNAL_ERROR,
@@ -608,7 +608,7 @@ struct Zipper::Impl
                         m_zip_memory.base, std::streamsize(m_zip_memory.limit));
                 }
             }
-            catch (const std::bad_alloc& e)
+            catch (const std::bad_alloc&)
             {
                 // Handle potential allocation error during vector resize/assign
                 m_error_code =
@@ -616,7 +616,7 @@ struct Zipper::Impl
                                     "Memory allocation failed writing to "
                                     "vector/stream in close");
             }
-            catch (const std::exception& e)
+            catch (const std::exception&)
             {
                 // Handle potential stream write errors
                 m_error_code =
@@ -737,6 +737,7 @@ void Zipper::close()
         m_impl->close();
     }
     m_open = false;
+    m_error_code.clear();
 }
 
 // -------------------------------------------------------------------------

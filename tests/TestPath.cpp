@@ -148,8 +148,11 @@ TEST(TestDir, createDir)
     EXPECT_EQ(Path::exist("doesnotexist/foo/bar"), true);
     std::remove("doesnotexist");
 
+    // Permission denied
+#if !defined(_WIN32)
     EXPECT_EQ(Path::createDir("foo", "/usr/bin"), false);
     EXPECT_EQ(Path::exist("/usr/bin/foo"), false);
+#endif
 
     EXPECT_EQ(Path::createDir("", Path::getTempDirectory()), true);
     EXPECT_EQ(Path::exist(Path::getTempDirectory()), true);

@@ -52,7 +52,7 @@ inline bool checkFileExists(const std::string& p_file)
  */
 inline bool checkFileDoesNotExist(const std::string& p_file)
 {
-    return !zipper::Path::exist(p_file) || !zipper::Path::isFile(p_file);
+    return !(zipper::Path::exist(p_file) && zipper::Path::isFile(p_file));
 }
 
 /**
@@ -72,7 +72,7 @@ inline bool checkDirExists(const std::string& p_dir)
  */
 inline bool checkDirDoesNotExist(const std::string& p_dir)
 {
-    return !zipper::Path::exist(p_dir) && !zipper::Path::isDir(p_dir);
+    return !(zipper::Path::exist(p_dir) && zipper::Path::isDir(p_dir));
 }
 
 /**
