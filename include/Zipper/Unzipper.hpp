@@ -87,6 +87,15 @@ public:
     std::vector<ZipEntry> entries();
 
     // -------------------------------------------------------------------------
+    //! \brief Returns the total uncompressed size of all entries in the zip
+    //! archive.
+    //! \note Call this method before extractAll() to check if the total
+    //! uncompressed size is too large. Prevent zip bomb attacks.
+    //! \return Total uncompressed size in bytes.
+    // -------------------------------------------------------------------------
+    size_t getTotalUncompressedSize();
+
+    // -------------------------------------------------------------------------
     //! \brief Extract the whole zip archive using alternative destination names
     //! for existing files on the disk.
     //!

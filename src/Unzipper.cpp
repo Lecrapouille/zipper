@@ -1003,4 +1003,16 @@ bool Unzipper::checkValid()
     return true;
 }
 
+// -----------------------------------------------------------------------------
+size_t Unzipper::getTotalUncompressedSize()
+{
+    size_t total_uncompressed = 0;
+    auto entries = m_impl->entries();
+    for (const auto& entry : entries)
+    {
+        total_uncompressed += entry.uncompressed_size;
+    }
+    return total_uncompressed;
+}
+
 } // namespace zipper

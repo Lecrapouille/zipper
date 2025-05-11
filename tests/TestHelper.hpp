@@ -137,6 +137,39 @@ inline bool isDirEmpty(const std::string& p_dir)
     std::vector<std::string> entries = zipper::Path::filesFromDir(p_dir, false);
     return entries.empty();
 }
+
+//-----------------------------------------------------------------------------
+//! \brief Convert an integer to a base-36 string (digits 0-9, letters A-Z).
+//! \param[in] value The integer value to convert (must be >= 0).
+//! \return The base-36 string representation.
+//-----------------------------------------------------------------------------
+inline std::string intToBase36(size_t value)
+{
+    static const char digits[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    if (value < 36)
+        return std::string(1, digits[value]);
+
+    // On commence à 2 digits après 35 ("00"), puis 3, etc.
+    size_t n = value - 36;
+    size_t width = 2;
+    size_t max = 36 * 36;
+    while (n >= max)
+    {
+        n -= max;
+        ++width;
+        max *= 36;
+    }
+
+    std::string result(width, '0');
+    size_t i = width;
+    while (i-- > 0)
+    {
+        result[i] = digits[n % 36];
+        n /= 36;
+    }
+    return result;
+}
+
 } // namespace helper
 
 #endif // UNIT_TESTS_HELPER_HPP

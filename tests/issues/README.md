@@ -5,3 +5,4 @@
 - poc0.zip and poc1.zip come from https://github.com/zlib-ng/minizip-ng/issues/739 coming from https://nvd.nist.gov/vuln/detail/CVE-2023-48107
 - zip-slip-win.zip, zip-slip-linux.zip: https://github.com/snyk/zip-slip-vulnerability/tree/master
 - unicode.zip, unicode2.zip: https://github.com/corkami/pocs/tree/master/zip
+- 42.zip: https://unforgettable.dk/
