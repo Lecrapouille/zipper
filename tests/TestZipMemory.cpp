@@ -50,7 +50,7 @@ TEST(ZipperMemoryOps, ZipToVector)
         ASSERT_EQ(entries[0].name, entryName);
 
         std::vector<unsigned char> extractedData;
-        ASSERT_TRUE(unzipper.extractEntryToMemory(entryName, extractedData));
+        ASSERT_TRUE(unzipper.extract(entryName, extractedData));
         ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
         std::string extractedString(extractedData.begin(), extractedData.end());
         ASSERT_EQ(extractedString, content);
@@ -109,9 +109,9 @@ TEST(ZipperMemoryOps, ZipMultipleToVector)
         ASSERT_EQ(entries.size(), 2);
 
         std::vector<unsigned char> data1, data2;
-        ASSERT_TRUE(unzipper.extractEntryToMemory(entryName1, data1));
+        ASSERT_TRUE(unzipper.extract(entryName1, data1));
         ASSERT_EQ(std::string(data1.begin(), data1.end()), content1);
-        ASSERT_TRUE(unzipper.extractEntryToMemory(entryName2, data2));
+        ASSERT_TRUE(unzipper.extract(entryName2, data2));
         ASSERT_EQ(std::string(data2.begin(), data2.end()), content2);
         unzipper.close();
     }
@@ -142,7 +142,7 @@ TEST(ZipperMemoryOps, ZipWithPasswordToVector)
         Unzipper unzipper(zipData, password);
         ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
         std::vector<unsigned char> data;
-        ASSERT_TRUE(unzipper.extractEntryToMemory(entryName, data));
+        ASSERT_TRUE(unzipper.extract(entryName, data));
         ASSERT_EQ(std::string(data.begin(), data.end()), content);
         unzipper.close();
     }
@@ -153,8 +153,8 @@ TEST(ZipperMemoryOps, ZipWithPasswordToVector)
         ASSERT_FALSE(unzipper.error())
             << "Constructor should not fail on wrong password.";
         std::vector<unsigned char> data;
-        ASSERT_FALSE(unzipper.extractEntryToMemory(
-            entryName, data)); // Extraction should fail
+        ASSERT_FALSE(
+            unzipper.extract(entryName, data)); // Extraction should fail
         ASSERT_TRUE(unzipper.error());
         ASSERT_TRUE(data.empty());
         unzipper.close();
@@ -196,7 +196,7 @@ TEST(ZipperMemoryOps, ZipFromExternalFileToVector)
         ASSERT_EQ(unzipper.entries()[0].name, entryName);
 
         std::vector<unsigned char> data;
-        ASSERT_TRUE(unzipper.extractEntryToMemory(entryName, data));
+        ASSERT_TRUE(unzipper.extract(entryName, data));
         ASSERT_EQ(std::string(data.begin(), data.end()), content);
         unzipper.close();
     }
@@ -256,7 +256,7 @@ TEST(ZipperMemoryOps, ZipToStream)
         ASSERT_EQ(entries[2].name, appendEntryName);
 
         std::stringstream extractedStream;
-        ASSERT_TRUE(unzipper.extractEntryToStream(entryName, extractedStream));
+        ASSERT_TRUE(unzipper.extract(entryName, extractedStream));
         ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
         ASSERT_EQ(extractedStream.str(), content);
         unzipper.close();
@@ -353,7 +353,7 @@ TEST(ZipperMemoryOps, MultipleOpenSequence)
         Unzipper unzipper(zipFileName);
         ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
         std::vector<unsigned char> data1;
-        ASSERT_TRUE(unzipper.extractEntryToMemory(entryName, data1));
+        ASSERT_TRUE(unzipper.extract(entryName, data1));
         ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
         std::string extracted1(data1.begin(), data1.end());
         ASSERT_EQ(extracted1, content);
@@ -373,7 +373,7 @@ TEST(ZipperMemoryOps, MultipleOpenSequence)
         Unzipper unzipper2(zipData);
         ASSERT_FALSE(unzipper2.error()) << unzipper2.error().message();
         std::vector<unsigned char> data2;
-        ASSERT_TRUE(unzipper2.extractEntryToMemory(entryName, data2));
+        ASSERT_TRUE(unzipper2.extract(entryName, data2));
         ASSERT_FALSE(unzipper2.error()) << unzipper2.error().message();
         std::string extracted2(data2.begin(), data2.end());
         ASSERT_EQ(extracted2, content);
@@ -388,7 +388,7 @@ TEST(ZipperMemoryOps, MultipleOpenSequence)
         Unzipper unzipper3(zipStream);
         ASSERT_FALSE(unzipper3.error()) << unzipper3.error().message();
         std::vector<unsigned char> data3;
-        ASSERT_TRUE(unzipper3.extractEntryToMemory(entryName, data3));
+        ASSERT_TRUE(unzipper3.extract(entryName, data3));
         ASSERT_FALSE(unzipper3.error()) << unzipper3.error().message();
         std::string extracted3(data3.begin(), data3.end());
         ASSERT_EQ(extracted3, content);
@@ -429,7 +429,7 @@ TEST(ZipperMemoryOps, MultipleOpenWithSameZipper)
         Unzipper unzipper(zipFileName);
         ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
         std::vector<unsigned char> data;
-        ASSERT_TRUE(unzipper.extractEntryToMemory(entryName1, data));
+        ASSERT_TRUE(unzipper.extract(entryName1, data));
         ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
         std::string extracted(data.begin(), data.end());
         ASSERT_EQ(extracted, content1);
@@ -453,7 +453,7 @@ TEST(ZipperMemoryOps, MultipleOpenWithSameZipper)
         Unzipper unzipper(zipData);
         ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
         std::vector<unsigned char> data;
-        ASSERT_TRUE(unzipper.extractEntryToMemory(entryName2, data));
+        ASSERT_TRUE(unzipper.extract(entryName2, data));
         ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
         std::string extracted(data.begin(), data.end());
         ASSERT_EQ(extracted, content2);
@@ -478,7 +478,7 @@ TEST(ZipperMemoryOps, MultipleOpenWithSameZipper)
         Unzipper unzipper(zipStream);
         ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
         std::vector<unsigned char> data;
-        ASSERT_TRUE(unzipper.extractEntryToMemory(entryName3, data));
+        ASSERT_TRUE(unzipper.extract(entryName3, data));
         ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
         std::string extracted(data.begin(), data.end());
         ASSERT_EQ(extracted, content3);

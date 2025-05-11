@@ -266,7 +266,7 @@ TEST(ZipTests, Issue33_unzipping)
         Unzipper unzipper(PWD "/issues/issue33_1.zip");
         EXPECT_EQ(unzipper.entries().size(), 1u);
         EXPECT_STREQ(unzipper.entries()[0].name.c_str(), "../Test1");
-        EXPECT_EQ(unzipper.extractEntry("../Test1"), false);
+        EXPECT_EQ(unzipper.extract("../Test1"), false);
 #if defined(_WIN32)
         EXPECT_STREQ(unzipper.error().message().c_str(),
                      "Security error: entry '..\\Test1' would be outside your "
@@ -289,7 +289,7 @@ TEST(ZipTests, Issue33_unzipping)
         Unzipper unzipper(PWD "/issues/issue33_2.zip");
         EXPECT_EQ(unzipper.entries().size(), 1u);
         EXPECT_STREQ(unzipper.entries()[0].name.c_str(), "foo/../Test1");
-        EXPECT_TRUE(unzipper.extractEntry("foo/../Test1"));
+        EXPECT_TRUE(unzipper.extract("foo/../Test1"));
         unzipper.close();
         EXPECT_TRUE(Path::exist("Test1"));
         EXPECT_TRUE(Path::isFile("Test1"));
@@ -399,8 +399,7 @@ TEST(MemoryZipTests, Issue83)
 
 #if !defined(_WIN32)
     // Test extraction to non-existent path
-    EXPECT_FALSE(
-        unzipper.extractEntry("data/somefolder/test.txt", does_not_exist));
+    EXPECT_FALSE(unzipper.extract("data/somefolder/test.txt", does_not_exist));
     error = "Cannot create the folder '" +
             Path::toNativeSeparators(does_not_exist + "/data/somefolder") +
             "'. Reason: Permission denied";
@@ -411,16 +410,14 @@ TEST(MemoryZipTests, Issue83)
     EXPECT_STREQ(unzipper.error().message().c_str(), error.c_str());
 #else
     // Test extraction to non-existent path
-    EXPECT_TRUE(
-        unzipper.extractEntry("data/somefolder/test.txt", does_not_exist));
+    EXPECT_TRUE(unzipper.extract("data/somefolder/test.txt", does_not_exist));
 
     // Test extractAll to non-existent path
     EXPECT_TRUE(unzipper.extractAll(does_not_exist));
 #endif
 
     // Test extraction to system path without permissions
-    EXPECT_FALSE(
-        unzipper.extractEntry("data/somefolder/test.txt", no_permissions));
+    EXPECT_FALSE(unzipper.extract("data/somefolder/test.txt", no_permissions));
     error = "Cannot create the folder '" +
             Path::toNativeSeparators(no_permissions + "/data/somefolder") +
             "'. Reason: Permission denied";
@@ -482,7 +479,7 @@ TEST(ZipTests, Issue1_01)
     EXPECT_EQ(unzipper.entries().size(), 1u);
     EXPECT_STREQ(unzipper.entries()[0].name.c_str(), file1.c_str());
 
-    ASSERT_TRUE(unzipper.extractEntry(file1));
+    ASSERT_TRUE(unzipper.extract(file1));
     ASSERT_TRUE(helper::checkFileExists(file1, "Hello World!"));
 
     unzipper.close();
@@ -502,7 +499,7 @@ TEST(ZipTests, Issue1_02)
     EXPECT_EQ(unzipper.entries().size(), 1u);
     EXPECT_STREQ(unzipper.entries()[0].name.c_str(), file1.c_str());
 
-    ASSERT_TRUE(unzipper.extractEntry(file1));
+    ASSERT_TRUE(unzipper.extract(file1));
     ASSERT_TRUE(helper::checkFileExists(file1, "Hello World!"));
 
     unzipper.close();

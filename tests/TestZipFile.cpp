@@ -643,15 +643,15 @@ TEST(ZipperFileOps, AddOperations)
                 const auto& entry = entries[i];
                 std::cout << "  - Extracting " << entry.name << std::endl;
 
-                ASSERT_TRUE(unzipper.extractEntry(entry.name, false));
+                ASSERT_TRUE(unzipper.extract(entry.name, false));
                 ASSERT_TRUE(helper::checkFileExists(
                     entry.name, 0 == i ? content1 : contentInFolder));
 
-                ASSERT_TRUE(unzipper.extractEntry(entry.name, true));
+                ASSERT_TRUE(unzipper.extract(entry.name, true));
                 ASSERT_TRUE(helper::checkFileExists(
                     entry.name, 0 == i ? content1 : contentInFolder));
 
-                ASSERT_FALSE(unzipper.extractEntry(entry.name, false));
+                ASSERT_FALSE(unzipper.extract(entry.name, false));
                 ASSERT_THAT(unzipper.error().message(),
                             testing::HasSubstr("already exists"));
                 ASSERT_TRUE(helper::checkFileExists(
@@ -681,20 +681,17 @@ TEST(ZipperFileOps, AddOperations)
                 const auto& entry = entries[i];
                 std::cout << "  - Extracting " << entry.name << std::endl;
 
-                ASSERT_TRUE(
-                    unzipper.extractEntry(entry.name, extractDir, false));
+                ASSERT_TRUE(unzipper.extract(entry.name, extractDir, false));
                 ASSERT_TRUE(helper::checkFileExists(extractDir + entry.name,
                                                     0 == i ? content1
                                                            : contentInFolder));
 
-                ASSERT_TRUE(
-                    unzipper.extractEntry(entry.name, extractDir, true));
+                ASSERT_TRUE(unzipper.extract(entry.name, extractDir, true));
                 ASSERT_TRUE(helper::checkFileExists(extractDir + entry.name,
                                                     0 == i ? content1
                                                            : contentInFolder));
 
-                ASSERT_FALSE(
-                    unzipper.extractEntry(entry.name, extractDir, false));
+                ASSERT_FALSE(unzipper.extract(entry.name, extractDir, false));
                 ASSERT_THAT(unzipper.error().message(),
                             testing::HasSubstr("already exists"));
                 ASSERT_TRUE(helper::checkFileExists(extractDir + entry.name,
@@ -905,9 +902,9 @@ TEST(ZipperFileOps, ExtractBadPassword)
     Unzipper unzipper(zipFilename, "bad_pass");
     ASSERT_EQ(unzipper.entries().size(), 1u);
     ASSERT_STREQ(unzipper.entries()[0].name.c_str(), file1.c_str());
-    ASSERT_FALSE(unzipper.extractEntry(file1, false));
+    ASSERT_FALSE(unzipper.extract(file1, false));
     ASSERT_THAT(unzipper.error().message(), testing::HasSubstr("Bad password"));
-    ASSERT_FALSE(unzipper.extractEntry(file1, true));
+    ASSERT_FALSE(unzipper.extract(file1, true));
     ASSERT_THAT(unzipper.error().message(), testing::HasSubstr("Bad password"));
     ASSERT_FALSE(unzipper.extractAll(true));
     ASSERT_THAT(unzipper.error().message(), testing::HasSubstr("Bad password"));
@@ -941,7 +938,7 @@ TEST(UnzipperFileOps, ErrorHandling)
     // Test invalid entry name
     {
         Unzipper unzipper(zipFilename);
-        ASSERT_FALSE(unzipper.extractEntry("non_existent_entry.txt"));
+        ASSERT_FALSE(unzipper.extract("non_existent_entry.txt"));
         ASSERT_THAT(unzipper.error().message(),
                     testing::HasSubstr("Invalid info entry"));
         unzipper.close();
@@ -951,8 +948,7 @@ TEST(UnzipperFileOps, ErrorHandling)
     {
         Unzipper unzipper(zipFilename);
         std::stringstream output;
-        ASSERT_FALSE(
-            unzipper.extractEntryToStream("non_existent_entry.txt", output));
+        ASSERT_FALSE(unzipper.extract("non_existent_entry.txt", output));
         ASSERT_THAT(unzipper.error().message(),
                     testing::HasSubstr("Invalid info entry"));
         unzipper.close();
@@ -962,8 +958,7 @@ TEST(UnzipperFileOps, ErrorHandling)
     {
         Unzipper unzipper(zipFilename);
         std::vector<unsigned char> output;
-        ASSERT_FALSE(
-            unzipper.extractEntryToMemory("non_existent_entry.txt", output));
+        ASSERT_FALSE(unzipper.extract("non_existent_entry.txt", output));
         ASSERT_THAT(unzipper.error().message(),
                     testing::HasSubstr("Invalid info entry"));
         unzipper.close();
@@ -1082,7 +1077,7 @@ TEST(UnzipperFileOps, PasswordProtectedFiles)
     {
         Unzipper unzipper(zipFilename, password);
         std::vector<unsigned char> output;
-        ASSERT_TRUE(unzipper.extractEntryToMemory(file1, output));
+        ASSERT_TRUE(unzipper.extract(file1, output));
         std::string extracted(output.begin(), output.end());
         ASSERT_EQ(extracted, content1);
         unzipper.close();
@@ -1092,7 +1087,7 @@ TEST(UnzipperFileOps, PasswordProtectedFiles)
     {
         Unzipper unzipper(zipFilename, "wrong_password");
         std::vector<unsigned char> output;
-        ASSERT_FALSE(unzipper.extractEntryToMemory(file1, output));
+        ASSERT_FALSE(unzipper.extract(file1, output));
         ASSERT_THAT(unzipper.error().message(),
                     testing::HasSubstr("Bad password"));
         unzipper.close();
@@ -1165,7 +1160,7 @@ TEST(ZipperFileOps, CompressionFlags)
         for (const auto& entry : entries)
         {
             std::vector<unsigned char> output;
-            ASSERT_TRUE(unzipper.extractEntryToMemory(entry.name, output));
+            ASSERT_TRUE(unzipper.extract(entry.name, output));
             ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
             std::string extracted(output.begin(), output.end());
             ASSERT_EQ(extracted, repeatedContent);
@@ -1262,7 +1257,7 @@ TEST(ZipperFileOps, CompressionFlagsWithHierarchy)
         for (const auto& entry : entries)
         {
             std::vector<unsigned char> output;
-            ASSERT_TRUE(unzipper.extractEntryToMemory(entry.name, output));
+            ASSERT_TRUE(unzipper.extract(entry.name, output));
             ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
             std::string extracted(output.begin(), output.end());
             ASSERT_EQ(extracted, repeatedContent);

@@ -900,9 +900,9 @@ std::vector<ZipEntry> Unzipper::entries()
 }
 
 // -----------------------------------------------------------------------------
-bool Unzipper::extractEntry(std::string const& p_entry_name,
-                            std::string const& p_entry_destination,
-                            bool const p_replace)
+bool Unzipper::extract(std::string const& p_entry_name,
+                       std::string const& p_entry_destination,
+                       bool const p_replace)
 {
     if (!checkValid())
         return false;
@@ -911,8 +911,7 @@ bool Unzipper::extractEntry(std::string const& p_entry_name,
 }
 
 // -----------------------------------------------------------------------------
-bool Unzipper::extractEntry(std::string const& p_entry_name,
-                            bool const p_replace)
+bool Unzipper::extract(std::string const& p_entry_name, bool const p_replace)
 {
     if (!checkValid())
         return false;
@@ -921,8 +920,8 @@ bool Unzipper::extractEntry(std::string const& p_entry_name,
 }
 
 // -----------------------------------------------------------------------------
-bool Unzipper::extractEntryToStream(std::string const& p_entry_name,
-                                    std::ostream& p_output_stream)
+bool Unzipper::extract(std::string const& p_entry_name,
+                       std::ostream& p_output_stream)
 {
     if (!checkValid())
         return false;
@@ -931,8 +930,8 @@ bool Unzipper::extractEntryToStream(std::string const& p_entry_name,
 }
 
 // -----------------------------------------------------------------------------
-bool Unzipper::extractEntryToMemory(std::string const& p_entry_name,
-                                    std::vector<unsigned char>& p_output_buffer)
+bool Unzipper::extract(std::string const& p_entry_name,
+                       std::vector<unsigned char>& p_output_buffer)
 {
     if (!checkValid())
         return false;

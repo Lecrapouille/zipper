@@ -313,7 +313,7 @@ zipper.add(input1, "Test1");
 zipper.close();
 
 zipper::Unzipper unzipper(zip_in_memory);
-unzipper.extractEntry(...
+unzipper.extract(...
 ```
 
 Or:
@@ -342,7 +342,7 @@ zipper.close();
 
 // Example of extracting
 zipper::Unzipper unzipper(zipData); // or unzipper(zipStream) for stringstream
-unzipper.extractEntry(...
+unzipper.extract(...
 ```
 
 ### Unzipping API
@@ -446,7 +446,7 @@ unzipper.close();
 
 ```c++
 Unzipper unzipper("zipfile.zip");
-unzipper.extractEntry("entry name");
+unzipper.extract("entry name");
 unzipper.close();
 ```
 
@@ -457,8 +457,8 @@ In case of failure, use `unzipper.error();` to get the `std::error_code`.
 
 ```c++
 Unzipper unzipper("zipfile.zip");
-unzipper.extractEntry("entry name", "/the/destination/path"); // Fail if a file exists (false argument is implicit)
-unzipper.extractEntry("entry name", "/the/destination/path", true); // Replace existing file
+unzipper.extract("entry name", "/the/destination/path"); // Fail if a file exists (false argument is implicit)
+unzipper.extract("entry name", "/the/destination/path", true); // Replace existing file
 unzipper.close();
 ```
 
@@ -470,7 +470,7 @@ In case of failure, use `unzipper.error();` to get the `std::error_code`.
 ```c++
 std::vector<unsigned char> unzipped_entry;
 Unzipper unzipper("zipfile.zip");
-unzipper.extractEntryToMemory("entry name", unzipped_entry);
+unzipper.extract("entry name", unzipped_entry);
 unzipper.close();
 ```
 
@@ -484,7 +484,7 @@ In case of failure, use `unzipper.error();` to get the `std::error_code`.
 std::vector<unsigned char> zip_vect; // Populated with Zipper zipper(zip_vect);
 
 Unzipper unzipper(zip_vect);
-unzipper.extractEntry("Test1");
+unzipper.extract("Test1");
 ```
 
 - Zipper has security against [Zip Slip vulnerability](https://security.snyk.io/research/zip-slip-vulnerability): if an entry has a path outside the extraction folder (like `../foo.txt`) it

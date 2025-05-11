@@ -180,9 +180,9 @@ public:
     //! \return true on success, false on failure.
     //! Call error() for more info.
     // -------------------------------------------------------------------------
-    bool extractEntry(std::string const& p_entry_name,
-                      std::string const& p_entry_destination,
-                      bool const p_replace = false);
+    bool extract(std::string const& p_entry_name,
+                 std::string const& p_entry_destination,
+                 bool const p_replace = false);
 
     // -------------------------------------------------------------------------
     //! \brief Extract a single entry from the archive.
@@ -195,13 +195,13 @@ public:
     //! \return true on success, false on failure.
     //! Call error() for more info.
     // -------------------------------------------------------------------------
-    inline bool extractEntry(const char* p_entry_name,
-                             const char* p_entry_destination,
-                             bool const p_replace = false)
+    inline bool extract(const char* p_entry_name,
+                        const char* p_entry_destination,
+                        bool const p_replace = false)
     {
-        return extractEntry(std::string(p_entry_name),
-                            std::string(p_entry_destination),
-                            p_replace);
+        return extract(std::string(p_entry_name),
+                       std::string(p_entry_destination),
+                       p_replace);
     }
 
     // -------------------------------------------------------------------------
@@ -212,8 +212,7 @@ public:
     //! file already exists.
     //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
-    bool extractEntry(std::string const& p_entry_name,
-                      bool const p_replace = false);
+    bool extract(std::string const& p_entry_name, bool const p_replace = false);
 
     // -------------------------------------------------------------------------
     //! \brief Extract a single entry to the same folder as the zip file.
@@ -223,10 +222,9 @@ public:
     //! file already exists.
     //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
-    inline bool extractEntry(const char* p_entry_name,
-                             bool const p_replace = false)
+    inline bool extract(const char* p_entry_name, bool const p_replace = false)
     {
-        return extractEntry(std::string(p_entry_name), p_replace);
+        return extract(std::string(p_entry_name), p_replace);
     }
 
     // -------------------------------------------------------------------------
@@ -237,8 +235,8 @@ public:
     //! data.
     //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
-    bool extractEntryToStream(std::string const& p_entry_name,
-                              std::ostream& p_output_stream);
+    bool extract(std::string const& p_entry_name,
+                 std::ostream& p_output_stream);
 
     // -------------------------------------------------------------------------
     //! \brief Extract a single entry from zip to memory (stream).
@@ -248,10 +246,9 @@ public:
     //! data.
     //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
-    inline bool extractEntryToStream(const char* p_entry_name,
-                                     std::ostream& p_output_stream)
+    inline bool extract(const char* p_entry_name, std::ostream& p_output_stream)
     {
-        return extractEntryToStream(std::string(p_entry_name), p_output_stream);
+        return extract(std::string(p_entry_name), p_output_stream);
     }
 
     // -------------------------------------------------------------------------
@@ -262,8 +259,8 @@ public:
     //! data.
     //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
-    bool extractEntryToMemory(std::string const& p_entry_name,
-                              std::vector<unsigned char>& p_output_buffer);
+    bool extract(std::string const& p_entry_name,
+                 std::vector<unsigned char>& p_output_buffer);
 
     // -------------------------------------------------------------------------
     //! \brief Extract a single entry from zip to memory (vector).
@@ -273,11 +270,10 @@ public:
     //! data.
     //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
-    inline bool
-    extractEntryToMemory(const char* p_entry_name,
-                         std::vector<unsigned char>& p_output_buffer)
+    inline bool extract(const char* p_entry_name,
+                        std::vector<unsigned char>& p_output_buffer)
     {
-        return extractEntryToMemory(std::string(p_entry_name), p_output_buffer);
+        return extract(std::string(p_entry_name), p_output_buffer);
     }
 
     // -------------------------------------------------------------------------
