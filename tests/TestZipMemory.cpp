@@ -488,3 +488,45 @@ TEST(ZipperMemoryOps, MultipleOpenWithSameZipper)
     // Cleanup
     ASSERT_TRUE(helper::removeFileOrDir(zipFileName));
 }
+
+//=============================================================================
+// Tests for adding file with timestamp
+//=============================================================================
+TEST(ZipperMemoryOps, AddFileWithTimestamp)
+{
+    helper::createFile("somefile.txt", "some content");
+    std::ifstream input("somefile.txt");
+
+    std::tm timestamp;
+    timestamp.tm_year = 2024;
+    timestamp.tm_mon = 0;   // January (0-11)
+    timestamp.tm_mday = 1;  // 1st day
+    timestamp.tm_hour = 12; // 12:00
+    timestamp.tm_min = 1;
+    timestamp.tm_sec = 2;
+
+    Zipper zipper("ziptest.zip");
+    zipper.add(input, timestamp, "somefile.txt");
+    zipper.close();
+
+    Unzipper unzipper("ziptest.zip");
+    auto entries = unzipper.entries();
+    unzipper.close();
+
+    ASSERT_EQ(entries.size(), 1);
+
+    ZipEntry& entry = entries[0];
+    ASSERT_EQ(entry.name, "somefile.txt");
+    ASSERT_STREQ(entry.timestamp.c_str(), "2024-0-1 12:1:2");
+    ASSERT_EQ(entry.unix_date.tm_year, timestamp.tm_year);
+    ASSERT_EQ(entry.unix_date.tm_mon, timestamp.tm_mon);
+    ASSERT_EQ(entry.unix_date.tm_mday, timestamp.tm_mday);
+    ASSERT_EQ(entry.unix_date.tm_hour, timestamp.tm_hour);
+    ASSERT_EQ(entry.unix_date.tm_min, timestamp.tm_min);
+    ASSERT_EQ(entry.unix_date.tm_sec, timestamp.tm_sec);
+    ASSERT_NE(entry.compressed_size, 0);
+    ASSERT_NE(entry.uncompressed_size, 0);
+
+    ASSERT_TRUE(helper::removeFileOrDir("somefile.txt"));
+    ASSERT_TRUE(helper::removeFileOrDir("ziptest.zip"));
+}
