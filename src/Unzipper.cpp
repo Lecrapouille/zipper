@@ -84,12 +84,6 @@ struct UnzipperErrorCategory: std::error_category
 static UnzipperErrorCategory theUnzipperErrorCategory;
 
 // -----------------------------------------------------------------------------
-static std::error_code make_error_code(UnzipperError p_error)
-{
-    return {static_cast<int>(p_error), theUnzipperErrorCategory};
-}
-
-// -----------------------------------------------------------------------------
 static std::error_code make_error_code(UnzipperError p_error,
                                        std::string const& p_message)
 {
