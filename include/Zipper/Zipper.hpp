@@ -156,7 +156,7 @@ public:
     //! initialization.
     // -------------------------------------------------------------------------
     Zipper(std::vector<unsigned char>& p_buffer,
-           const std::string& p_password = "");
+           const std::string& p_password = std::string());
 
     // -------------------------------------------------------------------------
     //! \brief Destructor automatically calls close().
@@ -335,7 +335,7 @@ public:
     //! \brief Check if the zipper is currently open and ready for adding files.
     //! \return True if the zipper is open, false otherwise.
     // -------------------------------------------------------------------------
-    inline bool isOpen() const
+    inline bool isOpened() const
     {
         return m_open;
     }

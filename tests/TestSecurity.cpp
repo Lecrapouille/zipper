@@ -117,7 +117,7 @@ TEST(ZipSlipTests, ZipBomb)
     {
         ASSERT_EQ(entries[i].name, helper::intToBase36(i));
     }
-    ASSERT_EQ(unzipper.getTotalUncompressedSize(), 5461307620); // 5.46 GB
+    ASSERT_EQ(unzipper.sizeOnDisk(), 5461307620); // 5.46 GB
     unzipper.close();
 
     ASSERT_TRUE(helper::removeFileOrDir(temp_dir));

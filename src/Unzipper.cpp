@@ -263,7 +263,7 @@ public:
     // -------------------------------------------------------------------------
     bool extractCurrentEntryToFile(ZipEntry& p_entry_info,
                                    std::string const& p_file_name,
-                                   bool const p_replace)
+                                   Unzipper::OverwriteMode p_overwrite)
     {
         int err = UNZ_OK;
 
@@ -287,7 +287,7 @@ public:
         }
         else
         {
-            err = extractToFile(p_file_name, p_entry_info, p_replace);
+            err = extractToFile(p_file_name, p_entry_info, p_overwrite);
             if (UNZ_OK == err)
             {
                 err = unzCloseCurrentFile(m_zip_file);
@@ -411,7 +411,7 @@ public:
     // -------------------------------------------------------------------------
     int extractToFile(std::string const& p_filename,
                       ZipEntry& p_entry_info,
-                      bool const p_replace)
+                      Unzipper::OverwriteMode p_overwrite)
     {
         // If zip entry is a directory then create it on disk
         std::string folder = Path::dirName(p_filename);
@@ -444,7 +444,8 @@ public:
         }
 
         // Avoid replacing the file. Prevent Zip Slip attack (See ticket #33)
-        if ((!p_replace) && Path::exist(p_filename))
+        if ((p_overwrite == Unzipper::OverwriteMode::DoNotOverwrite) &&
+            Path::exist(p_filename))
         {
             std::stringstream str;
             str << "Security Error: '" << Path::toNativeSeparators(p_filename)
@@ -747,7 +748,7 @@ public:
     bool
     extractAll(std::string const& p_destination,
                const std::map<std::string, std::string>& p_alternative_names,
-               bool const p_replace)
+               Unzipper::OverwriteMode p_overwrite)
     {
         m_error_code.clear();
         bool res = true;
@@ -784,7 +785,8 @@ public:
             else
                 alternative_name += entry.name;
 
-            if (!extractCurrentEntryToFile(entry, alternative_name, p_replace))
+            if (!extractCurrentEntryToFile(
+                    entry, alternative_name, p_overwrite))
             {
                 res = false;
             }
@@ -805,7 +807,7 @@ public:
     // -------------------------------------------------------------------------
     bool extractEntry(std::string const& p_name,
                       std::string const& p_destination,
-                      bool const p_replace)
+                      Unzipper::OverwriteMode p_overwrite)
     {
         ZipEntry entry;
         std::string outputFile =
@@ -816,7 +818,7 @@ public:
 
         m_error_code.clear();
         return locateEntry(p_name) && currentEntryInfo(entry) &&
-               extractCurrentEntryToFile(entry, canonOutputFile, p_replace);
+               extractCurrentEntryToFile(entry, canonOutputFile, p_overwrite);
     }
 
     // -------------------------------------------------------------------------
@@ -902,21 +904,22 @@ std::vector<ZipEntry> Unzipper::entries()
 // -----------------------------------------------------------------------------
 bool Unzipper::extract(std::string const& p_entry_name,
                        std::string const& p_entry_destination,
-                       bool const p_replace)
+                       Unzipper::OverwriteMode p_overwrite)
 {
     if (!checkValid())
         return false;
 
-    return m_impl->extractEntry(p_entry_name, p_entry_destination, p_replace);
+    return m_impl->extractEntry(p_entry_name, p_entry_destination, p_overwrite);
 }
 
 // -----------------------------------------------------------------------------
-bool Unzipper::extract(std::string const& p_entry_name, bool const p_replace)
+bool Unzipper::extract(std::string const& p_entry_name,
+                       Unzipper::OverwriteMode p_overwrite)
 {
     if (!checkValid())
         return false;
 
-    return m_impl->extractEntry(p_entry_name, std::string(), p_replace);
+    return m_impl->extractEntry(p_entry_name, std::string(), p_overwrite);
 }
 
 // -----------------------------------------------------------------------------
@@ -943,35 +946,36 @@ bool Unzipper::extract(std::string const& p_entry_name,
 bool Unzipper::extractAll(
     std::string const& p_folder_destination,
     const std::map<std::string, std::string>& p_alternative_names,
-    bool const p_replace)
+    Unzipper::OverwriteMode p_overwrite)
 {
     if (!checkValid())
         return false;
 
-    return m_impl->extractAll(
-        Path::normalize(p_folder_destination), p_alternative_names, p_replace);
+    return m_impl->extractAll(Path::normalize(p_folder_destination),
+                              p_alternative_names,
+                              p_overwrite);
 }
 
 // -----------------------------------------------------------------------------
-bool Unzipper::extractAll(bool p_replace)
+bool Unzipper::extractAll(Unzipper::OverwriteMode p_overwrite)
 {
     if (!checkValid())
         return false;
 
     return m_impl->extractAll(
-        std::string(), std::map<std::string, std::string>(), p_replace);
+        std::string(), std::map<std::string, std::string>(), p_overwrite);
 }
 
 // -----------------------------------------------------------------------------
 bool Unzipper::extractAll(std::string const& p_destination,
-                          bool const p_replace)
+                          Unzipper::OverwriteMode p_overwrite)
 {
     if (!checkValid())
         return false;
 
     return m_impl->extractAll(Path::normalize(p_destination),
                               std::map<std::string, std::string>(),
-                              p_replace);
+                              p_overwrite);
 }
 
 // -----------------------------------------------------------------------------
@@ -1002,7 +1006,7 @@ bool Unzipper::checkValid()
 }
 
 // -----------------------------------------------------------------------------
-size_t Unzipper::getTotalUncompressedSize()
+size_t Unzipper::sizeOnDisk()
 {
     size_t total_uncompressed = 0;
     auto entries = m_impl->entries();

@@ -38,6 +38,15 @@ class ZIPPER_EXPORT Unzipper
 {
 public:
 
+    // -------------------------------------------------------------------------
+    //! \brief Overwrite mode for extraction operations.
+    // -------------------------------------------------------------------------
+    enum class OverwriteMode
+    {
+        DoNotOverwrite, //!< Do not overwrite existing files
+        Overwrite       //!< Overwrite existing files
+    };
+
     //! \brief Default constructor. Creates an uninitialized Unzipper.
     Unzipper();
 
@@ -93,7 +102,7 @@ public:
     //! uncompressed size is too large. Prevent zip bomb attacks.
     //! \return Total uncompressed size in bytes.
     // -------------------------------------------------------------------------
-    size_t getTotalUncompressedSize();
+    size_t sizeOnDisk();
 
     // -------------------------------------------------------------------------
     //! \brief Extract the whole zip archive using alternative destination names
@@ -103,71 +112,32 @@ public:
     //! empty, extracts to same folder as the zip file).
     //! \param[in] p_alternative_names Dictionary of alternative names for
     //! existing files (key: zip entry name, value: desired path name on disk).
-    //! \param[in] p_replace If false (default), throws an exception when a file
-    //! already exists.
-    //! \return true on success, false on failure. Call error() for more info.
-    // -------------------------------------------------------------------------
-    inline bool
-    extractAll(const char* p_destination,
-               const std::map<std::string, std::string>& p_alternative_names,
-               bool const p_replace = false)
-    {
-        return extractAll(
-            std::string(p_destination), p_alternative_names, p_replace);
-    }
-
-    // -------------------------------------------------------------------------
-    //! \brief Extract the whole zip archive using alternative destination names
-    //! for existing files on the disk.
-    //!
-    //! \param[in] p_destination Full path where files will be extracted (if
-    //! empty, extracts to same folder as the zip file).
-    //! \param[in] p_alternative_names Dictionary of alternative names for
-    //! existing files (key: zip entry name, value: desired path name on disk).
-    //! \param[in] p_replace If false (default), throws an exception when a file
-    //! already exists.
+    //! \param[in] p_overwrite Overwrite mode for extraction operations.
     //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
     bool
     extractAll(std::string const& p_destination,
                const std::map<std::string, std::string>& p_alternative_names,
-               bool const p_replace = false);
+               OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
 
     // -------------------------------------------------------------------------
     //! \brief Extract the whole archive to the desired disk destination.
     //!
     //! \param[in] p_folder_destination Full path where files will be extracted
     //! (if empty, extracts to same folder as the zip file).
-    //! \param[in] p_replace If false (default), throws an exception when a file
-    //! already exists.
+    //! \param[in] p_overwrite Overwrite mode for extraction operations.
     //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
     bool extractAll(std::string const& p_folder_destination,
-                    bool const p_replace = false);
-
-    // -------------------------------------------------------------------------
-    //! \brief Extract the whole archive to the desired disk destination.
-    //!
-    //! \param[in] p_folder_destination Full path where files will be extracted
-    //! (if empty, extracts to same folder as the zip file).
-    //! \param[in] p_replace If false (default), throws an exception when a file
-    //! already exists.
-    //! \return true on success, false on failure. Call error() for more info.
-    // -------------------------------------------------------------------------
-    inline bool extractAll(const char* p_folder_destination,
-                           bool const p_replace = false)
-    {
-        return extractAll(std::string(p_folder_destination), p_replace);
-    }
+                    OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
 
     // -------------------------------------------------------------------------
     //! \brief Extract the whole archive to the same folder as the zip file.
     //!
-    //! \param[in] p_replace If false (default), throws an exception when a file
-    //! already exists.
+    //! \param[in] p_overwrite Overwrite mode for extraction operations.
     //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
-    bool extractAll(bool const p_replace = false);
+    bool extractAll(OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
 
     // -------------------------------------------------------------------------
     //! \brief Extract a single entry from the archive.
@@ -175,57 +145,23 @@ public:
     //! \param[in] p_entry_name Entry path inside the zip archive.
     //! \param[in] p_entry_destination Full path where the file will be
     //! extracted.
-    //! \param[in] p_replace If false (default), throws an exception
-    //! when the file already exists.
+    //! \param[in] p_overwrite Overwrite mode for extraction operations.
     //! \return true on success, false on failure.
     //! Call error() for more info.
     // -------------------------------------------------------------------------
     bool extract(std::string const& p_entry_name,
                  std::string const& p_entry_destination,
-                 bool const p_replace = false);
-
-    // -------------------------------------------------------------------------
-    //! \brief Extract a single entry from the archive.
-    //!
-    //! \param[in] p_entry_name Entry path inside the zip archive.
-    //! \param[in] p_entry_destination Full path where the file will be
-    //! extracted.
-    //! \param[in] p_replace If false (default), throws an exception
-    //! when the file already exists.
-    //! \return true on success, false on failure.
-    //! Call error() for more info.
-    // -------------------------------------------------------------------------
-    inline bool extract(const char* p_entry_name,
-                        const char* p_entry_destination,
-                        bool const p_replace = false)
-    {
-        return extract(std::string(p_entry_name),
-                       std::string(p_entry_destination),
-                       p_replace);
-    }
+                 OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
 
     // -------------------------------------------------------------------------
     //! \brief Extract a single entry to the same folder as the zip file.
     //!
     //! \param[in] p_entry_name Entry path inside the zip archive.
-    //! \param[in] p_replace If false (default), throws an exception when the
-    //! file already exists.
+    //! \param[in] p_overwrite Overwrite mode for extraction operations.
     //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
-    bool extract(std::string const& p_entry_name, bool const p_replace = false);
-
-    // -------------------------------------------------------------------------
-    //! \brief Extract a single entry to the same folder as the zip file.
-    //!
-    //! \param[in] p_entry_name Entry path inside the zip archive.
-    //! \param[in] p_replace If false (default), throws an exception when the
-    //! file already exists.
-    //! \return true on success, false on failure. Call error() for more info.
-    // -------------------------------------------------------------------------
-    inline bool extract(const char* p_entry_name, bool const p_replace = false)
-    {
-        return extract(std::string(p_entry_name), p_replace);
-    }
+    bool extract(std::string const& p_entry_name,
+                 OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
 
     // -------------------------------------------------------------------------
     //! \brief Extract a single entry from zip to memory (stream).
@@ -239,19 +175,6 @@ public:
                  std::ostream& p_output_stream);
 
     // -------------------------------------------------------------------------
-    //! \brief Extract a single entry from zip to memory (stream).
-    //!
-    //! \param[in] p_entry_name Entry path inside the zip archive.
-    //! \param[out] p_output_stream Stream that will receive the extracted entry
-    //! data.
-    //! \return true on success, false on failure. Call error() for more info.
-    // -------------------------------------------------------------------------
-    inline bool extract(const char* p_entry_name, std::ostream& p_output_stream)
-    {
-        return extract(std::string(p_entry_name), p_output_stream);
-    }
-
-    // -------------------------------------------------------------------------
     //! \brief Extract a single entry from zip to memory (vector).
     //!
     //! \param[in] p_entry_name Entry path inside the zip archive.
@@ -263,29 +186,9 @@ public:
                  std::vector<unsigned char>& p_output_buffer);
 
     // -------------------------------------------------------------------------
-    //! \brief Extract a single entry from zip to memory (vector).
-    //!
-    //! \param[in] p_entry_name Entry path inside the zip archive.
-    //! \param[out] p_output_buffer Vector that will receive the extracted entry
-    //! data.
-    //! \return true on success, false on failure. Call error() for more info.
-    // -------------------------------------------------------------------------
-    inline bool extract(const char* p_entry_name,
-                        std::vector<unsigned char>& p_output_buffer)
-    {
-        return extract(std::string(p_entry_name), p_output_buffer);
-    }
-
-    // -------------------------------------------------------------------------
     //! \brief Closes the archive. Called by the destructor.
     // -------------------------------------------------------------------------
     void close();
-
-    // -------------------------------------------------------------------------
-    //! \brief Check if the unzipper is valid.
-    //! \return true if the unzipper is valid, false otherwise.
-    // -------------------------------------------------------------------------
-    bool checkValid();
 
     // -------------------------------------------------------------------------
     //! \brief Get the error information when a method returned false.
@@ -301,10 +204,18 @@ public:
     //! files.
     //! \return True if the unzipper is open, false otherwise.
     // -------------------------------------------------------------------------
-    inline bool isOpen() const
+    inline bool isOpened() const
     {
         return m_open;
     }
+
+private:
+
+    // -------------------------------------------------------------------------
+    //! \brief Check if the unzipper is valid.
+    //! \return true if the unzipper is valid, false otherwise.
+    // -------------------------------------------------------------------------
+    bool checkValid();
 
 private:
 

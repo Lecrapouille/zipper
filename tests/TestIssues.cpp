@@ -61,7 +61,8 @@ TEST(MemoryZipTests, Issue05_1)
     ASSERT_STREQ(entries[2].name.c_str(), "manifest.xml");
 
     // Check can be extracted
-    ASSERT_TRUE(unzipper.extractAll(temp_dir, false));
+    ASSERT_TRUE(
+        unzipper.extractAll(temp_dir, Unzipper::OverwriteMode::DoNotOverwrite));
     ASSERT_TRUE(helper::checkFileExists(temp_dir + "sim.sedml", ""));
     ASSERT_TRUE(helper::checkFileExists(temp_dir + "model.xml", ""));
     ASSERT_TRUE(helper::checkFileExists(temp_dir + "manifest.xml"));
@@ -71,7 +72,8 @@ TEST(MemoryZipTests, Issue05_1)
     std::string error = "Security Error: '" +
                         Path::toNativeSeparators(temp_dir + "manifest.xml") +
                         "' already exists and would have been replaced!";
-    ASSERT_FALSE(unzipper.extractAll(temp_dir, false));
+    ASSERT_FALSE(
+        unzipper.extractAll(temp_dir, Unzipper::OverwriteMode::DoNotOverwrite));
     ASSERT_STREQ(unzipper.error().message().c_str(), error.c_str());
 
     // Check cannot be extracted, by security: files already exist.
@@ -79,7 +81,8 @@ TEST(MemoryZipTests, Issue05_1)
     ASSERT_STREQ(unzipper.error().message().c_str(), error.c_str());
 
     // Check can be extracted, when security is disabled.
-    ASSERT_TRUE(unzipper.extractAll(temp_dir, true));
+    ASSERT_TRUE(
+        unzipper.extractAll(temp_dir, Unzipper::OverwriteMode::Overwrite));
     ASSERT_TRUE(helper::checkFileExists(temp_dir + "sim.sedml", ""));
     ASSERT_TRUE(helper::checkFileExists(temp_dir + "model.xml", ""));
     ASSERT_TRUE(helper::checkFileExists(temp_dir + "manifest.xml"));
@@ -106,7 +109,8 @@ TEST(MemoryZipTests, Issue05_nopassword)
     ASSERT_STREQ(entries[4].name.c_str(), "issue_05/foo/bar");
 
     // Check can be extracted
-    ASSERT_TRUE(unzipper.extractAll(".", false));
+    ASSERT_TRUE(
+        unzipper.extractAll(".", Unzipper::OverwriteMode::DoNotOverwrite));
     unzipper.close();
 
     // Check files and directories were created
@@ -137,7 +141,8 @@ TEST(MemoryZipTests, Issue05_password)
     ASSERT_STREQ(entries[4].name.c_str(), "issue_05/foo/bar");
 
     // Check can be extracted
-    ASSERT_TRUE(unzipper.extractAll("."));
+    ASSERT_TRUE(
+        unzipper.extractAll(".", Unzipper::OverwriteMode::DoNotOverwrite));
     unzipper.close();
 
     // Check files and directories were created

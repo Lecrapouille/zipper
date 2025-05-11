@@ -28,7 +28,7 @@ namespace helper {
  * @param[in] p_content Content to write in the file.
  * @param[in] p_entry_path Path of the entry in the zip archive.
  * @param[in] p_flags Compression flags for the file.
- * @return true if successful, false otherwise.
+ * @return true if successful, Unzipper::OverwriteMode::Overwrite otherwise.
  */
 static bool zipAddFile(Zipper& p_zipper,
                        const std::string& p_file_path,
@@ -58,40 +58,40 @@ TEST(ZipperFileOps, OpenAndClose)
 {
     // Opening from a dummy constructor.
     Zipper zipper1;
-    ASSERT_FALSE(zipper1.isOpen());
+    ASSERT_FALSE(zipper1.isOpened());
     zipper1.close();
-    ASSERT_FALSE(zipper1.isOpen());
+    ASSERT_FALSE(zipper1.isOpened());
     zipper1.reopen();
-    ASSERT_FALSE(zipper1.isOpen());
+    ASSERT_FALSE(zipper1.isOpened());
 
     // Opening from a non existing zip file.
     zipper1.open("ziptest_nominal.zip");
-    ASSERT_TRUE(zipper1.isOpen());
+    ASSERT_TRUE(zipper1.isOpened());
     zipper1.close();
-    ASSERT_FALSE(zipper1.isOpen());
+    ASSERT_FALSE(zipper1.isOpened());
 
     // Opening from an existing zip file.
     ASSERT_TRUE(Path::exist("ziptest_nominal.zip"));
     ASSERT_TRUE(Path::isFile("ziptest_nominal.zip"));
     Zipper zipper2("ziptest_nominal.zip");
-    ASSERT_TRUE(zipper2.isOpen());
+    ASSERT_TRUE(zipper2.isOpened());
     zipper2.close();
-    ASSERT_FALSE(zipper2.isOpen());
+    ASSERT_FALSE(zipper2.isOpened());
     zipper2.reopen();
-    ASSERT_TRUE(zipper2.isOpen());
+    ASSERT_TRUE(zipper2.isOpened());
     zipper2.close();
-    ASSERT_FALSE(zipper2.isOpen());
+    ASSERT_FALSE(zipper2.isOpened());
 
     // Opening an existent zipfile.
     ASSERT_TRUE(Path::exist("ziptest_nominal.zip"));
     ASSERT_TRUE(Path::isFile("ziptest_nominal.zip"));
     Unzipper unzipper2("ziptest_nominal.zip");
-    ASSERT_TRUE(unzipper2.isOpen());
+    ASSERT_TRUE(unzipper2.isOpened());
     unzipper2.close();
-    ASSERT_FALSE(unzipper2.isOpen());
+    ASSERT_FALSE(unzipper2.isOpened());
     // TODO: to implement
     // unzipper2.open();
-    // ASSERT_TRUE(zipper2.isOpen());
+    // ASSERT_TRUE(zipper2.isOpened());
     // unzipper2.close();
 
     // Opening from a non-existent zip file.
@@ -135,7 +135,7 @@ TEST(ZipperFileOps, NominalOpenings)
         // Constructor with Overwrite flag.
         {
             Zipper zipper(zip_filename, password); // Default is Overwrite
-            ASSERT_TRUE(zipper.isOpen());
+            ASSERT_TRUE(zipper.isOpened());
             ASSERT_FALSE(zipper.error()) << zipper.error().message();
             ASSERT_TRUE(helper::zipAddFile(zipper, file1, content1, file1));
             ASSERT_FALSE(zipper.error()) << zipper.error().message();
@@ -145,7 +145,7 @@ TEST(ZipperFileOps, NominalOpenings)
         // Verify content. Check if file1 is in the zip archive.
         {
             Unzipper unzipper(zip_filename, password);
-            ASSERT_TRUE(unzipper.isOpen());
+            ASSERT_TRUE(unzipper.isOpened());
             ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
             auto entries = unzipper.entries();
             unzipper.close();
@@ -156,7 +156,7 @@ TEST(ZipperFileOps, NominalOpenings)
         // Reopen with Append
         {
             Zipper zipper(zip_filename, password, Zipper::OpenFlags::Append);
-            ASSERT_TRUE(zipper.isOpen());
+            ASSERT_TRUE(zipper.isOpened());
             ASSERT_FALSE(zipper.error()) << zipper.error().message();
             ASSERT_TRUE(helper::zipAddFile(zipper, file3, content3, file3));
             ASSERT_FALSE(zipper.error()) << zipper.error().message();
@@ -167,7 +167,7 @@ TEST(ZipperFileOps, NominalOpenings)
         {
             Unzipper unzipper(zip_filename, password);
             ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
-            ASSERT_TRUE(unzipper.isOpen());
+            ASSERT_TRUE(unzipper.isOpened());
             auto entries = unzipper.entries();
             unzipper.close();
             ASSERT_EQ(entries.size(), 2u);
@@ -448,7 +448,8 @@ TEST(ZipperFileOps, TryOpeningWithInsufficientPermissions)
         zipper.close();
 
         Unzipper unzipper("foo.zip");
-        ASSERT_FALSE(unzipper.extractAll(protected_path, true));
+        ASSERT_FALSE(unzipper.extractAll(
+            protected_path, Unzipper::OverwriteMode::DoNotOverwrite));
         ASSERT_THAT(unzipper.error().message(),
                     testing::HasSubstr("Permission denied"));
         unzipper.close();
@@ -512,17 +513,17 @@ TEST(ZipperFileOps, DummyStuffs)
 {
     // Append to a dummy zip file: allowed
     Zipper zipper1("issues/dummy.zip", Zipper::OpenFlags::Append);
-    ASSERT_TRUE(zipper1.isOpen());
+    ASSERT_TRUE(zipper1.isOpened());
     zipper1.close();
 
     // Open a dummy zip file: allowed
     Unzipper unzipper1("issues/dummy.zip");
-    ASSERT_TRUE(unzipper1.isOpen());
+    ASSERT_TRUE(unzipper1.isOpened());
     unzipper1.close();
 
     //
     Zipper zipper2("foo.zip");
-    ASSERT_TRUE(zipper2.isOpen());
+    ASSERT_TRUE(zipper2.isOpened());
 
     // Empty file content: allowed
     ASSERT_TRUE(helper::zipAddFile(zipper2, "dummy.txt", "", "dummy.txt"));
@@ -643,15 +644,18 @@ TEST(ZipperFileOps, AddOperations)
                 const auto& entry = entries[i];
                 std::cout << "  - Extracting " << entry.name << std::endl;
 
-                ASSERT_TRUE(unzipper.extract(entry.name, false));
+                ASSERT_TRUE(unzipper.extract(
+                    entry.name, Unzipper::OverwriteMode::Overwrite));
                 ASSERT_TRUE(helper::checkFileExists(
                     entry.name, 0 == i ? content1 : contentInFolder));
 
-                ASSERT_TRUE(unzipper.extract(entry.name, true));
+                ASSERT_TRUE(unzipper.extract(
+                    entry.name, Unzipper::OverwriteMode::Overwrite));
                 ASSERT_TRUE(helper::checkFileExists(
                     entry.name, 0 == i ? content1 : contentInFolder));
 
-                ASSERT_FALSE(unzipper.extract(entry.name, false));
+                ASSERT_FALSE(unzipper.extract(
+                    entry.name, Unzipper::OverwriteMode::DoNotOverwrite));
                 ASSERT_THAT(unzipper.error().message(),
                             testing::HasSubstr("already exists"));
                 ASSERT_TRUE(helper::checkFileExists(
@@ -681,17 +685,26 @@ TEST(ZipperFileOps, AddOperations)
                 const auto& entry = entries[i];
                 std::cout << "  - Extracting " << entry.name << std::endl;
 
-                ASSERT_TRUE(unzipper.extract(entry.name, extractDir, false));
+                ASSERT_TRUE(
+                    unzipper.extract(entry.name,
+                                     extractDir,
+                                     Unzipper::OverwriteMode::Overwrite));
                 ASSERT_TRUE(helper::checkFileExists(extractDir + entry.name,
                                                     0 == i ? content1
                                                            : contentInFolder));
 
-                ASSERT_TRUE(unzipper.extract(entry.name, extractDir, true));
+                ASSERT_TRUE(
+                    unzipper.extract(entry.name,
+                                     extractDir,
+                                     Unzipper::OverwriteMode::Overwrite));
                 ASSERT_TRUE(helper::checkFileExists(extractDir + entry.name,
                                                     0 == i ? content1
                                                            : contentInFolder));
 
-                ASSERT_FALSE(unzipper.extract(entry.name, extractDir, false));
+                ASSERT_FALSE(
+                    unzipper.extract(entry.name,
+                                     extractDir,
+                                     Unzipper::OverwriteMode::DoNotOverwrite));
                 ASSERT_THAT(unzipper.error().message(),
                             testing::HasSubstr("already exists"));
                 ASSERT_TRUE(helper::checkFileExists(extractDir + entry.name,
@@ -714,7 +727,8 @@ TEST(ZipperFileOps, AddOperations)
             Unzipper unzipper(zipFilename, password);
             auto entries = unzipper.entries();
 
-            ASSERT_TRUE(unzipper.extractAll(extractDir, false));
+            ASSERT_TRUE(unzipper.extractAll(
+                extractDir, Unzipper::OverwriteMode::Overwrite));
             for (size_t i = 0; i < entries.size(); ++i)
             {
                 ASSERT_TRUE(helper::checkFileExists(
@@ -722,7 +736,8 @@ TEST(ZipperFileOps, AddOperations)
                     0 == i ? content1 : contentInFolder));
             }
 
-            ASSERT_TRUE(unzipper.extractAll(extractDir, true));
+            ASSERT_TRUE(unzipper.extractAll(
+                extractDir, Unzipper::OverwriteMode::Overwrite));
             for (size_t i = 0; i < entries.size(); ++i)
             {
                 ASSERT_TRUE(helper::checkFileExists(
@@ -730,7 +745,8 @@ TEST(ZipperFileOps, AddOperations)
                     0 == i ? content1 : contentInFolder));
             }
 
-            ASSERT_FALSE(unzipper.extractAll(extractDir, false));
+            ASSERT_FALSE(unzipper.extractAll(
+                extractDir, Unzipper::OverwriteMode::DoNotOverwrite));
             ASSERT_THAT(unzipper.error().message(),
                         testing::HasSubstr("already exists"));
             for (size_t i = 0; i < entries.size(); ++i)
@@ -752,7 +768,8 @@ TEST(ZipperFileOps, AddOperations)
             Unzipper unzipper(zipFilename, password);
             auto entries = unzipper.entries();
 
-            ASSERT_TRUE(unzipper.extractAll(false));
+            ASSERT_TRUE(
+                unzipper.extractAll(Unzipper::OverwriteMode::DoNotOverwrite));
             std::cout << unzipper.error().message() << std::endl;
 
             for (size_t i = 0; i < entries.size(); ++i)
@@ -761,14 +778,16 @@ TEST(ZipperFileOps, AddOperations)
                     entries[i].name, 0 == i ? content1 : contentInFolder));
             }
 
-            ASSERT_TRUE(unzipper.extractAll(true));
+            ASSERT_TRUE(
+                unzipper.extractAll(Unzipper::OverwriteMode::Overwrite));
             for (size_t i = 0; i < entries.size(); ++i)
             {
                 ASSERT_TRUE(helper::checkFileExists(
                     entries[i].name, 0 == i ? content1 : contentInFolder));
             }
 
-            ASSERT_FALSE(unzipper.extractAll(false));
+            ASSERT_FALSE(
+                unzipper.extractAll(Unzipper::OverwriteMode::DoNotOverwrite));
             ASSERT_THAT(unzipper.error().message(),
                         testing::HasSubstr("already exists"));
             for (size_t i = 0; i < entries.size(); ++i)
@@ -830,13 +849,13 @@ TEST(ZipTests, LargeFileWithPassword)
     // Create zipper with password and add the large file
     {
         Zipper zipper(zip_filename, password);
-        ASSERT_TRUE(zipper.isOpen());
+        ASSERT_TRUE(zipper.isOpened());
         std::ifstream ifs(large_filename, std::ios::binary);
         ASSERT_TRUE(ifs.is_open());
         ASSERT_TRUE(zipper.add(ifs, large_filename));
         ifs.close();
         zipper.close();
-        ASSERT_FALSE(zipper.isOpen());
+        ASSERT_FALSE(zipper.isOpened());
         ASSERT_FALSE(zipper.error()) << zipper.error().message();
     }
 
@@ -882,7 +901,7 @@ TEST(ZipperFileOps, AddAndExtractClosed)
     unzipper.close();
 
     ASSERT_EQ(unzipper.entries().size(), 0u);
-    ASSERT_FALSE(unzipper.extractAll(true));
+    ASSERT_FALSE(unzipper.extractAll(Unzipper::OverwriteMode::Overwrite));
     ASSERT_THAT(unzipper.error().message(),
                 testing::HasSubstr("Zip archive is not opened"));
 }
@@ -902,12 +921,19 @@ TEST(ZipperFileOps, ExtractBadPassword)
     Unzipper unzipper(zipFilename, "bad_pass");
     ASSERT_EQ(unzipper.entries().size(), 1u);
     ASSERT_STREQ(unzipper.entries()[0].name.c_str(), file1.c_str());
-    ASSERT_FALSE(unzipper.extract(file1, false));
+    ASSERT_FALSE(unzipper.extract(file1, Unzipper::OverwriteMode::Overwrite));
     ASSERT_THAT(unzipper.error().message(), testing::HasSubstr("Bad password"));
-    ASSERT_FALSE(unzipper.extract(file1, true));
+    ASSERT_FALSE(unzipper.extract(file1, Unzipper::OverwriteMode::Overwrite));
     ASSERT_THAT(unzipper.error().message(), testing::HasSubstr("Bad password"));
-    ASSERT_FALSE(unzipper.extractAll(true));
+    ASSERT_FALSE(
+        unzipper.extract(file1, Unzipper::OverwriteMode::DoNotOverwrite));
+    ASSERT_THAT(unzipper.error().message(),
+                testing::HasSubstr("already exists"));
+    ASSERT_FALSE(unzipper.extractAll(Unzipper::OverwriteMode::Overwrite));
     ASSERT_THAT(unzipper.error().message(), testing::HasSubstr("Bad password"));
+    ASSERT_FALSE(unzipper.extractAll(Unzipper::OverwriteMode::DoNotOverwrite));
+    ASSERT_THAT(unzipper.error().message(),
+                testing::HasSubstr("already exists"));
     unzipper.close();
 
     ASSERT_FALSE(helper::checkFileDoesNotExist(file1));
@@ -938,7 +964,8 @@ TEST(UnzipperFileOps, ErrorHandling)
     // Test invalid entry name
     {
         Unzipper unzipper(zipFilename);
-        ASSERT_FALSE(unzipper.extract("non_existent_entry.txt"));
+        ASSERT_FALSE(unzipper.extract("non_existent_entry.txt",
+                                      Unzipper::OverwriteMode::DoNotOverwrite));
         ASSERT_THAT(unzipper.error().message(),
                     testing::HasSubstr("Invalid info entry"));
         unzipper.close();
@@ -971,7 +998,9 @@ TEST(UnzipperFileOps, ErrorHandling)
         alternative_names[file1] = "renamed1.txt";
         alternative_names[file2] = "renamed2.txt";
         ASSERT_TRUE(
-            unzipper.extractAll("extract_dir", alternative_names, true));
+            unzipper.extractAll("extract_dir",
+                                alternative_names,
+                                Unzipper::OverwriteMode::DoNotOverwrite));
         ASSERT_TRUE(
             helper::checkFileExists("extract_dir/renamed1.txt", content1));
         ASSERT_TRUE(
@@ -983,7 +1012,7 @@ TEST(UnzipperFileOps, ErrorHandling)
     // Test extract all to current directory
     {
         Unzipper unzipper(zipFilename);
-        ASSERT_TRUE(unzipper.extractAll(true));
+        ASSERT_TRUE(unzipper.extractAll(Unzipper::OverwriteMode::Overwrite));
         ASSERT_TRUE(helper::checkFileExists(file1, content1));
         ASSERT_TRUE(helper::checkFileExists(file2, content2));
         unzipper.close();
@@ -994,7 +1023,8 @@ TEST(UnzipperFileOps, ErrorHandling)
     // Test extract all to specific directory
     {
         Unzipper unzipper(zipFilename);
-        ASSERT_TRUE(unzipper.extractAll("extract_dir", true));
+        ASSERT_TRUE(unzipper.extractAll(
+            "extract_dir", Unzipper::OverwriteMode::DoNotOverwrite));
         ASSERT_TRUE(helper::checkFileExists("extract_dir/" + file1, content1));
         ASSERT_TRUE(helper::checkFileExists("extract_dir/" + file2, content2));
         unzipper.close();
@@ -1004,7 +1034,7 @@ TEST(UnzipperFileOps, ErrorHandling)
     // Test checkValid() with uninitialized Unzipper
     {
         Unzipper unzipper;
-        ASSERT_FALSE(unzipper.extractAll(true));
+        ASSERT_FALSE(unzipper.extractAll(Unzipper::OverwriteMode::Overwrite));
         ASSERT_THAT(unzipper.error().message(),
                     testing::HasSubstr("not initialized"));
     }
@@ -1013,7 +1043,7 @@ TEST(UnzipperFileOps, ErrorHandling)
     {
         Unzipper unzipper(zipFilename);
         unzipper.close();
-        ASSERT_FALSE(unzipper.extractAll(true));
+        ASSERT_FALSE(unzipper.extractAll(Unzipper::OverwriteMode::Overwrite));
         ASSERT_THAT(unzipper.error().message(),
                     testing::HasSubstr("not opened"));
     }
@@ -1046,7 +1076,7 @@ TEST(UnzipperFileOps, EmptyZipHandling)
     // Test extractAll() on empty zip
     {
         Unzipper unzipper(emptyZipFilename);
-        ASSERT_FALSE(unzipper.extractAll(true));
+        ASSERT_FALSE(unzipper.extractAll(Unzipper::OverwriteMode::Overwrite));
         ASSERT_THAT(unzipper.error().message(),
                     testing::HasSubstr("Failed to go to first file"));
         unzipper.close();
@@ -1124,7 +1154,7 @@ TEST(ZipperFileOps, CompressionFlags)
     // Test different compression flags
     {
         Zipper zipper(zipFilename);
-        ASSERT_TRUE(zipper.isOpen());
+        ASSERT_TRUE(zipper.isOpened());
 
         // Store (no compression)
         ASSERT_TRUE(helper::zipAddFile(
@@ -1223,7 +1253,7 @@ TEST(ZipperFileOps, CompressionFlagsWithHierarchy)
     // Test different compression flags with hierarchy
     {
         Zipper zipper(zipFilename);
-        ASSERT_TRUE(zipper.isOpen());
+        ASSERT_TRUE(zipper.isOpened());
 
         // Store with hierarchy
         ASSERT_TRUE(helper::zipAddFile(zipper,
