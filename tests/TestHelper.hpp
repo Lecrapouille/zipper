@@ -138,6 +138,33 @@ inline bool isDirEmpty(const std::string& p_dir)
     return entries.empty();
 }
 
+/**
+ * @brief Creates a file with content and adds it to the zipper.
+ * @param[in] p_zipper The zipper instance.
+ * @param[in] p_file_path Path of the temporary file to create.
+ * @param[in] p_content Content to write in the file.
+ * @param[in] p_entry_path Path of the entry in the zip archive.
+ * @return true if successful, false otherwise.
+ */
+inline bool zipAddFile(zipper::Zipper& p_zipper,
+                       const char* p_file_path, // FIXME useless: to be removed
+                       const char* p_content,
+                       const char* p_entry_path)
+{
+    if (!helper::createFile(p_file_path, p_content))
+    {
+        return false;
+    }
+
+    std::ifstream ifs(p_file_path);
+    bool res = p_zipper.add(ifs, p_entry_path, zipper::Zipper::SaveHierarchy);
+    ifs.close();
+
+    helper::removeFileOrDir(p_file_path);
+
+    return res;
+}
+
 //-----------------------------------------------------------------------------
 //! \brief Convert an integer to a base-36 string (digits 0-9, letters A-Z).
 //! \param[in] value The integer value to convert (must be >= 0).

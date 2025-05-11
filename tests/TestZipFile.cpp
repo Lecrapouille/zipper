@@ -809,6 +809,31 @@ TEST(ZipperFileOps, AddOperations)
 }
 
 //=============================================================================
+// Test adding a file with a relative path
+//=============================================================================
+TEST(ZipTests, AddFileWithRelativePath)
+{
+    const std::string zip_filename = "ziptest_relative.zip";
+    const std::string input_entry_path = "foo/../Test1";
+    const std::string expected_entry_path = "Test1";
+
+    Zipper zipper(zip_filename);
+    helper::zipAddFile(zipper, "foo.txt", "content", input_entry_path);
+    zipper.close();
+
+    Unzipper unzipper(zip_filename);
+    auto entries = unzipper.entries();
+    unzipper.close();
+
+    // Check normalized path is used for entry name
+    ASSERT_EQ(entries.size(), 1u);
+    ASSERT_STREQ(entries[0].name.c_str(), expected_entry_path.c_str());
+
+    // Clean up
+    helper::removeFileOrDir(zip_filename);
+}
+
+//=============================================================================
 // Test adding a large file with a password to trigger chunked CRC
 // calculation.
 //=============================================================================

@@ -15,35 +15,6 @@
 
 using namespace zipper;
 
-namespace helper {
-/**
- * @brief Creates a file with content and adds it to the zipper.
- * @param[in] p_zipper The zipper instance.
- * @param[in] p_file_path Path of the temporary file to create.
- * @param[in] p_content Content to write in the file.
- * @param[in] p_entry_path Path of the entry in the zip archive.
- * @return true if successful, false otherwise.
- */
-static bool zipAddFile(Zipper& p_zipper,
-                       const char* p_file_path,
-                       const char* p_content,
-                       const char* p_entry_path)
-{
-    if (!helper::createFile(p_file_path, p_content))
-    {
-        return false;
-    }
-
-    std::ifstream ifs(p_file_path);
-    bool res = p_zipper.add(ifs, p_entry_path, Zipper::SaveHierarchy);
-    ifs.close();
-
-    Path::remove(p_file_path);
-
-    return res;
-}
-} // namespace helper
-
 //=============================================================================
 // https://github.com/Lecrapouille/zipper/issues/5
 //=============================================================================
