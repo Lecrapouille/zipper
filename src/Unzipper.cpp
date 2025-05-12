@@ -112,8 +112,8 @@ private:
         m_zip_file = unzOpen2("__notused__", &p_file_func);
         if (m_zip_file == nullptr)
         {
-            m_error_code =
-                make_error_code(UnzipperError::OPENING_ERROR, strerror(errno));
+            m_error_code = make_error_code(UnzipperError::OPENING_ERROR,
+                                           OS_STRERROR(errno));
             return false;
         }
         return true;
@@ -204,7 +204,7 @@ private:
     void getEntries(std::vector<ZipEntry>& p_entries)
     {
         // First pass to count the number of entries
-        uLong num_entries = 0;
+        uint64_t num_entries = 0;
         unz_global_info64 gi;
         int err = unzGetGlobalInfo64(m_zip_file, &gi);
         if (err == UNZ_OK)
@@ -233,7 +233,7 @@ private:
                         // Set the error code if the entry info is invalid
                         err = UNZ_ERRNO;
                         m_error_code = make_error_code(
-                            UnzipperError::INTERNAL_ERROR, strerror(errno));
+                            UnzipperError::INTERNAL_ERROR, OS_STRERROR(errno));
                     }
                 } while (UNZ_OK == err);
 
@@ -429,7 +429,7 @@ public:
                 std::stringstream str;
                 str << "Cannot create the folder '"
                     << Path::toNativeSeparators(folder)
-                    << "'. Reason: " << strerror(errno);
+                    << "'. Reason: " << OS_STRERROR(errno);
 
                 m_error_code =
                     make_error_code(UnzipperError::INTERNAL_ERROR, str.str());
@@ -485,7 +485,7 @@ public:
             // is not very explicit.
             std::stringstream str;
             str << "Failed creating '" << Path::toNativeSeparators(p_filename)
-                << "' file because " << strerror(errno);
+                << "' file because " << OS_STRERROR(errno);
 
             m_error_code =
                 make_error_code(UnzipperError::INTERNAL_ERROR, str.str());
@@ -517,7 +517,7 @@ public:
                         break; // If password was not valid we reach this case.
 
                     m_error_code = make_error_code(
-                        UnzipperError::INTERNAL_ERROR, strerror(errno));
+                        UnzipperError::INTERNAL_ERROR, OS_STRERROR(errno));
                     return UNZ_ERRNO;
                 }
 
@@ -525,7 +525,7 @@ public:
                 if (!p_stream.good())
                 {
                     m_error_code = make_error_code(
-                        UnzipperError::INTERNAL_ERROR, strerror(errno));
+                        UnzipperError::INTERNAL_ERROR, OS_STRERROR(errno));
                     return UNZ_ERRNO;
                 }
             } while (bytes > 0);
@@ -567,7 +567,7 @@ public:
                         break;
 
                     m_error_code = make_error_code(
-                        UnzipperError::INTERNAL_ERROR, strerror(errno));
+                        UnzipperError::INTERNAL_ERROR, OS_STRERROR(errno));
                     return UNZ_ERRNO;
                 }
 
@@ -655,8 +655,8 @@ public:
         }
         else
         {
-            m_error_code =
-                make_error_code(UnzipperError::OPENING_ERROR, strerror(errno));
+            m_error_code = make_error_code(UnzipperError::OPENING_ERROR,
+                                           OS_STRERROR(errno));
         }
 
         return false;
@@ -671,8 +671,8 @@ public:
 
         if (s < 0)
         {
-            m_error_code =
-                make_error_code(UnzipperError::INTERNAL_ERROR, strerror(errno));
+            m_error_code = make_error_code(UnzipperError::INTERNAL_ERROR,
+                                           OS_STRERROR(errno));
             return false;
         }
         else
@@ -690,7 +690,7 @@ public:
             if (!p_stream.good())
             {
                 m_error_code = make_error_code(UnzipperError::INTERNAL_ERROR,
-                                               strerror(errno));
+                                               OS_STRERROR(errno));
                 return false;
             }
         }
@@ -875,7 +875,7 @@ Unzipper::Unzipper(std::string const& p_zipname, std::string const& p_password)
     {
         throw std::runtime_error(m_impl->m_error_code
                                      ? m_impl->m_error_code.message()
-                                     : std::strerror(errno));
+                                     : std::OS_STRERROR(errno));
     }
     m_open = true;
 }

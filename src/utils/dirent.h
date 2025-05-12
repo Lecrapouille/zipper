@@ -150,6 +150,16 @@ void rewinddir(DIR* dir);
  */
 struct dirent* readdir(DIR* dir);
 
+/** \brief Returns a string describing the error code
+ *
+ * This function returns a string describing the error code passed in the
+ * errnum argument.
+ *
+ * \param errnum The error code to get the description for
+ * \return A string describing the error code
+ */
+const char* win_strerror(int errnum);
+
 #    ifdef __cplusplus
 }
 #    endif /* __cplusplus */

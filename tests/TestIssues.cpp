@@ -1,8 +1,5 @@
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-copy"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#pragma GCC diagnostic pop
 
 #define protected public
 #define private public

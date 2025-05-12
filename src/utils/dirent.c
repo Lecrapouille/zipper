@@ -244,4 +244,11 @@ struct dirent *readdir(DIR *dir)
     }
 }
 
+const char* win_strerror(int errnum)
+{
+    static char buffer[256];
+    strerror_s(buffer, sizeof(buffer), errnum);
+    return buffer;
+}
+
 /* ////////////////////////////////////////////////////////////////////////// */

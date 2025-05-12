@@ -118,7 +118,7 @@ static void getFileCrc(std::istream& p_input_stream,
                           reinterpret_cast<const unsigned char*>(p_buff.data()),
                           size_read);
         }
-        catch (const std::bad_alloc& e)
+        catch (const std::bad_alloc&)
         {
             // Handle allocation error - cannot calculate CRC if buffer fails
             // Maybe set a specific error code or just let the caller handle
@@ -229,7 +229,7 @@ struct Zipper::Impl
         else
         {
             m_error_code =
-                make_error_code(ZipperError::OPENING_ERROR, strerror(errno));
+                make_error_code(ZipperError::OPENING_ERROR, OS_STRERROR(errno));
         }
         return false;
     }
