@@ -122,27 +122,13 @@ private:
     // -------------------------------------------------------------------------
     bool locateEntry(std::string const& p_entry_name)
     {
-        bool res = (UNZ_OK ==
-                    unzLocateFile(m_zip_file, p_entry_name.c_str(), nullptr));
-        if (!res)
+        if (p_entry_name.empty() ||
+            (unzLocateFile(m_zip_file, p_entry_name.c_str(), nullptr) !=
+             UNZ_OK))
         {
             std::stringstream str;
             str << "Invalid info entry '"
                 << Path::toNativeSeparators(p_entry_name) << "'";
-            m_error_code = make_error_code(UnzipperError::NO_ENTRY, str.str());
-            return false;
-        }
-        return true;
-    }
-
-    // -------------------------------------------------------------------------
-    bool failIfInvalidEntry(ZipEntry const& p_entry_info)
-    {
-        if (!p_entry_info.valid())
-        {
-            std::stringstream str;
-            str << "Invalid info entry '"
-                << Path::toNativeSeparators(p_entry_info.name) << "'";
             m_error_code = make_error_code(UnzipperError::NO_ENTRY, str.str());
             return false;
         }
@@ -201,6 +187,12 @@ private:
     }
 
     // -------------------------------------------------------------------------
+    bool isEntryValid(ZipEntry const& p_entry_info)
+    {
+        return !p_entry_info.name.empty();
+    }
+
+    // -------------------------------------------------------------------------
     void getEntries(std::vector<ZipEntry>& p_entries)
     {
         // First pass to count the number of entries
@@ -223,7 +215,8 @@ private:
                 {
                     // Get the current entry info
                     ZipEntry entry_info;
-                    if (currentEntryInfo(entry_info) && entry_info.valid())
+                    if (currentEntryInfo(entry_info) &&
+                        isEntryValid(entry_info))
                     {
                         p_entries.push_back(entry_info);
                         err = unzGoToNextFile(m_zip_file);
@@ -260,9 +253,6 @@ public:
                                    Unzipper::OverwriteMode p_overwrite)
     {
         int err = UNZ_OK;
-
-        if (!failIfInvalidEntry(p_entry_info))
-            return false;
 
         // if (!entryinfo.uncompressed_size) was not a good method to
         // distinguish dummy file from folder. See
@@ -306,9 +296,6 @@ public:
     {
         int err = UNZ_OK;
 
-        if (!failIfInvalidEntry(p_entry_info))
-            return false;
-
         err = extractToStream(p_stream, p_entry_info);
         if (UNZ_OK == err)
         {
@@ -333,9 +320,6 @@ public:
                                 std::vector<unsigned char>& p_output_vector)
     {
         int err = UNZ_OK;
-
-        if (!failIfInvalidEntry(p_entry_info))
-            return false;
 
         err = extractToMemory(p_output_vector, p_entry_info);
         if (UNZ_OK == err)
@@ -765,7 +749,7 @@ public:
         do
         {
             ZipEntry entry;
-            if (!currentEntryInfo(entry) || !entry.valid())
+            if ((!currentEntryInfo(entry)) || (!isEntryValid(entry)))
             {
                 res = false;
                 continue;

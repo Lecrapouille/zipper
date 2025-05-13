@@ -289,13 +289,6 @@ public:
     //! \brief Move assignment operator.
     ZipEntry& operator=(ZipEntry&& p_other) = default;
 
-    //! \brief Checks if the entry has a valid name.
-    //! \return true if the entry name is not empty.
-    inline bool valid() const
-    {
-        return !name.empty();
-    }
-
 public:
 
     //! \brief Structure representing a date and time.
