@@ -868,9 +868,9 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
             return false;
         }
 
-        std::string nameInZip;
+        std::string name_in_zip;
         // Assuming p_file_or_folder_path is normalized enough
-        std::string canonicalFilePath = p_file_or_folder_path;
+        std::string canonical_file_path = p_file_or_folder_path;
 
         // Check if hierarchy needs to be saved
         if ((p_flags & Zipper::SaveHierarchy) == Zipper::SaveHierarchy)
@@ -882,18 +882,16 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
             // include path components, use: nameInZip = canonicalFilePath; Or
             // adjust based on desired behavior relative to zip root. Let's keep
             // it simple: use filename only unless it's in a dir add.
-            nameInZip =
-                Path::fileName(p_file_or_folder_path); // Current behavior
+            name_in_zip = Path::fileName(p_file_or_folder_path);
         }
         else
         {
-            nameInZip = Path::fileName(p_file_or_folder_path);
+            name_in_zip = Path::fileName(p_file_or_folder_path);
         }
 
-        // Get timestamp for the file
-        Timestamp time(p_file_or_folder_path);
         // Call the stream-based add function
-        overall_success = add(input, time.timestamp, nameInZip, p_flags);
+        Timestamp time(p_file_or_folder_path);
+        overall_success = add(input, time.timestamp, name_in_zip, p_flags);
     }
 
     return overall_success;
