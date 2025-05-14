@@ -177,60 +177,61 @@ private:
         return !p_entry_info.name.empty();
     }
 
+public:
+
     // -------------------------------------------------------------------------
-    void getEntries(std::vector<ZipEntry>& p_entries)
+    std::vector<ZipEntry> entries()
     {
-        // First pass to count the number of entries
-        uint64_t num_entries = 0;
+        std::vector<ZipEntry> entries;
+
+        // Count the number of entries and prealloc
         unz_global_info64 gi;
-        int err = unzGetGlobalInfo64(m_zip_handler, &gi);
-        if (err == UNZ_OK)
-        {
-            num_entries = gi.number_entry;
-
-            // Pre-allocation of the vector to avoid reallocations
-            p_entries.reserve(num_entries);
-
-            // Second pass to get the entries
-            err = unzGoToFirstFile(m_zip_handler);
-            if (UNZ_OK == err)
-            {
-                // Traverse the zip file sequentially in a single pass
-                do
-                {
-                    // Get the current entry info
-                    ZipEntry entry_info;
-                    if (currentEntryInfo(entry_info) &&
-                        isEntryValid(entry_info))
-                    {
-                        p_entries.push_back(entry_info);
-                        err = unzGoToNextFile(m_zip_handler);
-                    }
-                    else
-                    {
-                        // Set the error code if the entry info is invalid
-                        err = UNZ_ERRNO;
-                        m_error_code = make_error_code(
-                            UnzipperError::INTERNAL_ERROR, OS_STRERROR(errno));
-                    }
-                } while (UNZ_OK == err);
-
-                // If the end of the list of files is not reached and there is
-                // an error, return
-                if (UNZ_END_OF_LIST_OF_FILE != err && UNZ_OK != err)
-                {
-                    return;
-                }
-            }
-        }
-        else
+        if (unzGetGlobalInfo64(m_zip_handler, &gi) != UNZ_OK)
         {
             m_error_code = make_error_code(UnzipperError::INTERNAL_ERROR,
                                            "Invalid zip entry info");
+            return {};
         }
-    }
+        entries.reserve(gi.number_entry);
 
-public:
+        // Traverse the zip file sequentially in a single pass
+        if (unzGoToFirstFile(m_zip_handler) != UNZ_OK)
+        {
+            m_error_code =
+                make_error_code(UnzipperError::INTERNAL_ERROR,
+                                "Failed navigating inside zip entries");
+            return {};
+        }
+
+        int err = UNZ_OK;
+        do
+        {
+            // Get the current entry info
+            ZipEntry entry_info;
+            if (currentEntryInfo(entry_info) && isEntryValid(entry_info))
+            {
+                entries.push_back(entry_info);
+                err = unzGoToNextFile(m_zip_handler);
+            }
+            else
+            {
+                // Set the error code if the entry info is invalid
+                err = UNZ_ERRNO;
+            }
+        } while (UNZ_OK == err);
+
+        // If the end of the list of files is not reached and there is
+        // an error, return
+        if (UNZ_END_OF_LIST_OF_FILE != err && UNZ_OK != err)
+        {
+            m_error_code =
+                make_error_code(UnzipperError::INTERNAL_ERROR,
+                                "Failed navigating inside zip entries");
+            return {};
+        }
+
+        return entries;
+    }
 
     // -------------------------------------------------------------------------
     bool extractCurrentEntryToFile(ZipEntry& p_entry_info,
@@ -737,14 +738,6 @@ public:
 
         fill_memory_filefunc(&m_file_func, &m_zip_memory);
         return initMemory(m_file_func);
-    }
-
-    // -------------------------------------------------------------------------
-    std::vector<ZipEntry> entries()
-    {
-        std::vector<ZipEntry> entrylist;
-        getEntries(entrylist);
-        return entrylist;
     }
 
     // -------------------------------------------------------------------------

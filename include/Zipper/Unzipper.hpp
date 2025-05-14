@@ -155,6 +155,9 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Returns all entries contained in the zip archive.
+    //! \note If no entries are found, the vector is empty but this may comes
+    //! from an internal error. Call error() to get to distinguish between
+    //! an empty vector and an internal error.
     //! \return Vector of ZipEntry objects.
     // -------------------------------------------------------------------------
     std::vector<ZipEntry> entries();
