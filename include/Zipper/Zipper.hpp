@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <ctime>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -66,6 +67,30 @@ public:
         //! \brief Preserve directory hierarchy when adding files.
         SaveHierarchy = 0x40
     };
+
+    // -------------------------------------------------------------------------
+    //! \brief Structure holding progress information during compression
+    // -------------------------------------------------------------------------
+    struct Progress
+    {
+        //! \brief Status of the compression operation
+        enum class Status
+        {
+            OK,        //!< Compression completed successfully
+            KO,        //!< Compression failed
+            InProgress //!< Compression in progress
+        };
+
+        Status status = Status::InProgress; //!< Current status
+        std::string current_file; //!< Name of the current file being compressed
+        uint64_t bytes_processed = 0;  //!< Number of bytes processed so far
+        uint64_t total_bytes = 0;      //!< Total number of bytes to compress
+        uint64_t files_compressed = 0; //!< Number of files compressed
+        uint64_t total_files = 0;      //!< Total number of files to compress
+    };
+
+    //! \brief Callback type for reporting compression progress
+    using ProgressCallback = std::function<void(const Progress&)>;
 
     // -------------------------------------------------------------------------
     //! \brief Default constructor. You shall use open() method to initialize
@@ -349,6 +374,21 @@ public:
     {
         return m_error_code;
     }
+
+    // -------------------------------------------------------------------------
+    //! \brief Set the progress callback function.
+    //! \param[in] callback The function to call with progress updates.
+    //! \return true if the callback was set successfully.
+    // -------------------------------------------------------------------------
+    bool setProgressCallback(ProgressCallback callback);
+
+private:
+
+    // -------------------------------------------------------------------------
+    //! \brief Check if the zipper is valid.
+    //! \return true if the zipper is valid, false otherwise.
+    // -------------------------------------------------------------------------
+    bool checkValid();
 
 private:
 

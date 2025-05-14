@@ -167,6 +167,8 @@ struct Zipper::Impl
     zlib_filefunc_def m_file_func;
     std::error_code& m_error_code;
     std::vector<char> m_buffer;
+    Progress m_progress;
+    ProgressCallback m_progress_callback;
 
     // -------------------------------------------------------------------------
     Impl(Zipper& p_outer, std::error_code& p_error_code)
@@ -407,6 +409,13 @@ struct Zipper::Impl
             return false;
         }
 
+        if (m_progress_callback)
+        {
+            m_progress.status = Progress::Status::InProgress;
+            m_progress.current_file = p_name_in_zip;
+            m_progress_callback(m_progress);
+        }
+
         // Ensure buffer exists and has the standard size.
         // Should be guaranteed by constructor, but check doesn't hurt.
         if (m_buffer.size() != ZIPPER_WRITE_BUFFER_SIZE)
@@ -542,7 +551,15 @@ struct Zipper::Impl
                 err = zipWriteInFileInZip(m_zip_file,
                                           m_buffer.data(),
                                           static_cast<unsigned int>(size_read));
-                if (err != ZIP_OK)
+                if (err == ZIP_OK)
+                {
+                    if (m_progress_callback)
+                    {
+                        m_progress.bytes_processed += size_read;
+                        m_progress_callback(m_progress);
+                    }
+                }
+                else
                 {
                     std::stringstream str;
                     str << "Error writing '" << p_name_in_zip
@@ -556,7 +573,7 @@ struct Zipper::Impl
                 }
             }
 
-            // Check stream state *after* trying to read
+            // Check stream state
             else if (!p_input_stream.eof() && !p_input_stream.good())
             {
                 err = ZIP_ERRNO;
@@ -568,8 +585,7 @@ struct Zipper::Impl
 
         // Close the current file entry in the zip archive
         int close_err = zipCloseFileInZip(m_zip_file);
-        if (err == ZIP_OK &&
-            close_err != ZIP_OK) // Report close error only if write loop was ok
+        if ((err == ZIP_OK) && (close_err != ZIP_OK))
         {
             std::stringstream str;
             str << "Error closing '" << p_name_in_zip
@@ -580,7 +596,16 @@ struct Zipper::Impl
         }
 
         // Return true only if both write loop and close entry succeeded
-        return (err == ZIP_OK && close_err == ZIP_OK);
+        bool result = ((err == ZIP_OK) && (close_err == ZIP_OK));
+
+        // Update progress callback
+        if (m_progress_callback)
+        {
+            m_progress.files_compressed += result;
+            m_progress_callback(m_progress);
+        }
+
+        return result;
     }
 
     // -------------------------------------------------------------------------
@@ -741,41 +766,56 @@ void Zipper::close()
 }
 
 // -------------------------------------------------------------------------
-bool Zipper::add(std::istream& p_source,
-                 const std::tm& p_timestamp,
-                 const std::string& p_nameInZip,
-                 ZipFlags p_flags)
+bool Zipper::setProgressCallback(ProgressCallback callback)
 {
-    return m_impl->add(p_source, p_timestamp, p_nameInZip, m_password, p_flags);
+    if (m_impl)
+    {
+        m_impl->m_progress_callback = std::move(callback);
+        return true;
+    }
+    return false;
 }
 
 // -------------------------------------------------------------------------
 bool Zipper::add(std::istream& p_source,
-                 const std::string& p_nameInZip,
+                 const std::tm& p_timestamp,
+                 const std::string& p_name_in_zip,
                  ZipFlags p_flags)
 {
+    if (!checkValid())
+        return false;
+
+    m_impl->m_progress.total_files = 1;
+    m_impl->m_progress.bytes_processed = 0;
+    m_impl->m_progress.files_compressed = 0;
+
+    return m_impl->add(
+        p_source, p_timestamp, p_name_in_zip, m_password, p_flags);
+}
+
+// -------------------------------------------------------------------------
+bool Zipper::add(std::istream& p_source,
+                 const std::string& p_name_in_zip,
+                 ZipFlags p_flags)
+{
+    if (!checkValid())
+        return false;
+
+    m_impl->m_progress.total_files = 1;
+    m_impl->m_progress.bytes_processed = 0;
+    m_impl->m_progress.files_compressed = 0;
+
     Timestamp time;
     return m_impl->add(
-        p_source, time.timestamp, p_nameInZip, m_password, p_flags);
+        p_source, time.timestamp, p_name_in_zip, m_password, p_flags);
 }
 
 // -------------------------------------------------------------------------
 bool Zipper::add(const std::string& p_file_or_folder_path,
                  Zipper::ZipFlags p_flags)
 {
-    if (!m_impl)
-    {
-        m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
-                                       "Zipper not initialized");
+    if (!checkValid())
         return false;
-    }
-
-    if (!m_open)
-    {
-        m_error_code = make_error_code(ZipperError::OPENING_ERROR,
-                                       "Zip archive is not opened");
-        return false;
-    }
 
     // Clear previous error before attempting add operation
     m_error_code = {};
@@ -783,10 +823,26 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
 
     if (Path::isDir(p_file_or_folder_path))
     {
+        // Get all files in the directory
         std::vector<std::string> files;
         try
         {
             files = Path::filesFromDir(p_file_or_folder_path, true);
+
+            // Set progress for the directory
+            m_impl->m_progress.total_files = files.size();
+            m_impl->m_progress.total_bytes = 0;
+            for (const auto& file : files)
+            {
+                std::ifstream input(file.c_str(), std::ios::binary);
+                if (input.is_open())
+                {
+                    input.seekg(0, std::ios::end);
+                    m_impl->m_progress.total_bytes +=
+                        static_cast<uint64_t>(input.tellg());
+                    input.seekg(0, std::ios::beg);
+                }
+            }
         }
         catch (const std::exception& e)
         {
@@ -796,6 +852,7 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
             return false;
         }
 
+        // If the directory is empty, return true if it's readable
         if (files.empty())
         {
             if (!Path::isReadable(p_file_or_folder_path))
@@ -805,28 +862,35 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
                                                    p_file_or_folder_path + "'");
                 return false;
             }
+
+            // TODO: add the directory itself to the zip
             return true;
         }
 
         for (const auto& file_path : files)
         {
+            // Open the file
             std::ifstream input(file_path.c_str(), std::ios::binary);
             if (!input.is_open())
             {
-                // Log error or collect errors, but continue trying other
-                // files
-                m_error_code =
-                    make_error_code(ZipperError::OPENING_ERROR,
-                                    "Cannot open file: '" + file_path + "'");
-                overall_success = false;
-                continue; // Try next file
+                if (Path::isFile(file_path))
+                {
+                    m_error_code = make_error_code(ZipperError::OPENING_ERROR,
+                                                   "Cannot open file: '" +
+                                                       file_path + "'");
+                    overall_success = false;
+                }
+
+                // Continue trying other files
+                continue;
             }
 
+            // Get the name of the file to add to the zip. Assuming filePath is
+            // normalized enough.
             std::string name_in_zip;
-            // Assuming filePath is normalized enough
             std::string canonical_file_path = file_path;
 
-            // Check if hierarchy needs to be saved
+            // Check if hierarchy needs to be saved.
             if ((p_flags & Zipper::SaveHierarchy) == Zipper::SaveHierarchy)
             {
                 // Find the base folder path within the canonical file path
@@ -846,42 +910,50 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
                 name_in_zip = Path::fileName(file_path);
             }
 
-            // Call the stream-based add function
+            // Call the stream-based add function.
             Timestamp time(file_path);
-            // Pass the integer representation of flags
-            bool success = add(input, time.timestamp, name_in_zip, p_flags);
-            if (!success)
+            if (!m_impl->add(
+                    input, time.timestamp, name_in_zip, m_password, p_flags))
             {
                 overall_success = false;
-                // error_code should be set by the called add function
             }
         }
     }
     else // It's a single file
     {
+        // Set progress for a single file
+        m_impl->m_progress.total_files = 1;
+        m_impl->m_progress.bytes_processed = 0;
+        m_impl->m_progress.files_compressed = 0;
+
+        // Open the file
         std::ifstream input(p_file_or_folder_path.c_str(), std::ios::binary);
         if (!input.is_open())
         {
+            m_impl->m_progress.total_bytes =
+                static_cast<uint64_t>(input.tellg());
             m_error_code = make_error_code(ZipperError::OPENING_ERROR,
                                            "Cannot open file: '" +
                                                p_file_or_folder_path + "'");
             return false;
         }
 
+        // Get the name of the file to add to the zip. Assuming
+        // p_file_or_folder_path is normalized enough.
         std::string name_in_zip;
-        // Assuming p_file_or_folder_path is normalized enough
         std::string canonical_file_path = p_file_or_folder_path;
 
         // Check if hierarchy needs to be saved
         if ((p_flags & Zipper::SaveHierarchy) == Zipper::SaveHierarchy)
         {
-            // For a single file, "saving hierarchy" might mean including its
-            // path components relative to the current working directory, or
-            // just the filename depending on interpretation. Current behavior
-            // uses Path::fileName even with SaveHierarchy for single file. To
-            // include path components, use: nameInZip = canonicalFilePath; Or
-            // adjust based on desired behavior relative to zip root. Let's keep
-            // it simple: use filename only unless it's in a dir add.
+            // For a single file, "saving hierarchy" might mean including
+            // its path components relative to the current working
+            // directory, or just the filename depending on interpretation.
+            // Current behavior uses Path::fileName even with SaveHierarchy
+            // for single file. To include path components, use: nameInZip =
+            // canonicalFilePath; Or adjust based on desired behavior
+            // relative to zip root. Let's keep it simple: use filename only
+            // unless it's in a dir add.
             name_in_zip = Path::fileName(p_file_or_folder_path);
         }
         else
@@ -891,8 +963,12 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
 
         // Call the stream-based add function
         Timestamp time(p_file_or_folder_path);
-        overall_success = add(input, time.timestamp, name_in_zip, p_flags);
+        overall_success = m_impl->add(
+            input, time.timestamp, name_in_zip, m_password, p_flags);
     }
+
+    m_impl->m_progress.status =
+        overall_success ? Progress::Status::OK : Progress::Status::KO;
 
     return overall_success;
 }
@@ -915,7 +991,7 @@ bool Zipper::open(const std::string& p_zip_name,
 // -------------------------------------------------------------------------
 bool Zipper::open(const std::string& p_zip_name, Zipper::OpenFlags p_open_flags)
 {
-    return open(p_zip_name, "", p_open_flags);
+    return open(p_zip_name, std::string(), p_open_flags);
 }
 
 // -------------------------------------------------------------------------
@@ -962,13 +1038,13 @@ bool Zipper::open(std::vector<unsigned char>& p_buffer,
 // -------------------------------------------------------------------------
 bool Zipper::reopen()
 {
-    // Ensure impl is created if it wasn't (e.g., after default constructor if
-    // added) For now, assuming constructor always creates impl or throws.
+    // Ensure impl is created if it wasn't (e.g., after default constructor
+    // if added) For now, assuming constructor always creates impl or
+    // throws.
     if (!m_impl)
     {
-        m_error_code =
-            make_error_code(ZipperError::INTERNAL_ERROR,
-                            "Zipper not initialized properly, cannot open");
+        m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
+                                       "Zipper is not initialized");
         return false;
     }
 
@@ -1010,6 +1086,26 @@ bool Zipper::reopen()
     }
 
     return success;
+}
+
+// -----------------------------------------------------------------------------
+bool Zipper::checkValid()
+{
+    if (!m_impl)
+    {
+        m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
+                                       "Zipper is not initialized");
+        return false;
+    }
+
+    if (!m_open)
+    {
+        m_error_code =
+            make_error_code(ZipperError::NO_ENTRY, "Zip archive is not opened");
+        return false;
+    }
+
+    return true;
 }
 
 } // namespace zipper

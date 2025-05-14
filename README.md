@@ -606,9 +606,13 @@ Unzipper unzipper(zip_vect);
 unzipper.extract("Test1");
 ```
 
+- Zipper has security against [Zip Slip vulnerability](https://security.snyk.io/research/zip-slip-vulnerability): if an entry has a path outside the extraction folder (like `../foo.txt`) it
+will return `false` even if the replace option is set.
+
 #### Progress Callback
 
 You can monitor the extraction progress by setting a callback function. The callback provides information about:
+
 - Current status (OK, KO, InProgress)
 - Current file being extracted
 - Number of bytes read
@@ -645,8 +649,7 @@ unzipper.extractAll();
 unzipper.close();
 ```
 
-- Zipper has security against [Zip Slip vulnerability](https://security.snyk.io/research/zip-slip-vulnerability): if an entry has a path outside the extraction folder (like `../foo.txt`) it
-will return `false` even if the replace option is set.
+Same idea for Zipper.
 
 ## FAQ
 

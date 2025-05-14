@@ -1,13 +1,17 @@
 #include "Zipper/Zipper.hpp"
-#include <iostream>
 #include <filesystem>
+#include <iomanip>
+#include <iostream>
+#include <string>
 
 #ifdef WIN32
-#  include <windows.h>
+#    include <windows.h>
 #else
-#  include <termios.h>
-#  include <unistd.h>
+#    include <termios.h>
+#    include <unistd.h>
 #endif
+
+#define PROGRESS_BAR_WIDTH 50
 
 // ----------------------------------------------------------------------------
 //! \brief Display the usage of the program
@@ -16,10 +20,9 @@
 static void usage(const char* argv0)
 {
     std::cout << "Usage:\n  " << argv0
-              << " [[-p] [-r] [-o path/to/output.zip] <path/to/folder>\n\n"
+              << " [[-p] [-o path/to/output.zip] <path/to/folder>\n\n"
               << "Where:\n"
               << "  -p with AES password (from stdin)\n"
-              << "  -r recursive compression of the folder\n"
               << "  -o path to the zip file to create (default: ./output.zip)\n"
               << std::endl;
 }
@@ -27,15 +30,16 @@ static void usage(const char* argv0)
 // ----------------------------------------------------------------------------
 //! \brief Quick and dirty parser the command-line option.
 // ----------------------------------------------------------------------------
-static std::string cli(int argc, char* const argv[], const std::string& short_option)
+static std::string
+cli(int argc, char* const argv[], const std::string& short_option)
 {
     for (int i = 1; i < argc; ++i)
     {
         std::string arg(argv[i]);
         if (arg == short_option)
         {
-            if (i+1 < argc)
-                return argv[i+1];
+            if (i + 1 < argc)
+                return argv[i + 1];
             return argv[i];
         }
     }
@@ -43,40 +47,45 @@ static std::string cli(int argc, char* const argv[], const std::string& short_op
 }
 
 // ----------------------------------------------------------------------------
-//! \brief Add a file or a folder to the zip archive
-//! \param[in,out] zipper Instance of Zipper
-//! \param[in] path Path of the file or folder to add
-//! \param[in] recursive If true, add the subfolders recursively
-//! \return true if success, false otherwise
+//! \brief Display a progress bar.
+//! \param[in] progress Progress information.
 // ----------------------------------------------------------------------------
-static bool addToZip(zipper::Zipper& zipper, const std::string& path, bool recursive)
+static void displayProgress(const zipper::Zipper::Progress& progress)
 {
-    // Check if the path is a folder
-    if (std::filesystem::is_directory(path))
+    // Compute the global percentage
+    float percent = 0.0f;
+    if (progress.total_bytes > 0)
     {
-        if (recursive)
-        {
-            // Add the folder and its content recursively
-            return zipper.add(path, zipper::Zipper::Better);
-        }
-        else
-        {
-            // Add only the files of the folder (without recursion)
-            bool success = true;
-            for (const auto& entry : std::filesystem::directory_iterator(path))
-            {
-                if (entry.is_regular_file())
-                {
-                    success &= zipper.add(entry.path().string(), zipper::Zipper::Better);
-                }
-            }
-            return success;
-        }
+        percent = float(progress.bytes_processed) /
+                  float(progress.total_bytes) * 100.0f;
     }
-    else
+
+    // Compute the number of characters to display
+    size_t filled = size_t((percent / 100.0f) * PROGRESS_BAR_WIDTH);
+
+    // Display the progress bar
+    std::cout << "\r[";
+    for (size_t i = 0; i < PROGRESS_BAR_WIDTH; ++i)
     {
-        // Add a simple file
-        return zipper.add(path, zipper::Zipper::Better);
+        if (i < filled)
+            std::cout << "=";
+        else
+            std::cout << " ";
+    }
+    std::cout << "] " << std::fixed << std::setprecision(1) << percent << "% ";
+
+    // Display the current file and the number of files
+    std::cout << "(" << progress.files_compressed << "/" << progress.total_files
+              << ") ";
+    std::cout << progress.current_file;
+
+    // Clean the line
+    std::cout << std::string(20, ' ') << "\r" << std::flush;
+
+    // If finished, go to the next line
+    if (progress.status != zipper::Zipper::Progress::Status::InProgress)
+    {
+        std::cout << std::endl;
     }
 }
 
@@ -113,8 +122,9 @@ int main(int argc, char* argv[])
     // Check if the last argument is a valid path
     if (folder_path.empty() || folder_path[0] == '-')
     {
-        std::cerr << "CLI error: The last argument must be a folder or file path"
-                  << std::endl;
+        std::cerr
+            << "CLI error: The last argument must be a folder or file path"
+            << std::endl;
         return EXIT_FAILURE;
     }
 
@@ -131,14 +141,15 @@ int main(int argc, char* argv[])
     {
         zipper::Zipper zipper(zip_file, password, zipper::Zipper::Overwrite);
 
-        if (!addToZip(zipper, folder_path, recursive))
+        // Set the progress callback
+        zipper.setProgressCallback(displayProgress);
+
+        if (!zipper.add(folder_path, zipper::Zipper::Better))
         {
             std::error_code err = zipper.error();
-            std::cerr << "Compression failed for '" << folder_path
-                      << "' to '"
-                      << zip_file
-                      << "' Reason: '" << err.message()
-                      << "'" << std::endl;
+            std::cerr << "Compression failed for '" << folder_path << "' to '"
+                      << zip_file << "' Reason: '" << err.message() << "'"
+                      << std::endl;
             return EXIT_FAILURE;
         }
 
@@ -147,8 +158,7 @@ int main(int argc, char* argv[])
     catch (std::runtime_error const& e)
     {
         std::cerr << "Compression failed for '" << folder_path
-                  << "' Exception: '" << e.what()
-                  << "'" << std::endl;
+                  << "' Exception: '" << e.what() << "'" << std::endl;
         return EXIT_FAILURE;
     }
 
