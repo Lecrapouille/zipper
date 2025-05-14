@@ -9,6 +9,7 @@
 #define ZIPPER_UNZIPPER_HPP
 
 #include <cstdint>
+#include <functional>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -47,7 +48,36 @@ public:
         Overwrite       //!< Overwrite existing files
     };
 
+    // -------------------------------------------------------------------------
+    //! \brief Structure containing progress information during extraction.
+    // -------------------------------------------------------------------------
+    struct Progress
+    {
+        //! \brief Status of the extraction
+        enum class Status
+        {
+            OK,        //!< Extraction completed successfully
+            KO,        //!< Extraction failed
+            InProgress //!< Extraction in progress
+        };
+
+        Status status = Status::InProgress; //!< Current status
+        std::string current_file;   //!< Name of the file being extracted
+        uint64_t bytes_read = 0;    //!< Number of bytes read so far
+        uint64_t total_bytes = 0;   //!< Total number of bytes to extract
+        size_t files_extracted = 0; //!< Number of files extracted so far
+        size_t total_files = 0;     //!< Total number of files to extract
+    };
+
+    // -------------------------------------------------------------------------
+    //! \brief Callback type for progress reporting
+    //! \param[in] progress Current progress information
+    // -------------------------------------------------------------------------
+    using ProgressCallback = std::function<void(const Progress&)>;
+
+    // -------------------------------------------------------------------------
     //! \brief Default constructor. Creates an uninitialized Unzipper.
+    // -------------------------------------------------------------------------
     Unzipper();
 
     // -------------------------------------------------------------------------
@@ -103,6 +133,13 @@ public:
     //! \return Total uncompressed size in bytes.
     // -------------------------------------------------------------------------
     size_t sizeOnDisk();
+
+    // -------------------------------------------------------------------------
+    //! \brief Set the progress callback.
+    //! \param[in] callback Function to call with progress updates.
+    //! \return true if the callback was set, false otherwise.
+    // -------------------------------------------------------------------------
+    bool setProgressCallback(ProgressCallback callback);
 
     // -------------------------------------------------------------------------
     //! \brief Extract the whole zip archive using alternative destination names

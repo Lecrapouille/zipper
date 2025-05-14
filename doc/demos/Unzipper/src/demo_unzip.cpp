@@ -1,5 +1,7 @@
 #include "Zipper/Unzipper.hpp"
+#include <iomanip>
 #include <iostream>
+#include <string>
 
 #ifdef WIN32
 #    include <windows.h>
@@ -10,6 +12,50 @@
 
 #define DEFAULT_MAX_UNCOMPRESSED_SIZE_GB 6
 #define TO_GB(bytes) (bytes * 1024 * 1024 * 1024)
+#define PROGRESS_BAR_WIDTH 50
+
+// ----------------------------------------------------------------------------
+//! \brief Display a progress bar.
+//! \param[in] progress Progress information.
+// ----------------------------------------------------------------------------
+static void displayProgress(const zipper::Unzipper::Progress& progress)
+{
+    // Compute the global percentage
+    float percent = 0.0f;
+    if (progress.total_bytes > 0)
+    {
+        percent =
+            float(progress.bytes_read) / float(progress.total_bytes) * 100.0f;
+    }
+
+    // Compute the number of characters to display
+    size_t filled = size_t((percent / 100.0f) * PROGRESS_BAR_WIDTH);
+
+    // Display the progress bar
+    std::cout << "\r[";
+    for (size_t i = 0; i < PROGRESS_BAR_WIDTH; ++i)
+    {
+        if (i < filled)
+            std::cout << "=";
+        else
+            std::cout << " ";
+    }
+    std::cout << "] " << std::fixed << std::setprecision(1) << percent << "% ";
+
+    // Display the current file and the number of files
+    std::cout << "(" << progress.files_extracted << "/" << progress.total_files
+              << ") ";
+    std::cout << progress.current_file;
+
+    // Clean the line
+    std::cout << std::string(20, ' ') << "\r" << std::flush;
+
+    // If finished, go to the next line
+    if (progress.status != zipper::Unzipper::Progress::Status::InProgress)
+    {
+        std::cout << std::endl;
+    }
+}
 
 // ----------------------------------------------------------------------------
 static void usage(const char* argv0)
@@ -116,6 +162,8 @@ int main(int argc, char* argv[])
                 << " GB). Use -m to set a different limit." << std::endl;
             return EXIT_FAILURE;
         }
+
+        unzipper.setProgressCallback(displayProgress);
 
         if (!unzipper.extractAll(
                 extraction_path,

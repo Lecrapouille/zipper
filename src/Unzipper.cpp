@@ -103,6 +103,8 @@ struct Unzipper::Impl
     std::error_code& m_error_code;
     std::vector<char> m_char_buffer;
     std::vector<unsigned char> m_uchar_buffer;
+    Unzipper::Progress m_progress;
+    Unzipper::ProgressCallback m_progress_callback;
 
 private:
 
@@ -271,6 +273,14 @@ public:
         }
         else
         {
+            // Update progress before starting extraction
+            if (m_progress_callback)
+            {
+                m_progress.current_file = p_entry_info.name;
+                m_progress.status = Progress::Status::InProgress;
+                m_progress_callback(m_progress);
+            }
+
             err = extractToFile(p_file_name, p_entry_info, p_overwrite);
             if (UNZ_OK == err)
             {
@@ -296,6 +306,14 @@ public:
     {
         int err = UNZ_OK;
 
+        // Update progress before starting extraction
+        if (m_progress_callback)
+        {
+            m_progress.current_file = p_entry_info.name;
+            m_progress.status = Progress::Status::InProgress;
+            m_progress_callback(m_progress);
+        }
+
         err = extractToStream(p_stream, p_entry_info);
         if (UNZ_OK == err)
         {
@@ -320,6 +338,14 @@ public:
                                 std::vector<unsigned char>& p_output_vector)
     {
         int err = UNZ_OK;
+
+        // Update progress before starting extraction
+        if (m_progress_callback)
+        {
+            m_progress.current_file = p_entry_info.name;
+            m_progress.status = Progress::Status::InProgress;
+            m_progress_callback(m_progress);
+        }
 
         err = extractToMemory(p_output_vector, p_entry_info);
         if (UNZ_OK == err)
@@ -479,12 +505,19 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    int extractToStream(std::ostream& p_stream,
-                        const ZipEntry& /*p_entry_info*/)
+    int extractToStream(std::ostream& p_stream, const ZipEntry& p_entry_info)
     {
         int err;
         int bytes = 0;
 
+        // Update progress
+        if (m_progress_callback)
+        {
+            m_progress.current_file = p_entry_info.name;
+        }
+
+        // Open the file with the password. UNZ_OK is returned even if the
+        // password is not valid.
         err = unzOpenCurrentFilePassword(
             m_zip_file, m_password.empty() ? NULL : m_password.c_str());
         if (UNZ_OK == err)
@@ -511,6 +544,13 @@ public:
                     m_error_code = make_error_code(
                         UnzipperError::INTERNAL_ERROR, OS_STRERROR(errno));
                     return UNZ_ERRNO;
+                }
+
+                // Update progress
+                if (m_progress_callback)
+                {
+                    m_progress.bytes_read += uint64_t(bytes);
+                    m_progress_callback(m_progress);
                 }
             } while (bytes > 0);
 
@@ -731,12 +771,35 @@ public:
         m_error_code.clear();
         bool res = true;
 
+        if (m_progress_callback)
+        {
+            // Get total number of files and bytes
+            m_progress.total_bytes = 0;
+            std::vector<ZipEntry> entries = this->entries();
+            for (const auto& entry : entries)
+            {
+                m_progress.total_bytes += entry.uncompressed_size;
+            }
+
+            // Initialize progress
+            m_progress.status = Progress::Status::InProgress;
+            m_progress.total_files = entries.size();
+            m_progress.files_extracted = 0;
+            m_progress.bytes_read = 0;
+            m_progress_callback(m_progress);
+        }
+
         // Traverse the zip file sequentially in a single pass
         int err = unzGoToFirstFile(m_zip_file);
         if (err != UNZ_OK)
         {
             m_error_code = make_error_code(UnzipperError::INTERNAL_ERROR,
                                            "Failed to go to first file");
+            if (m_progress_callback)
+            {
+                m_progress.status = Progress::Status::KO;
+                m_progress_callback(m_progress);
+            }
             return false;
         }
 
@@ -769,6 +832,13 @@ public:
                 res = false;
             }
 
+            // Update progress after each file
+            else if (m_progress_callback)
+            {
+                m_progress.files_extracted++;
+                m_progress_callback(m_progress);
+            }
+
             err = unzGoToNextFile(m_zip_file);
         } while (err == UNZ_OK);
 
@@ -776,7 +846,20 @@ public:
         {
             m_error_code = make_error_code(UnzipperError::INTERNAL_ERROR,
                                            "Error navigating zip file");
+            if (m_progress_callback)
+            {
+                m_progress.status = Progress::Status::KO;
+                m_progress_callback(m_progress);
+            }
             return false;
+        }
+
+        // Final progress update
+        if (m_progress_callback)
+        {
+            m_progress.status =
+                res ? Progress::Status::OK : Progress::Status::KO;
+            m_progress_callback(m_progress);
         }
 
         return res;
@@ -999,4 +1082,14 @@ size_t Unzipper::sizeOnDisk()
     return total_uncompressed;
 }
 
+// -----------------------------------------------------------------------------
+bool Unzipper::setProgressCallback(ProgressCallback callback)
+{
+    if (m_impl)
+    {
+        m_impl->m_progress_callback = std::move(callback);
+        return true;
+    }
+    return false;
+}
 } // namespace zipper

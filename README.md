@@ -606,6 +606,45 @@ Unzipper unzipper(zip_vect);
 unzipper.extract("Test1");
 ```
 
+#### Progress Callback
+
+You can monitor the extraction progress by setting a callback function. The callback provides information about:
+- Current status (OK, KO, InProgress)
+- Current file being extracted
+- Number of bytes read
+- Total bytes to extract
+- Number of files extracted
+- Total number of files
+
+Example:
+
+```c++
+Unzipper unzipper("zipfile.zip");
+
+// Set the progress callback
+unzipper.setProgressCallback([](const Unzipper::Progress& progress) {
+    switch (progress.status) {
+        case Unzipper::Progress::Status::InProgress:
+            std::cout << "Extracting: " << progress.current_file
+                      << " (" << progress.files_extracted << "/"
+                      << progress.total_files << " files) "
+                      << (progress.bytes_read * 100 / progress.total_bytes)
+                      << "%" << std::endl;
+            break;
+        case Unzipper::Progress::Status::OK:
+            std::cout << "Extraction completed successfully" << std::endl;
+            break;
+        case Unzipper::Progress::Status::KO:
+            std::cout << "Extraction failed" << std::endl;
+            break;
+    }
+});
+
+// Start extraction
+unzipper.extractAll();
+unzipper.close();
+```
+
 - Zipper has security against [Zip Slip vulnerability](https://security.snyk.io/research/zip-slip-vulnerability): if an entry has a path outside the extraction folder (like `../foo.txt`) it
 will return `false` even if the replace option is set.
 
