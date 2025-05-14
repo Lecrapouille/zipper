@@ -24,11 +24,17 @@ namespace zipper {
 
 enum class ZipperError
 {
+    //! No error
     NO_ERROR_ZIPPER = 0,
+    //! Error when accessing to a info entry
+    BAD_ENTRY,
+    //! Error when opening a zip file
     OPENING_ERROR,
+    //! Error inside this library
     INTERNAL_ERROR,
-    NO_ENTRY,
+    //! Zip slip vulnerability
     SECURITY_ERROR,
+    //! Error when adding a file to a zip file
     ADDING_ERROR
 };
 
@@ -42,30 +48,9 @@ struct ZipperErrorCategory: std::error_category
         return "zipper";
     }
 
-    virtual std::string message(int p_error) const override
+    virtual std::string message(int /*p_error*/) const override
     {
-        if (!custom_message.empty())
-        {
-            return custom_message;
-        }
-
-        switch (static_cast<ZipperError>(p_error))
-        {
-            case ZipperError::NO_ERROR_ZIPPER:
-                return "There was no error";
-            case ZipperError::OPENING_ERROR:
-                return "Opening error";
-            case ZipperError::INTERNAL_ERROR:
-                return "Internal error";
-            case ZipperError::NO_ENTRY:
-                return "Error, couldn't get the current entry info";
-            case ZipperError::SECURITY_ERROR:
-                return "ZipSlip security";
-            case ZipperError::ADDING_ERROR:
-                return "Error adding file to zip";
-            default:
-                return "Unkown Error";
-        }
+        return custom_message;
     }
 
     std::string custom_message;
@@ -162,7 +147,7 @@ static void getFileCrc(std::istream& p_input_stream,
 struct Zipper::Impl
 {
     Zipper& m_outer;
-    zipFile m_zip_file = nullptr;
+    zipFile m_zip_handler = nullptr;
     ourmemory_t m_zip_memory;
     zlib_filefunc_def m_file_func;
     std::error_code& m_error_code;
@@ -191,13 +176,8 @@ struct Zipper::Impl
     // -------------------------------------------------------------------------
     bool initFile(const std::string& p_filename, Zipper::OpenFlags p_flags)
     {
-#if defined(_WIN32)
-        zlib_filefunc64_def ffunc = {0};
-#endif
-
+        // Set the minizip opening mode
         int mode = 0;
-
-        // Set the minizip mode
         if (p_flags == Zipper::OpenFlags::Overwrite)
         {
             mode = APPEND_STATUS_CREATE;
@@ -207,33 +187,41 @@ struct Zipper::Impl
             mode = APPEND_STATUS_ADDINZIP;
         }
 
+        // Open the zip file
 #if defined(_WIN32)
+        zlib_filefunc64_def ffunc = {0};
         fill_win32_filefunc64A(&ffunc);
-        m_zip_file = zipOpen2_64(p_filename.c_str(), mode, nullptr, &ffunc);
+        m_zip_handler = zipOpen2_64(p_filename.c_str(), mode, nullptr, &ffunc);
 #else
-        m_zip_file = zipOpen64(p_filename.c_str(), mode);
+        m_zip_handler = zipOpen64(p_filename.c_str(), mode);
 #endif
 
-        if (m_zip_file != nullptr)
-            return true;
+        // If the zip file is not opened, return an custom error message
+        if (m_zip_handler == nullptr)
+        {
+            std::stringstream str;
+            str << "Failed opening zip file '" << p_filename << "'. Reason: ";
 
-        if (Path::isDir(p_filename))
-        {
+            if (Path::isDir(p_filename))
+            {
+                str << "Is a directory";
+            }
+            else if ((errno == EINVAL) ||
+                     p_filename.substr(p_filename.find_last_of(".") + 1u) !=
+                         "zip")
+            {
+                str << "Not a zip file";
+            }
+            else
+            {
+                str << OS_STRERROR(errno);
+            }
+
             m_error_code =
-                make_error_code(ZipperError::OPENING_ERROR, "Is a directory");
+                make_error_code(ZipperError::OPENING_ERROR, str.str());
+            return false;
         }
-        else if ((errno == EINVAL) ||
-                 p_filename.substr(p_filename.find_last_of(".") + 1u) != "zip")
-        {
-            m_error_code =
-                make_error_code(ZipperError::OPENING_ERROR, "Not a zip file");
-        }
-        else
-        {
-            m_error_code =
-                make_error_code(ZipperError::OPENING_ERROR, OS_STRERROR(errno));
-        }
-        return false;
+        return true;
     }
 
     // -------------------------------------------------------------------------
@@ -246,7 +234,7 @@ struct Zipper::Impl
         std::streampos s = p_stream.tellg();
         if (s < 0)
         {
-            m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
+            m_error_code = make_error_code(ZipperError::OPENING_ERROR,
                                            "Invalid stream provided");
             return false;
         }
@@ -284,9 +272,8 @@ struct Zipper::Impl
             }
             catch (const std::bad_alloc&)
             {
-                m_error_code =
-                    make_error_code(ZipperError::INTERNAL_ERROR,
-                                    "Failed to allocate read buffer");
+                m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
+                                               "Failed to allocate memory");
                 if (m_zip_memory.base)
                 {
                     free(m_zip_memory.base);
@@ -387,12 +374,14 @@ struct Zipper::Impl
     // -------------------------------------------------------------------------
     bool initMemory(int p_mode, zlib_filefunc_def& p_file_func)
     {
-        m_zip_file = zipOpen3("__notused__", p_mode, 0, 0, &p_file_func);
-        if (m_zip_file != nullptr)
-            return true;
-        m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
-                                       "zipOpen3 failed for memory mode");
-        return false;
+        m_zip_handler = zipOpen3("__notused__", p_mode, 0, 0, &p_file_func);
+        if (m_zip_handler == nullptr)
+        {
+            m_error_code = make_error_code(ZipperError::OPENING_ERROR,
+                                           "Failed opening zip memory");
+            return false;
+        }
+        return true;
     }
 
     // -------------------------------------------------------------------------
@@ -402,7 +391,7 @@ struct Zipper::Impl
              const std::string& p_password,
              int p_flags)
     {
-        if (!m_zip_file)
+        if (!m_zip_handler)
         {
             m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
                                            "Zip archive is not opened");
@@ -441,8 +430,8 @@ struct Zipper::Impl
 
         if (p_name_in_zip.empty())
         {
-            m_error_code = make_error_code(ZipperError::NO_ENTRY,
-                                           "Entry name cannot be empty");
+            m_error_code = make_error_code(ZipperError::BAD_ENTRY,
+                                           "Zip entry name cannot be empty");
             return false;
         }
 
@@ -481,7 +470,7 @@ struct Zipper::Impl
                 std::stringstream str;
                 str << "Invalid compression level flag: " << p_flags;
                 m_error_code =
-                    make_error_code(ZipperError::INTERNAL_ERROR, str.str());
+                    make_error_code(ZipperError::BAD_ENTRY, str.str());
                 return false;
             }
         }
@@ -489,7 +478,7 @@ struct Zipper::Impl
         bool zip64 = Path::isLargeFile(p_input_stream);
         if (p_password.empty())
         {
-            err = zipOpenNewFileInZip64(m_zip_file,
+            err = zipOpenNewFileInZip64(m_zip_handler,
                                         canon_name_in_zip.c_str(),
                                         &zi,
                                         nullptr, // extrafield_local
@@ -507,7 +496,7 @@ struct Zipper::Impl
             // This reads the entire stream.
             getFileCrc(p_input_stream, m_buffer, crc_file);
             err =
-                zipOpenNewFileInZip3_64(m_zip_file,
+                zipOpenNewFileInZip3_64(m_zip_handler,
                                         canon_name_in_zip.c_str(),
                                         &zi,
                                         nullptr, // extrafield_local
@@ -531,8 +520,7 @@ struct Zipper::Impl
         if (err != ZIP_OK)
         {
             std::stringstream str;
-            str << "Error opening '" << p_name_in_zip
-                << "' in zip file, error code: " << err;
+            str << "Failed opening file '" << p_name_in_zip;
             m_error_code =
                 make_error_code(ZipperError::INTERNAL_ERROR, str.str());
             return false;
@@ -548,7 +536,7 @@ struct Zipper::Impl
 
             if (size_read > 0)
             {
-                err = zipWriteInFileInZip(m_zip_file,
+                err = zipWriteInFileInZip(m_zip_handler,
                                           m_buffer.data(),
                                           static_cast<unsigned int>(size_read));
                 if (err == ZIP_OK)
@@ -562,8 +550,7 @@ struct Zipper::Impl
                 else
                 {
                     std::stringstream str;
-                    str << "Error writing '" << p_name_in_zip
-                        << "' to zip file, error code: " << err;
+                    str << "Failed writing '" << p_name_in_zip << "'";
                     m_error_code =
                         make_error_code(ZipperError::INTERNAL_ERROR, str.str());
                     // Don't close file in zip here, let the main close handle
@@ -578,18 +565,17 @@ struct Zipper::Impl
             {
                 err = ZIP_ERRNO;
                 m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
-                                               "Input stream read error");
+                                               "Failed reading input stream");
                 break;
             }
         } while (err == ZIP_OK && size_read > 0);
 
         // Close the current file entry in the zip archive
-        int close_err = zipCloseFileInZip(m_zip_file);
+        int close_err = zipCloseFileInZip(m_zip_handler);
         if ((err == ZIP_OK) && (close_err != ZIP_OK))
         {
             std::stringstream str;
-            str << "Error closing '" << p_name_in_zip
-                << "' in zip file, error code: " << close_err;
+            str << "Failed closing file '" << p_name_in_zip << "'";
             m_error_code =
                 make_error_code(ZipperError::INTERNAL_ERROR, str.str());
             return false; // Return false on close error
@@ -636,17 +622,14 @@ struct Zipper::Impl
             catch (const std::bad_alloc&)
             {
                 // Handle potential allocation error during vector resize/assign
-                m_error_code =
-                    make_error_code(ZipperError::INTERNAL_ERROR,
-                                    "Memory allocation failed writing to "
-                                    "vector/stream in close");
+                m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
+                                               "Failed allocating memory");
             }
             catch (const std::exception&)
             {
                 // Handle potential stream write errors
-                m_error_code =
-                    make_error_code(ZipperError::INTERNAL_ERROR,
-                                    "Error writing to output stream in close");
+                m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
+                                               "Failed allocating memory");
             }
         }
     }
@@ -655,10 +638,10 @@ struct Zipper::Impl
     void close()
     {
         // Close the zip file first
-        if (m_zip_file != nullptr)
+        if (m_zip_handler != nullptr)
         {
-            zipClose(m_zip_file, nullptr);
-            m_zip_file = nullptr;
+            zipClose(m_zip_handler, nullptr);
+            m_zip_handler = nullptr;
         }
 
         // Update the output vector or stream with the data in the memory buffer
@@ -848,7 +831,7 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
         {
             m_error_code = make_error_code(
                 ZipperError::INTERNAL_ERROR,
-                std::string("Error listing directory files: ") + e.what());
+                std::string("Failed listing folder files: ") + e.what());
             return false;
         }
 
@@ -875,8 +858,8 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
             {
                 if (Path::isFile(file_path))
                 {
-                    m_error_code = make_error_code(ZipperError::OPENING_ERROR,
-                                                   "Cannot open file: '" +
+                    m_error_code = make_error_code(ZipperError::ADDING_ERROR,
+                                                   "Failed opening file: '" +
                                                        file_path + "'");
                     overall_success = false;
                 }
@@ -932,8 +915,8 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
         {
             m_impl->m_progress.total_bytes =
                 static_cast<uint64_t>(input.tellg());
-            m_error_code = make_error_code(ZipperError::OPENING_ERROR,
-                                           "Cannot open file: '" +
+            m_error_code = make_error_code(ZipperError::ADDING_ERROR,
+                                           "Failed opening file: '" +
                                                p_file_or_folder_path + "'");
             return false;
         }
@@ -1074,8 +1057,9 @@ bool Zipper::reopen()
     else
     {
         // Should not happen if constructor logic is correct
-        m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
-                                       "Invalid state for open");
+        m_error_code =
+            make_error_code(ZipperError::INTERNAL_ERROR,
+                            "Invalid internal state for opening zip file");
         return false;
     }
 
@@ -1100,8 +1084,8 @@ bool Zipper::checkValid()
 
     if (!m_open)
     {
-        m_error_code =
-            make_error_code(ZipperError::NO_ENTRY, "Zip archive is not opened");
+        m_error_code = make_error_code(ZipperError::OPENING_ERROR,
+                                       "Zip archive is not opened");
         return false;
     }
 

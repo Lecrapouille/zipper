@@ -161,13 +161,17 @@ TEST(ZipTests, Issue21)
     {
         Zipper zipper("ziptest.zip", Zipper::OpenFlags::Overwrite);
         EXPECT_EQ(zipper.add("data/somefolder", Zipper::SaveHierarchy), false);
-        std::string error =
-            "Cannot open file: 'data/somefolder'"; // FIXME:
-                                                   // Path::toNativeSeparators
-        EXPECT_STREQ(zipper.error().message().c_str(), error.c_str());
+        ASSERT_THAT(zipper.error().message(),
+                    testing::HasSubstr("Failed opening file"));
         EXPECT_EQ(zipper.add("data/somefolder", Zipper::SaveHierarchy), false);
+        ASSERT_THAT(zipper.error().message(),
+                    testing::HasSubstr("Failed opening file"));
         EXPECT_EQ(zipper.add("data/somefolder"), false);
+        ASSERT_THAT(zipper.error().message(),
+                    testing::HasSubstr("Failed opening file"));
         EXPECT_EQ(zipper.add("data/somefolder"), false);
+        ASSERT_THAT(zipper.error().message(),
+                    testing::HasSubstr("Failed opening file"));
         zipper.close();
 
         // Verify entries were added successfully
@@ -366,25 +370,23 @@ TEST(MemoryZipTests, Issue83)
 
     // Test extraction to non-existent path
     EXPECT_FALSE(unzipper.extract("data/somefolder/test.txt", does_not_exist));
-    error = "Cannot create the folder '" +
-            Path::toNativeSeparators(does_not_exist + "/data/somefolder") +
-            "'. Reason: Permission denied";
-    EXPECT_STREQ(unzipper.error().message().c_str(), error.c_str());
+    ASSERT_THAT(unzipper.error().message(),
+                testing::HasSubstr("Permission denied"));
 
     // Test extractAll to non-existent path
     EXPECT_FALSE(unzipper.extractAll(does_not_exist));
-    EXPECT_STREQ(unzipper.error().message().c_str(), error.c_str());
+    ASSERT_THAT(unzipper.error().message(),
+                testing::HasSubstr("Failed creating folder"));
 
     // Test extraction to system path without permissions
     EXPECT_FALSE(unzipper.extract("data/somefolder/test.txt", no_permissions));
-    error = "Cannot create the folder '" +
-            Path::toNativeSeparators(no_permissions + "/data/somefolder") +
-            "'. Reason: Permission denied";
-    EXPECT_STREQ(unzipper.error().message().c_str(), error.c_str());
+    ASSERT_THAT(unzipper.error().message(),
+                testing::HasSubstr("Permission denied"));
 
     // Test extractAll to system path without permissions
     EXPECT_FALSE(unzipper.extractAll(no_permissions));
-    EXPECT_STREQ(unzipper.error().message().c_str(), error.c_str());
+    ASSERT_THAT(unzipper.error().message(),
+                testing::HasSubstr("Permission denied"));
 
     // Clean up
     ASSERT_TRUE(helper::removeFileOrDir("data"));
@@ -414,14 +416,14 @@ TEST(MemoryZipTests, Issue118)
         ASSERT_FALSE(
             unzipper.extractAll(Unzipper::OverwriteMode::DoNotOverwrite));
         ASSERT_THAT(unzipper.error().message(),
-                    testing::HasSubstr("Failed to go to first file"));
+                    testing::HasSubstr("Failed going to first entry"));
         ASSERT_FALSE(unzipper.extractAll(Unzipper::OverwriteMode::Overwrite));
         ASSERT_THAT(unzipper.error().message(),
-                    testing::HasSubstr("Failed to go to first file"));
+                    testing::HasSubstr("Failed going to first entry"));
         ASSERT_FALSE(
             unzipper.extract("test1.txt", Unzipper::OverwriteMode::Overwrite));
         ASSERT_THAT(unzipper.error().message(),
-                    testing::HasSubstr("Invalid info entry"));
+                    testing::HasSubstr("Unknown entry name"));
         unzipper.close();
     }
 

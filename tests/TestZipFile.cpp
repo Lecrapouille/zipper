@@ -527,7 +527,7 @@ TEST(ZipperFileOps, DummyStuffs)
     // Empty entry zip name: forbidden
     ASSERT_FALSE(helper::zipAddFile(zipper2, "dummy.txt", "", ""));
     ASSERT_THAT(zipper2.error().message(),
-                testing::HasSubstr("Entry name cannot be empty"));
+                testing::HasSubstr("Zip entry name cannot be empty"));
 
     // Add a dummy directory: allowed
     helper::createDir("dummy_dir");
@@ -600,7 +600,7 @@ TEST(ZipperFileOps, AddOperations)
             // Add non-existent file (should fail)
             ASSERT_FALSE(zipper.add("non_existent_file_add.txt"));
             ASSERT_THAT(zipper.error().message(),
-                        testing::HasSubstr("Cannot open file"));
+                        testing::HasSubstr("Failed opening file"));
 
             zipper.close();
         }
@@ -988,7 +988,7 @@ TEST(UnzipperFileOps, ErrorHandling)
         ASSERT_FALSE(unzipper.extract("non_existent_entry.txt",
                                       Unzipper::OverwriteMode::DoNotOverwrite));
         ASSERT_THAT(unzipper.error().message(),
-                    testing::HasSubstr("Invalid info entry"));
+                    testing::HasSubstr("Unknown entry name"));
         unzipper.close();
     }
 
@@ -998,7 +998,7 @@ TEST(UnzipperFileOps, ErrorHandling)
         std::stringstream output;
         ASSERT_FALSE(unzipper.extract("non_existent_entry.txt", output));
         ASSERT_THAT(unzipper.error().message(),
-                    testing::HasSubstr("Invalid info entry"));
+                    testing::HasSubstr("Unknown entry name"));
         unzipper.close();
     }
 
@@ -1008,7 +1008,7 @@ TEST(UnzipperFileOps, ErrorHandling)
         std::vector<unsigned char> output;
         ASSERT_FALSE(unzipper.extract("non_existent_entry.txt", output));
         ASSERT_THAT(unzipper.error().message(),
-                    testing::HasSubstr("Invalid info entry"));
+                    testing::HasSubstr("Unknown entry name"));
         unzipper.close();
     }
 
@@ -1099,7 +1099,7 @@ TEST(UnzipperFileOps, EmptyZipHandling)
         Unzipper unzipper(emptyZipFilename);
         ASSERT_FALSE(unzipper.extractAll(Unzipper::OverwriteMode::Overwrite));
         ASSERT_THAT(unzipper.error().message(),
-                    testing::HasSubstr("Failed to go to first file"));
+                    testing::HasSubstr("Failed going to first entry"));
         unzipper.close();
     }
 

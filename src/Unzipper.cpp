@@ -31,16 +31,18 @@ namespace zipper {
 
 enum class UnzipperError
 {
+    //! No error
     NO_ERROR_UNZIPPER = 0,
     //! Error when accessing to a info entry
-    NO_ENTRY,
-    //! Error when opening a file
+    BAD_ENTRY,
+    //! Error when opening a zip file
     OPENING_ERROR,
-    //! Error inside libraries
+    //! Error inside this library
     INTERNAL_ERROR,
-    //! Zip slip vulnerability
-    //! https://snyk.io/research/zip-slip-vulnerability
+    //! Zip slip vulnerability, forbidden override files
     SECURITY_ERROR,
+    //! Error when extracting a file from a zip file
+    EXTRACT_ERROR,
 };
 
 // *************************************************************************
@@ -53,28 +55,9 @@ struct UnzipperErrorCategory: std::error_category
         return "unzipper";
     }
 
-    virtual std::string message(int p_error) const override
+    virtual std::string message(int /*p_error*/) const override
     {
-        if (!custom_message.empty())
-        {
-            return custom_message;
-        }
-
-        switch (static_cast<UnzipperError>(p_error))
-        {
-            case UnzipperError::NO_ERROR_UNZIPPER:
-                return "There was no error";
-            case UnzipperError::OPENING_ERROR:
-                return "Opening error";
-            case UnzipperError::NO_ENTRY:
-                return "Error, couldn't get the current entry info";
-            case UnzipperError::INTERNAL_ERROR:
-                return "Internal error";
-            case UnzipperError::SECURITY_ERROR:
-                return "ZipSlip security";
-            default:
-                return "Unkown Error";
-        }
+        return custom_message;
     }
 
     std::string custom_message;
@@ -96,7 +79,7 @@ static std::error_code make_error_code(UnzipperError p_error,
 // *************************************************************************
 struct Unzipper::Impl
 {
-    zipFile m_zip_file = nullptr;
+    zipFile m_zip_handler = nullptr;
     ourmemory_t m_zip_memory;
     zlib_filefunc_def m_file_func;
     const std::string m_password;
@@ -111,8 +94,8 @@ private:
     // -------------------------------------------------------------------------
     bool initMemory(zlib_filefunc_def& p_file_func)
     {
-        m_zip_file = unzOpen2("__notused__", &p_file_func);
-        if (m_zip_file == nullptr)
+        m_zip_handler = unzOpen2("__notused__", &p_file_func);
+        if (m_zip_handler == nullptr)
         {
             m_error_code = make_error_code(UnzipperError::OPENING_ERROR,
                                            OS_STRERROR(errno));
@@ -125,13 +108,13 @@ private:
     bool locateEntry(std::string const& p_entry_name)
     {
         if (p_entry_name.empty() ||
-            (unzLocateFile(m_zip_file, p_entry_name.c_str(), nullptr) !=
+            (unzLocateFile(m_zip_handler, p_entry_name.c_str(), nullptr) !=
              UNZ_OK))
         {
             std::stringstream str;
-            str << "Invalid info entry '"
+            str << "Unknown entry name '"
                 << Path::toNativeSeparators(p_entry_name) << "'";
-            m_error_code = make_error_code(UnzipperError::NO_ENTRY, str.str());
+            m_error_code = make_error_code(UnzipperError::BAD_ENTRY, str.str());
             return false;
         }
         return true;
@@ -144,13 +127,13 @@ private:
 
         // First pass to get the file name size
         int err = unzGetCurrentFileInfo64(
-            m_zip_file, &file_info, nullptr, 0, nullptr, 0, nullptr, 0);
+            m_zip_handler, &file_info, nullptr, 0, nullptr, 0, nullptr, 0);
         if (UNZ_OK != err)
         {
             std::stringstream str;
-            str << "Invalid info entry '"
+            str << "Invalid zip entry info '"
                 << Path::toNativeSeparators(p_entry_info.name) << "'";
-            m_error_code = make_error_code(UnzipperError::NO_ENTRY, str.str());
+            m_error_code = make_error_code(UnzipperError::BAD_ENTRY, str.str());
             return false;
         }
 
@@ -158,7 +141,7 @@ private:
         std::vector<char> filename_inzip(file_info.size_filename + 1, 0);
 
         // Second pass to get the file name
-        err = unzGetCurrentFileInfo64(m_zip_file,
+        err = unzGetCurrentFileInfo64(m_zip_handler,
                                       &file_info,
                                       filename_inzip.data(),
                                       file_info.size_filename + 1,
@@ -169,9 +152,9 @@ private:
         if (UNZ_OK != err)
         {
             std::stringstream str;
-            str << "Invalid info entry '"
+            str << "Invalid zip entry info '"
                 << Path::toNativeSeparators(p_entry_info.name) << "'";
-            m_error_code = make_error_code(UnzipperError::NO_ENTRY, str.str());
+            m_error_code = make_error_code(UnzipperError::BAD_ENTRY, str.str());
             return false;
         }
 
@@ -200,7 +183,7 @@ private:
         // First pass to count the number of entries
         uint64_t num_entries = 0;
         unz_global_info64 gi;
-        int err = unzGetGlobalInfo64(m_zip_file, &gi);
+        int err = unzGetGlobalInfo64(m_zip_handler, &gi);
         if (err == UNZ_OK)
         {
             num_entries = gi.number_entry;
@@ -209,7 +192,7 @@ private:
             p_entries.reserve(num_entries);
 
             // Second pass to get the entries
-            err = unzGoToFirstFile(m_zip_file);
+            err = unzGoToFirstFile(m_zip_handler);
             if (UNZ_OK == err)
             {
                 // Traverse the zip file sequentially in a single pass
@@ -221,7 +204,7 @@ private:
                         isEntryValid(entry_info))
                     {
                         p_entries.push_back(entry_info);
-                        err = unzGoToNextFile(m_zip_file);
+                        err = unzGoToNextFile(m_zip_handler);
                     }
                     else
                     {
@@ -243,7 +226,7 @@ private:
         else
         {
             m_error_code = make_error_code(UnzipperError::INTERNAL_ERROR,
-                                           "Failed to get global zip info");
+                                           "Invalid zip entry info");
         }
     }
 
@@ -261,13 +244,15 @@ public:
         // https://github.com/Lecrapouille/zipper/issues/5
         if (Path::hasTrailingSlash(p_entry_info.name))
         {
+            // Folder name may have an extension file, so we do not add checks
+            // if folder name ends with folder slash.
             if (!Path::createDir(p_file_name))
             {
                 std::stringstream str;
-                str << "Error cannot create the folder '"
+                str << "Failed creating folder '"
                     << Path::toNativeSeparators(p_file_name) << "'";
                 m_error_code =
-                    make_error_code(UnzipperError::INTERNAL_ERROR, str.str());
+                    make_error_code(UnzipperError::EXTRACT_ERROR, str.str());
                 err = UNZ_ERRNO;
             }
         }
@@ -284,12 +269,11 @@ public:
             err = extractToFile(p_file_name, p_entry_info, p_overwrite);
             if (UNZ_OK == err)
             {
-                err = unzCloseCurrentFile(m_zip_file);
+                err = unzCloseCurrentFile(m_zip_handler);
                 if (UNZ_OK != err)
                 {
                     std::stringstream str;
-                    str << "Error opening internal file '" << p_entry_info.name
-                        << "' in zip";
+                    str << "Failed closing file '" << p_entry_info.name << "'";
                     m_error_code = make_error_code(
                         UnzipperError::INTERNAL_ERROR, str.str());
                     return false;
@@ -317,13 +301,11 @@ public:
         err = extractToStream(p_stream, p_entry_info);
         if (UNZ_OK == err)
         {
-            err = unzCloseCurrentFile(m_zip_file);
+            err = unzCloseCurrentFile(m_zip_handler);
             if (UNZ_OK != err)
             {
                 std::stringstream str;
-                str << "Error opening internal file '" << p_entry_info.name
-                    << "' in zip";
-
+                str << "Failed closing file '" << p_entry_info.name << "'";
                 m_error_code =
                     make_error_code(UnzipperError::INTERNAL_ERROR, str.str());
             }
@@ -350,13 +332,11 @@ public:
         err = extractToMemory(p_output_vector, p_entry_info);
         if (UNZ_OK == err)
         {
-            err = unzCloseCurrentFile(m_zip_file);
+            err = unzCloseCurrentFile(m_zip_handler);
             if (UNZ_OK != err)
             {
                 std::stringstream str;
-                str << "Error opening internal file '" << p_entry_info.name
-                    << "' in zip";
-
+                str << "Failed closing file '" << p_entry_info.name << "'";
                 m_error_code =
                     make_error_code(UnzipperError::INTERNAL_ERROR, str.str());
             }
@@ -417,7 +397,7 @@ public:
                       ZipEntry& p_entry_info,
                       Unzipper::OverwriteMode p_overwrite)
     {
-        // If zip entry is a directory then create it on disk
+        // If zip file path contains a directory then create it on disk
         std::string folder = Path::dirName(p_filename);
         if (!folder.empty())
         {
@@ -437,7 +417,7 @@ public:
             if (!Path::createDir(folder))
             {
                 std::stringstream str;
-                str << "Cannot create the folder '"
+                str << "Failed creating folder '"
                     << Path::toNativeSeparators(folder)
                     << "'. Reason: " << OS_STRERROR(errno);
 
@@ -470,7 +450,7 @@ public:
                 << "' would be outside your target directory";
 
             m_error_code =
-                make_error_code(UnzipperError::SECURITY_ERROR, str.str());
+                make_error_code(UnzipperError::EXTRACT_ERROR, str.str());
             return UNZ_ERRNO;
         }
 
@@ -494,11 +474,12 @@ public:
             // Possible error is a directory already exists. The errno message
             // is not very explicit.
             std::stringstream str;
-            str << "Failed creating '" << Path::toNativeSeparators(p_filename)
-                << "' file because " << OS_STRERROR(errno);
+            str << "Failed creating file '"
+                << Path::toNativeSeparators(p_filename)
+                << "' because: " << OS_STRERROR(errno);
 
             m_error_code =
-                make_error_code(UnzipperError::INTERNAL_ERROR, str.str());
+                make_error_code(UnzipperError::EXTRACT_ERROR, str.str());
             output_file.close();
             return UNZ_ERRNO;
         }
@@ -519,13 +500,13 @@ public:
         // Open the file with the password. UNZ_OK is returned even if the
         // password is not valid.
         err = unzOpenCurrentFilePassword(
-            m_zip_file, m_password.empty() ? NULL : m_password.c_str());
+            m_zip_handler, m_password.empty() ? NULL : m_password.c_str());
         if (UNZ_OK == err)
         {
             do
             {
                 bytes = unzReadCurrentFile(
-                    m_zip_file,
+                    m_zip_handler,
                     m_char_buffer.data(),
                     static_cast<unsigned int>(m_char_buffer.size()));
                 if (bytes <= 0)
@@ -572,7 +553,7 @@ public:
         int bytes = 0;
 
         err = unzOpenCurrentFilePassword(
-            m_zip_file, m_password.empty() ? NULL : m_password.c_str());
+            m_zip_handler, m_password.empty() ? NULL : m_password.c_str());
         if (UNZ_OK == err)
         {
             // Pre-allocation to avoid costly reallocations
@@ -582,7 +563,7 @@ public:
             do
             {
                 bytes = unzReadCurrentFile(
-                    m_zip_file,
+                    m_zip_handler,
                     m_uchar_buffer.data(),
                     static_cast<unsigned int>(m_uchar_buffer.size()));
                 if (bytes <= 0)
@@ -622,7 +603,7 @@ public:
           m_uchar_buffer(ZIPPER_WRITE_BUFFER_SIZE)
     {
         memset(&m_zip_memory, 0, sizeof(m_zip_memory));
-        m_zip_file = nullptr;
+        m_zip_handler = nullptr;
     }
 
     // -------------------------------------------------------------------------
@@ -634,10 +615,10 @@ public:
     // -------------------------------------------------------------------------
     void close()
     {
-        if (m_zip_file != nullptr)
+        if (m_zip_handler != nullptr)
         {
-            unzClose(m_zip_file);
-            m_zip_file = nullptr;
+            unzClose(m_zip_handler);
+            m_zip_handler = nullptr;
         }
 
         if (m_zip_memory.base != nullptr)
@@ -655,40 +636,47 @@ public:
     // -------------------------------------------------------------------------
     bool initFile(std::string const& p_filename)
     {
+        // Open the zip file
 #if defined(_WIN32)
         zlib_filefunc64_def ffunc;
         fill_win32_filefunc64A(&ffunc);
-        m_zip_file = unzOpen2_64(p_filename.c_str(), &ffunc);
+        m_zip_handler = unzOpen2_64(p_filename.c_str(), &ffunc);
 #else
-        m_zip_file = unzOpen64(p_filename.c_str());
+        m_zip_handler = unzOpen64(p_filename.c_str());
 #endif
 
-        if (m_zip_file != nullptr)
-            return true;
+        // If the zip file is not opened, return an custom error message
+        if (m_zip_handler == nullptr)
+        {
+            std::stringstream str;
+            str << "Failed to open zip file '" << p_filename << "' because: ";
 
-        if (Path::isDir(p_filename))
-        {
-            m_error_code =
-                make_error_code(UnzipperError::OPENING_ERROR, "Is a directory");
-        }
-        else if ((errno == EINVAL) ||
-                 p_filename.substr(p_filename.find_last_of(".") + 1u) != "zip")
-        {
-            m_error_code =
-                make_error_code(UnzipperError::OPENING_ERROR, "Not a zip file");
-        }
-        else
-        {
-            m_error_code = make_error_code(UnzipperError::OPENING_ERROR,
-                                           OS_STRERROR(errno));
-        }
+            if (Path::isDir(p_filename))
+            {
+                str << "Is a directory";
+            }
+            else if ((errno == EINVAL) ||
+                     p_filename.substr(p_filename.find_last_of(".") + 1u) !=
+                         "zip")
+            {
+                str << "Not a zip file";
+            }
+            else
+            {
+                str << OS_STRERROR(errno);
+            }
 
-        return false;
+            m_error_code =
+                make_error_code(UnzipperError::OPENING_ERROR, str.str());
+            return false;
+        }
+        return true;
     }
 
     // -------------------------------------------------------------------------
     bool initWithStream(std::istream& p_stream)
     {
+        // Get the size of the stream
         p_stream.seekg(0, std::ios::end);
         std::streampos s = p_stream.tellg();
         p_stream.seekg(0);
@@ -726,7 +714,9 @@ public:
     // -------------------------------------------------------------------------
     bool initWithVector(const std::vector<unsigned char>& p_buffer)
     {
-        m_zip_memory.grow = 1; // Pas sûr que ce soit utile ici ?
+        // Initialize the zip memory
+        m_zip_memory.grow = 1;
+        m_zip_memory.size = 0;
 
         // Free existing memory if any
         if (m_zip_memory.base != nullptr)
@@ -736,18 +726,13 @@ public:
             m_zip_memory.size = 0;
         }
 
+        // Empty vector case is allowed
         if (!p_buffer.empty())
         {
             m_zip_memory.base =
                 reinterpret_cast<char*>(malloc(p_buffer.size() * sizeof(char)));
             memcpy(m_zip_memory.base, p_buffer.data(), p_buffer.size());
             m_zip_memory.size = static_cast<uint32_t>(p_buffer.size());
-        }
-        else // Handle empty vector case
-        {
-            m_zip_memory.size = 0;
-            // Base should already be nullptr here after freeing or initial
-            // state
         }
 
         fill_memory_filefunc(&m_file_func, &m_zip_memory);
@@ -790,11 +775,11 @@ public:
         }
 
         // Traverse the zip file sequentially in a single pass
-        int err = unzGoToFirstFile(m_zip_file);
+        int err = unzGoToFirstFile(m_zip_handler);
         if (err != UNZ_OK)
         {
             m_error_code = make_error_code(UnzipperError::INTERNAL_ERROR,
-                                           "Failed to go to first file");
+                                           "Failed going to first entry");
             if (m_progress_callback)
             {
                 m_progress.status = Progress::Status::KO;
@@ -839,13 +824,14 @@ public:
                 m_progress_callback(m_progress);
             }
 
-            err = unzGoToNextFile(m_zip_file);
+            err = unzGoToNextFile(m_zip_handler);
         } while (err == UNZ_OK);
 
         if (err != UNZ_END_OF_LIST_OF_FILE && err != UNZ_OK)
         {
-            m_error_code = make_error_code(UnzipperError::INTERNAL_ERROR,
-                                           "Error navigating zip file");
+            m_error_code =
+                make_error_code(UnzipperError::INTERNAL_ERROR,
+                                "Failed navigating inside zip entries");
             if (m_progress_callback)
             {
                 m_progress.status = Progress::Status::KO;
@@ -1062,7 +1048,7 @@ bool Unzipper::checkValid()
 
     if (!m_open)
     {
-        m_error_code = make_error_code(UnzipperError::NO_ENTRY,
+        m_error_code = make_error_code(UnzipperError::OPENING_ERROR,
                                        "Zip archive is not opened");
         return false;
     }
