@@ -77,68 +77,24 @@ static void getFileCrc(std::istream& p_input_stream,
     unsigned long calculate_crc = 0;
     unsigned int size_read = 0;
 
-    // Determine the size of the file to preallocate the buffer
-    p_input_stream.seekg(0, std::ios::end);
-    std::streampos file_size = p_input_stream.tellg();
-    p_input_stream.seekg(0, std::ios::beg);
-
-    // If the file is of reasonable size, use a single buffer to avoid multiple
-    // reads
-    if (file_size > 0 &&
-        file_size <
-            100 * 1024 * 1024) // Limit to 100 Mo to avoid exhausting memory
+    // Chunked reads
+    do
     {
-        try // Add try-catch for resize
+        p_input_stream.read(p_buff.data(), std::streamsize(p_buff.size()));
+        size_read = static_cast<unsigned int>(p_input_stream.gcount());
+        if (size_read > 0)
         {
-            // Resize the buffer to contain the whole file
-            p_buff.resize(static_cast<size_t>(file_size));
-
-            // Read the whole file in one go
-            p_input_stream.read(p_buff.data(), file_size);
-            size_read = static_cast<unsigned int>(p_input_stream.gcount());
-
-            if (size_read > 0)
-                calculate_crc =
-                    crc32(calculate_crc,
-                          reinterpret_cast<const unsigned char*>(p_buff.data()),
-                          size_read);
+            calculate_crc =
+                crc32(calculate_crc,
+                      reinterpret_cast<const unsigned char*>(p_buff.data()),
+                      size_read);
         }
-        catch (const std::bad_alloc&)
-        {
-            // Handle allocation error - cannot calculate CRC if buffer fails
-            // Maybe set a specific error code or just let the caller handle
-            // potential 0 CRC? For now, CRC will remain 0, which might cause
-            // issues if encryption is used. Let's ensure crc is 0 and stream is
-            // reset.
-            calculate_crc = 0; // Ensure CRC is 0 on error
-            // Consider logging or setting an error state if possible
-        }
-        // Reset the stream position regardless of allocation success/failure
-        p_input_stream.clear();
-        p_input_stream.seekg(0, std::ios_base::beg);
-    }
-    else
-    {
-        // For large files, use the original approach with chunked reads
-        do
-        {
-            p_input_stream.read(p_buff.data(), std::streamsize(p_buff.size()));
-            size_read = static_cast<unsigned int>(p_input_stream.gcount());
-
-            if (size_read > 0)
-                calculate_crc =
-                    crc32(calculate_crc,
-                          reinterpret_cast<const unsigned char*>(p_buff.data()),
-                          size_read);
-
-        } while (size_read > 0);
-
-        // Reset the stream position
-        p_input_stream.clear();
-        p_input_stream.seekg(0, std::ios_base::beg);
-    }
-
+    } while (size_read > 0);
     p_result_crc = static_cast<uint32_t>(calculate_crc);
+
+    // Reset the stream position
+    p_input_stream.clear();
+    p_input_stream.seekg(0, std::ios_base::beg);
 }
 
 // *************************************************************************
@@ -257,28 +213,6 @@ struct Zipper::Impl
             {
                 m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
                                                "Failed to allocate memory");
-                return false;
-            }
-
-            // Use the member buffer for reading. 1 Mo per chunk.
-            constexpr size_t CHUNK_SIZE = 1024 * 1024;
-            try
-            {
-                size_t required_buffer_size = std::min(CHUNK_SIZE, size);
-                if (m_buffer.size() < required_buffer_size)
-                {
-                    m_buffer.resize(required_buffer_size);
-                }
-            }
-            catch (const std::bad_alloc&)
-            {
-                m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
-                                               "Failed to allocate memory");
-                if (m_zip_memory.base)
-                {
-                    free(m_zip_memory.base);
-                }
-                memset(&m_zip_memory, 0, sizeof(m_zip_memory));
                 return false;
             }
 
@@ -403,13 +337,6 @@ struct Zipper::Impl
             m_progress.status = Progress::Status::InProgress;
             m_progress.current_file = p_name_in_zip;
             m_progress_callback(m_progress);
-        }
-
-        // Ensure buffer exists and has the standard size.
-        // Should be guaranteed by constructor, but check doesn't hurt.
-        if (m_buffer.size() != ZIPPER_WRITE_BUFFER_SIZE)
-        {
-            m_buffer.resize(ZIPPER_WRITE_BUFFER_SIZE);
         }
 
         int compress_level = 5; // Zipper::ZipFlags::Medium
