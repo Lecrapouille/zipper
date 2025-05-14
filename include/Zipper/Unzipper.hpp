@@ -120,6 +120,40 @@ public:
     ~Unzipper();
 
     // -------------------------------------------------------------------------
+    //! \brief Regular zip decompressor (from zip archive file).
+    //!
+    //! \param[in] p_zip_name Path of the zip file to extract.
+    //! \param[in] p_password Optional password used during compression (empty
+    //! if no password).
+    //! \throw std::runtime_error if an error occurs during initialization.
+    // -------------------------------------------------------------------------
+    bool open(std::string const& p_zip_name,
+              std::string const& p_password = std::string());
+
+    // -------------------------------------------------------------------------
+    //! \brief In-memory zip decompressor (from std::iostream).
+    //!
+    //! \param[in,out] p_buffer Stream containing zipped entries to extract.
+    //! \param[in] p_password Optional password used during compression (empty
+    //! if no password).
+    //! \throw std::runtime_error if an error occurs during initialization.
+    // -------------------------------------------------------------------------
+    bool open(std::istream& p_buffer,
+              std::string const& p_password = std::string());
+
+    // -------------------------------------------------------------------------
+    //! \brief In-memory zip decompressor (from std::vector).
+    //!
+    //! \param[in] p_buffer Vector containing zipped entries to extract.
+    //! The vector content is copied internally.
+    //! \param[in] p_password Optional password used during compression (empty
+    //! if no password).
+    //! \throw std::runtime_error if an error occurs during initialization.
+    // -------------------------------------------------------------------------
+    bool open(const std::vector<unsigned char>& p_buffer,
+              std::string const& p_password = std::string());
+
+    // -------------------------------------------------------------------------
     //! \brief Returns all entries contained in the zip archive.
     //! \return Vector of ZipEntry objects.
     // -------------------------------------------------------------------------

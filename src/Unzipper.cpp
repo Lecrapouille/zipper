@@ -940,6 +940,53 @@ Unzipper::~Unzipper()
 }
 
 // -----------------------------------------------------------------------------
+bool Unzipper::open(std::istream& p_zipped_buffer,
+                    std::string const& p_password)
+{
+    if (m_impl != nullptr)
+    {
+        m_impl->close();
+    }
+    else
+    {
+        m_impl = std::make_unique<Impl>(p_password, m_error_code);
+    }
+    m_open = m_impl->initWithStream(p_zipped_buffer);
+    return m_open;
+}
+
+// -----------------------------------------------------------------------------
+bool Unzipper::open(const std::vector<unsigned char>& p_zipped_buffer,
+                    std::string const& p_password)
+{
+    if (m_impl != nullptr)
+    {
+        m_impl->close();
+    }
+    else
+    {
+        m_impl = std::make_unique<Impl>(p_password, m_error_code);
+    }
+    m_open = m_impl->initWithVector(p_zipped_buffer);
+    return m_open;
+}
+
+// -----------------------------------------------------------------------------
+bool Unzipper::open(std::string const& p_zipname, std::string const& p_password)
+{
+    if (m_impl != nullptr)
+    {
+        m_impl->close();
+    }
+    else
+    {
+        m_impl = std::make_unique<Impl>(p_password, m_error_code);
+    }
+    m_open = m_impl->initFile(p_zipname);
+    return m_open;
+}
+
+// -----------------------------------------------------------------------------
 std::vector<ZipEntry> Unzipper::entries()
 {
     if (!checkValid())
