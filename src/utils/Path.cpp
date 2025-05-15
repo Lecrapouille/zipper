@@ -139,26 +139,20 @@ std::string Path::fileName(const std::string& p_path)
 }
 
 // -----------------------------------------------------------------------------
-bool Path::isRoot(const std::string& p_path)
-{
-    // On Linux, we should recognize Windows root paths also
-    if (p_path.length() == 1 && p_path[0] == UNIX_DIRECTORY_SEPARATOR)
-        return true;
-
-    // Recognize "C:\" or "C:/" as Windows roots even on Linux
-    return (p_path.length() == 3) && (p_path[1] == ':') &&
-           (((p_path[0] >= 'A') && (p_path[0] <= 'Z')) ||
-            ((p_path[0] >= 'a') && (p_path[0] <= 'z'))) &&
-           ((p_path[2] == UNIX_DIRECTORY_SEPARATOR) ||
-            (p_path[2] == WINDOWS_DIRECTORY_SEPARATOR));
-}
-
-// -----------------------------------------------------------------------------
 std::string Path::root(const std::string& p_path)
 {
     // For Unix paths like "/path"
     if ((p_path.length() > 0) && (p_path[0] == UNIX_DIRECTORY_SEPARATOR))
-        return STRING_PREFERRED_DIRECTORY_SEPARATOR;
+    {
+        return std::string(1, p_path[0]);
+    }
+
+    // On Windows, root is "\\\\path"
+    if (p_path.length() >= 2 && p_path[0] == WINDOWS_DIRECTORY_SEPARATOR &&
+        p_path[1] == WINDOWS_DIRECTORY_SEPARATOR)
+    {
+        return p_path.substr(0, 2);
+    }
 
     // For Windows paths like "C:\path" or "C:/path"
     if ((p_path.length() > 2) && (p_path[1] == ':') &&
@@ -171,6 +165,15 @@ std::string Path::root(const std::string& p_path)
     }
 
     return {};
+}
+
+// -----------------------------------------------------------------------------
+bool Path::isRoot(const std::string& p_path)
+{
+    std::string r = Path::root(p_path);
+    if (!r.empty() && p_path == r)
+        return true;
+    return false;
 }
 
 // -----------------------------------------------------------------------------
@@ -739,4 +742,22 @@ size_t Path::getFileSize(const std::string& p_path)
     std::streampos size = file.tellg();
     file.close();
     return (size >= 0) ? static_cast<size_t>(size) : 0;
+}
+
+// -----------------------------------------------------------------------------
+bool Path::isZipSlip(const std::string& p_file_path,
+                     const std::string& p_destination_dir)
+{
+    std::string dest = p_destination_dir.empty() ? "." : p_destination_dir;
+    dest = Path::normalize(dest);
+
+    // Trailing slash is mandatory to avoid matching "john" and "johnny".
+    // The if is important to avoid adding an extra trailing slash if
+    // destination is a root path.
+    if (!hasTrailingSlash(dest))
+        dest += "/";
+
+    // A slip slip attack uses '../' which will change the destination path.
+    std::string file = Path::normalize(dest + p_file_path);
+    return file.find(dest) != 0;
 }

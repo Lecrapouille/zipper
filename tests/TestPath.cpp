@@ -474,7 +474,7 @@ TEST(TestPathConversion, toZipArchiveSeparators)
 }
 
 // -----------------------------------------------------------------------------
-// Tests for root and isRoot functions
+// Tests for root and hasRoot functions
 // -----------------------------------------------------------------------------
 TEST(TestRoot, rootFunctions)
 {
@@ -558,4 +558,43 @@ TEST(TestDir, folderNameWithSeparator)
                  "C:/Program Files\\App/");
     EXPECT_STREQ(Path::folderNameWithSeparator("/usr\\local/bin").c_str(),
                  "/usr\\local/bin/");
+}
+
+// -----------------------------------------------------------------------------
+// Zip Slip attack detection (GoogleTest version)
+// -----------------------------------------------------------------------------
+TEST(TestSlipAttack, ZipSlipDetection)
+{
+    // Safe paths
+    EXPECT_FALSE(Path::isZipSlip("file.txt", "/safe/dir"));
+    EXPECT_FALSE(Path::isZipSlip("subdir/file.txt", "/safe/dir"));
+    EXPECT_FALSE(Path::isZipSlip("./sub/file", "/safe/dir"));
+    EXPECT_FALSE(Path::isZipSlip("file.txt", "/safe/dir/"));
+
+    // Explicit attacks
+    EXPECT_TRUE(Path::isZipSlip("../evil.txt", "/safe/dir"));
+    EXPECT_TRUE(Path::isZipSlip("../evil.txt", "/safe/dir/"));
+    EXPECT_TRUE(Path::isZipSlip("../../../../etc/passwd", "/safe/dir"));
+    EXPECT_TRUE(Path::isZipSlip("../../../../etc/passwd", "/safe/dir/"));
+    EXPECT_FALSE(Path::isZipSlip("/absolute/evil", "/safe/dir"));
+    EXPECT_TRUE(Path::isZipSlip("/absolute/evil", ""));
+    EXPECT_FALSE(Path::isZipSlip("/absolute/evil", "/"));
+    EXPECT_FALSE(Path::isZipSlip("/absolute/not/evil", "/"));
+
+    // Nasty case
+    // https://www.sonarsource.com/blog/openrefine-zip-slip/
+    EXPECT_FALSE(Path::isZipSlip("/home/johnny/.ssh/id_rsa", "/home/john"));
+    EXPECT_FALSE(Path::isZipSlip("/home/johnny/.ssh/id_rsa", "/home/john/"));
+    EXPECT_FALSE(Path::isZipSlip("ny/.ssh/id_rsa", "/home/john"));
+    EXPECT_FALSE(Path::isZipSlip("ny/.ssh/id_rsa", "/home/john/"));
+
+    // Edge cases
+    EXPECT_TRUE(Path::isZipSlip("", "/safe/dir"));
+    EXPECT_FALSE(Path::isZipSlip("subdir/../legal.txt", "/safe/dir"));
+    EXPECT_TRUE(Path::isZipSlip("subdir/../../evil.txt", "/safe/dir"));
+    EXPECT_FALSE(Path::isZipSlip("a/b/c/../../evil.txt", "/safe/dir/"));
+
+    // Windows-style paths
+    EXPECT_TRUE(Path::isZipSlip("..\\evil.txt", "C:\\safe\\dir"));
+    EXPECT_TRUE(Path::isZipSlip("C:\\evil.txt", "C:\\safe\\dir"));
 }

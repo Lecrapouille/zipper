@@ -77,9 +77,9 @@ public:
     //! \return std::string Root of the path
     static std::string root(const std::string& path);
 
-    //! \brief Checks if the path is a pure root.
+    //! \brief Check if the path is a root.
     //! \param[in] path Path to check
-    //! \return bool True if path is a pure root
+    //! \return bool True if path is a root
     static bool isRoot(const std::string& path);
 
     //! \brief Returns the current path.
@@ -197,6 +197,13 @@ public:
     //! \return size_t File size in bytes, or 0 if the file does not exist or is
     //! not a file.
     static size_t getFileSize(const std::string& path);
+
+    //! \brief Checks if a ZIP entry could be used for a zip slip attack
+    //! \param[in] p_entry_path The path inside the ZIP file
+    //! \param[in] p_target_dir The destination directory path
+    //! \return true if the entry could escape the destination directory
+    static bool isZipSlip(const std::string& p_entry_path,
+                          const std::string& p_target_dir);
 };
 
 } // namespace zipper
