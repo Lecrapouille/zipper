@@ -182,15 +182,15 @@ public:
     //! \brief Extract the whole zip archive using alternative destination names
     //! for existing files on the disk.
     //!
-    //! \param[in] p_destination Full path where files will be extracted (if
-    //! empty, extracts to same folder as the zip file).
+    //! \param[in] p_folder_destination Full path where files will be extracted
+    //! (if empty, extracts to same folder as the zip file).
     //! \param[in] p_alternative_names Dictionary of alternative names for
     //! existing files (key: zip entry name, value: desired path name on disk).
     //! \param[in] p_overwrite Overwrite mode for extraction operations.
     //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
     bool
-    extractAll(std::string const& p_destination,
+    extractAll(std::string const& p_folder_destination,
                const std::map<std::string, std::string>& p_alternative_names,
                OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
 
@@ -212,6 +212,52 @@ public:
     //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
     bool extractAll(OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
+
+    // -------------------------------------------------------------------------
+    //! \brief Extract entries matching a glob pattern.
+    //! \note Glob pattern is a the regular expression syntax used by the Unix
+    //! shell.
+    //!
+    //! \param[in] p_glob Glob pattern to select entries.
+    //! \param[in] p_folder_destination Full path where files will be extracted
+    //! (if empty, extracts to same folder as the zip file).
+    //! \param[in] p_alternative_names Dictionary of alternative names for
+    //! existing files (key: zip entry name, value: desired path name on disk).
+    //! \param[in] p_overwrite Overwrite mode for extraction operations.
+    //! \return true on success, false on failure. Call error() for more info.
+    // -------------------------------------------------------------------------
+    bool
+    extractGlob(std::string const& p_glob,
+                std::string const& p_destination,
+                const std::map<std::string, std::string>& p_alternative_names,
+                OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
+
+    // -------------------------------------------------------------------------
+    //! \brief Extract entries matching a glob pattern.
+    //! \note Glob pattern is a the regular expression syntax used by the Unix
+    //! shell.
+    //!
+    //! \param[in] p_glob Glob pattern to select entries.
+    //! \param[in] p_folder_destination Full path where files will be extracted
+    //! (if empty, extracts to same folder as the zip file).
+    //! \param[in] p_overwrite Overwrite mode for extraction operations.
+    //! \return true on success, false on failure. Call error() for more info.
+    // -------------------------------------------------------------------------
+    bool extractGlob(std::string const& p_glob,
+                     std::string const& p_folder_destination,
+                     OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
+
+    // -------------------------------------------------------------------------
+    //! \brief Extract entries matching a glob pattern.
+    //! \note Glob pattern is a the regular expression syntax used by the Unix
+    //! shell.
+    //!
+    //! \param[in] p_glob Glob pattern to select entries.
+    //! \param[in] p_overwrite Overwrite mode for extraction operations.
+    //! \return true on success, false on failure. Call error() for more info.
+    // -------------------------------------------------------------------------
+    bool extractGlob(std::string const& p_glob,
+                     OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
 
     // -------------------------------------------------------------------------
     //! \brief Extract a single entry from the archive.

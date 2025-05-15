@@ -32,15 +32,30 @@ static bool zipAddFile(Zipper& p_zipper,
                        const std::string& p_entry_path,
                        Zipper::ZipFlags p_flags = Zipper::ZipFlags::Better)
 {
+    std::string dir_name = Path::dirName(p_file_path);
+    if (!dir_name.empty())
+    {
+        if (!Path::createDir(dir_name))
+        {
+            std::cerr << "Failed to create directory: " << dir_name
+                      << std::endl;
+            return false;
+        }
+    }
+
     if (!helper::createFile(p_file_path, p_content))
     {
+        std::cerr << "Failed to create file: " << p_file_path << std::endl;
         return false;
     }
 
     std::ifstream ifs(p_file_path);
     bool res = p_zipper.add(ifs, p_entry_path, p_flags);
+    if (!res)
+    {
+        std::cerr << "Failed to add file: " << p_file_path << std::endl;
+    }
     ifs.close();
-
     Path::remove(p_file_path);
 
     return res;
@@ -1327,4 +1342,199 @@ TEST(ZipperFileOps, CompressionFlagsWithHierarchy)
     ASSERT_TRUE(helper::removeFileOrDir(zipFilename));
     ASSERT_TRUE(helper::removeFileOrDir(folder1));
     ASSERT_TRUE(helper::removeFileOrDir(folder2));
+}
+
+//=============================================================================
+// Test Suite for extractGlob functionality
+//=============================================================================
+TEST(UnzipperFileOps, ExtractGlob)
+{
+    const std::string zipFilename = "ziptest_glob.zip";
+    const std::string file1 = "test1.txt";
+    const std::string file2 = "test2.txt";
+    const std::string file3 = "doc/test3.txt";
+    const std::string file4 = "doc/test4.txt";
+    const std::string content1 = "content 1";
+    const std::string content2 = "content 2";
+    const std::string content3 = "content 3";
+    const std::string content4 = "content 4";
+
+    // Create a zip file with multiple entries
+    {
+        Zipper zipper(zipFilename);
+        ASSERT_TRUE(helper::zipAddFile(zipper, file1, content1, file1));
+        ASSERT_TRUE(helper::zipAddFile(zipper, file2, content2, file2));
+        ASSERT_TRUE(helper::zipAddFile(zipper, file3, content3, file3));
+        ASSERT_TRUE(helper::zipAddFile(zipper, file4, content4, file4));
+        zipper.close();
+    }
+
+    // Test glob pattern matching all files
+    {
+        Unzipper unzipper(zipFilename);
+        ASSERT_TRUE(
+            unzipper.extractGlob("*", Unzipper::OverwriteMode::Overwrite));
+        ASSERT_TRUE(helper::checkFileExists(file1, content1));
+        ASSERT_TRUE(helper::checkFileExists(file2, content2));
+        ASSERT_TRUE(helper::checkFileExists(file3, content3));
+        ASSERT_TRUE(helper::checkFileExists(file4, content4));
+        unzipper.close();
+
+        // Clean up
+        ASSERT_TRUE(helper::removeFileOrDir(file1));
+        ASSERT_TRUE(helper::removeFileOrDir(file2));
+        ASSERT_TRUE(helper::removeFileOrDir(file3));
+        ASSERT_TRUE(helper::removeFileOrDir(file4));
+        ASSERT_TRUE(helper::removeFileOrDir("doc"));
+    }
+
+    // Test glob pattern matching specific files
+    {
+        Unzipper unzipper(zipFilename);
+        ASSERT_TRUE(unzipper.extractGlob("test*.txt",
+                                         Unzipper::OverwriteMode::Overwrite));
+        ASSERT_TRUE(helper::checkFileExists(file1, content1));
+        ASSERT_TRUE(helper::checkFileExists(file2, content2));
+        ASSERT_FALSE(helper::checkFileExists(file3));
+        ASSERT_FALSE(helper::checkFileExists(file4));
+        unzipper.close();
+
+        // Clean up
+        ASSERT_TRUE(helper::removeFileOrDir(file1));
+        ASSERT_TRUE(helper::removeFileOrDir(file2));
+        ASSERT_TRUE(helper::removeFileOrDir(file3));
+        ASSERT_TRUE(helper::removeFileOrDir(file4));
+        ASSERT_TRUE(helper::removeFileOrDir("doc"));
+    }
+
+    // Test glob pattern matching files in specific directory
+    {
+        Unzipper unzipper(zipFilename);
+        ASSERT_TRUE(
+            unzipper.extractGlob("doc/*", Unzipper::OverwriteMode::Overwrite));
+        ASSERT_FALSE(helper::checkFileExists(file1));
+        ASSERT_FALSE(helper::checkFileExists(file2));
+        ASSERT_TRUE(helper::checkFileExists(file3, content3));
+        ASSERT_TRUE(helper::checkFileExists(file4, content4));
+        unzipper.close();
+
+        // Clean up
+        ASSERT_TRUE(helper::removeFileOrDir(file1));
+        ASSERT_TRUE(helper::removeFileOrDir(file2));
+        ASSERT_TRUE(helper::removeFileOrDir(file3));
+        ASSERT_TRUE(helper::removeFileOrDir(file4));
+        ASSERT_TRUE(helper::removeFileOrDir("doc"));
+    }
+
+    // Test glob pattern with alternative names
+    {
+        ASSERT_TRUE(helper::removeFileOrDir("extract_dir"));
+        Unzipper unzipper(zipFilename);
+        std::map<std::string, std::string> alternative_names;
+        alternative_names[file1] = "renamed1.txt";
+        alternative_names[file2] = "renamed2.txt";
+        ASSERT_TRUE(unzipper.extractGlob("test*.txt",
+                                         "extract_dir",
+                                         alternative_names,
+                                         Unzipper::OverwriteMode::Overwrite));
+        ASSERT_TRUE(
+            helper::checkFileExists("extract_dir/renamed1.txt", content1));
+        ASSERT_TRUE(
+            helper::checkFileExists("extract_dir/renamed2.txt", content2));
+        unzipper.close();
+
+        // Clean up
+        ASSERT_TRUE(helper::removeFileOrDir("extract_dir"));
+    }
+
+    // Clean up
+    ASSERT_TRUE(helper::removeFileOrDir(zipFilename));
+}
+
+//=============================================================================
+// Test Suite for extractAll with alternative names
+//=============================================================================
+TEST(UnzipperFileOps, ExtractAllWithAlternativeNames)
+{
+    const std::string zipFilename = "ziptest_alternative.zip";
+    const std::string file1 = "test1.txt";
+    const std::string file2 = "test2.txt";
+    const std::string file3 = "doc/test3.txt";
+    const std::string content1 = "content 1";
+    const std::string content2 = "content 2";
+    const std::string content3 = "content 3";
+
+    // Create a zip file with multiple entries
+    {
+        Zipper zipper(zipFilename);
+        ASSERT_TRUE(helper::zipAddFile(zipper, file1, content1, file1));
+        ASSERT_TRUE(helper::zipAddFile(zipper, file2, content2, file2));
+        ASSERT_TRUE(helper::zipAddFile(zipper, file3, content3, file3));
+        zipper.close();
+    }
+
+    // Test extractAll with alternative names to current directory
+    {
+        Unzipper unzipper(zipFilename);
+        std::map<std::string, std::string> alternative_names;
+        alternative_names[file1] = "renamed1.txt";
+        alternative_names[file2] = "renamed2.txt";
+        alternative_names[file3] = "renamed3.txt";
+        ASSERT_TRUE(unzipper.extractAll(
+            "", alternative_names, Unzipper::OverwriteMode::Overwrite));
+        ASSERT_TRUE(helper::checkFileExists("renamed1.txt", content1));
+        ASSERT_TRUE(helper::checkFileExists("renamed2.txt", content2));
+        ASSERT_TRUE(helper::checkFileExists("renamed3.txt", content3));
+        unzipper.close();
+
+        // Clean up
+        helper::removeFileOrDir("renamed1.txt");
+        helper::removeFileOrDir("renamed2.txt");
+        helper::removeFileOrDir("renamed3.txt");
+    }
+
+    // Test extractAll with alternative names to specific directory
+    {
+        Unzipper unzipper(zipFilename);
+        std::map<std::string, std::string> alternative_names;
+        alternative_names[file1] = "renamed1.txt";
+        alternative_names[file2] = "renamed2.txt";
+        alternative_names[file3] = "renamed3.txt";
+        ASSERT_TRUE(unzipper.extractAll("extract_dir",
+                                        alternative_names,
+                                        Unzipper::OverwriteMode::Overwrite));
+        ASSERT_TRUE(
+            helper::checkFileExists("extract_dir/renamed1.txt", content1));
+        ASSERT_TRUE(
+            helper::checkFileExists("extract_dir/renamed2.txt", content2));
+        ASSERT_TRUE(
+            helper::checkFileExists("extract_dir/renamed3.txt", content3));
+        unzipper.close();
+
+        // Clean up
+        helper::removeFileOrDir("extract_dir");
+    }
+
+    // Test extractAll with partial alternative names
+    {
+        Unzipper unzipper(zipFilename);
+        std::map<std::string, std::string> alternative_names;
+        alternative_names[file1] = "renamed1.txt";
+        // file2 and file3 will keep their original names
+        ASSERT_TRUE(unzipper.extractAll("extract_dir",
+                                        alternative_names,
+                                        Unzipper::OverwriteMode::Overwrite));
+        ASSERT_TRUE(
+            helper::checkFileExists("extract_dir/renamed1.txt", content1));
+        ASSERT_TRUE(helper::checkFileExists("extract_dir/test2.txt", content2));
+        ASSERT_TRUE(
+            helper::checkFileExists("extract_dir/doc/test3.txt", content3));
+        unzipper.close();
+
+        // Clean up
+        helper::removeFileOrDir("extract_dir");
+    }
+
+    // Clean up
+    helper::removeFileOrDir(zipFilename);
 }

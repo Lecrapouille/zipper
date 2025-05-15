@@ -8,6 +8,7 @@
 #include "Zipper/Unzipper.hpp"
 #include "utils/OS.hpp"
 #include "utils/Path.hpp"
+#include "utils/glob.hpp"
 
 #include "external/minizip/ioapi_mem.h"
 #include "external/minizip/minishared.h"
@@ -742,12 +743,13 @@ public:
 
     // -------------------------------------------------------------------------
     bool
-    extractAll(std::string const& p_destination,
+    extractAll(std::string const& p_glob_pattern,
+               std::string const& p_destination_folder,
                const std::map<std::string, std::string>& p_alternative_names,
                Unzipper::OverwriteMode p_overwrite)
     {
         m_error_code.clear();
-        bool res = true;
+        size_t failures = 0;
 
         if (m_progress_callback)
         {
@@ -767,64 +769,79 @@ public:
             m_progress_callback(m_progress);
         }
 
+        // Preparation of the destination prefix once.
+        // Shall be a folder name, add a separator if not already present.
+        std::string destination;
+        if (!p_destination_folder.empty())
+        {
+            destination = Path::folderNameWithSeparator(p_destination_folder);
+        }
+
         // Traverse the zip file sequentially in a single pass
         int err = unzGoToFirstFile(m_zip_handler);
         if (err != UNZ_OK)
         {
             m_error_code = make_error_code(UnzipperError::INTERNAL_ERROR,
                                            "Failed going to first entry");
-            if (m_progress_callback)
-            {
-                m_progress.status = Progress::Status::KO;
-                m_progress_callback(m_progress);
-            }
-            return false;
         }
-
-        // Preparation of the destination prefix once
-        std::string destPrefix =
-            p_destination.empty()
-                ? ""
-                : Path::folderNameWithSeparator(p_destination);
-
-        do
+        while (err == UNZ_OK)
         {
             ZipEntry entry;
-            if ((!currentEntryInfo(entry)) || (!isEntryValid(entry)))
+            if (currentEntryInfo(entry) && isEntryValid(entry))
             {
-                res = false;
-                continue;
+                // If the entry name matches the glob pattern, extract it else
+                // skip it.
+                if ((p_glob_pattern.empty()) ||
+                    (std::regex_match(entry.name, globToRegex(p_glob_pattern))))
+                {
+                    // If an alternative name is provided for this entry, use
+                    // it, otherwise use the entry name.
+                    std::string file_path = destination;
+                    auto const& alt = p_alternative_names.find(entry.name);
+                    if (alt != p_alternative_names.end())
+                        file_path += alt->second;
+                    else
+                        file_path += entry.name;
+
+                    // Extract the current entry to the destination file.
+                    if (!extractCurrentEntryToFile(
+                            entry, file_path, p_overwrite))
+                    {
+                        failures++;
+                        if (m_progress_callback)
+                        {
+                            m_progress.status = Progress::Status::KO;
+                            m_progress_callback(m_progress);
+                        }
+                    }
+                }
             }
-
-            std::string alternative_name = destPrefix;
-
-            auto const& alt = p_alternative_names.find(entry.name);
-            if (alt != p_alternative_names.end())
-                alternative_name += alt->second;
             else
-                alternative_name += entry.name;
-
-            if (!extractCurrentEntryToFile(
-                    entry, alternative_name, p_overwrite))
             {
-                res = false;
+                failures++;
+                if (m_progress_callback)
+                {
+                    m_progress.status = Progress::Status::KO;
+                    m_progress_callback(m_progress);
+                }
             }
 
-            // Update progress after each file
-            else if (m_progress_callback)
-            {
-                m_progress.files_extracted++;
-                m_progress_callback(m_progress);
-            }
-
+            // Go to the next entry.
             err = unzGoToNextFile(m_zip_handler);
-        } while (err == UNZ_OK);
+        }
 
-        if (err != UNZ_END_OF_LIST_OF_FILE && err != UNZ_OK)
+        // If the end of the list of files has not been reached
+        if (((err != UNZ_END_OF_LIST_OF_FILE) && (err != UNZ_OK)) ||
+            (failures > 0u))
         {
+            /* TODO
+            std::stringstream msg;
+            msg << "Failed extracting "
+                << (failures == 0u ? "all" : std::to_string(failures))
+                << (failures == 1u ? " file" : " files") << std::endl;
             m_error_code =
-                make_error_code(UnzipperError::INTERNAL_ERROR,
-                                "Failed navigating inside zip entries");
+                make_error_code(UnzipperError::EXTRACT_ERROR, msg.str());
+                */
             if (m_progress_callback)
             {
                 m_progress.status = Progress::Status::KO;
@@ -836,12 +853,10 @@ public:
         // Final progress update
         if (m_progress_callback)
         {
-            m_progress.status =
-                res ? Progress::Status::OK : Progress::Status::KO;
+            m_progress.status = Progress::Status::OK;
             m_progress_callback(m_progress);
         }
-
-        return res;
+        return true;
     }
 
     // -------------------------------------------------------------------------
@@ -1038,19 +1053,10 @@ bool Unzipper::extractAll(
     if (!checkValid())
         return false;
 
-    return m_impl->extractAll(Path::normalize(p_folder_destination),
+    return m_impl->extractAll(std::string(),
+                              Path::normalize(p_folder_destination),
                               p_alternative_names,
                               p_overwrite);
-}
-
-// -----------------------------------------------------------------------------
-bool Unzipper::extractAll(Unzipper::OverwriteMode p_overwrite)
-{
-    if (!checkValid())
-        return false;
-
-    return m_impl->extractAll(
-        std::string(), std::map<std::string, std::string>(), p_overwrite);
 }
 
 // -----------------------------------------------------------------------------
@@ -1060,7 +1066,62 @@ bool Unzipper::extractAll(std::string const& p_destination,
     if (!checkValid())
         return false;
 
-    return m_impl->extractAll(Path::normalize(p_destination),
+    return m_impl->extractAll(std::string(),
+                              Path::normalize(p_destination),
+                              std::map<std::string, std::string>(),
+                              p_overwrite);
+}
+
+// -----------------------------------------------------------------------------
+bool Unzipper::extractAll(Unzipper::OverwriteMode p_overwrite)
+{
+    if (!checkValid())
+        return false;
+
+    return m_impl->extractAll(std::string(),
+                              std::string(),
+                              std::map<std::string, std::string>(),
+                              p_overwrite);
+}
+
+// -----------------------------------------------------------------------------
+bool Unzipper::extractGlob(
+    std::string const& p_glob,
+    std::string const& p_folder_destination,
+    const std::map<std::string, std::string>& p_alternative_names,
+    OverwriteMode p_overwrite)
+{
+    if (!checkValid())
+        return false;
+
+    return m_impl->extractAll(p_glob,
+                              Path::normalize(p_folder_destination),
+                              p_alternative_names,
+                              p_overwrite);
+}
+
+// -----------------------------------------------------------------------------
+bool Unzipper::extractGlob(std::string const& p_glob,
+                           std::string const& p_folder_destination,
+                           OverwriteMode p_overwrite)
+{
+    if (!checkValid())
+        return false;
+
+    return m_impl->extractAll(p_glob,
+                              Path::normalize(p_folder_destination),
+                              std::map<std::string, std::string>(),
+                              p_overwrite);
+}
+
+// -----------------------------------------------------------------------------
+bool Unzipper::extractGlob(std::string const& p_glob, OverwriteMode p_overwrite)
+{
+    if (!checkValid())
+        return false;
+
+    return m_impl->extractAll(p_glob,
+                              std::string(),
                               std::map<std::string, std::string>(),
                               p_overwrite);
 }
