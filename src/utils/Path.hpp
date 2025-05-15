@@ -179,52 +179,10 @@ public:
 
     static bool remove(const std::string& path);
 
-#if 0
-    //! \brief Remove files or directories matching the pattern in directory dir.
-    //! \param[in] pattern
-    //! \param[in] dir
-    //! \return bool success
-    static bool removeFiles(const std::string& pattern,
-                            const std::string& dir);
-
-    //! \brief Compiles the pattern to a patternList. Valid wildcards in the pattern are:
-    //! '*' matches any number of characters and '?' matches exactly one character.
-    //! \param[in] pattern
-    //! \return std::vector< std::string > patternList
-
-    static std::vector<std::string> compilePattern(const std::string& pattern);
-
-    //! \brief Compare the name against the pattern list and returns whether the
-    //! name matches. The patternList can be created from a pattern by the
-    //! compilePattern method.
-    //! \param[in] name
-    //! \param[in] patternList
-    //! \return bool match
-    static bool match(const std::string& name,
-                      const std::vector<std::string>& patternList);
-#endif
-
     //! \brief Checks whether the given path is relative
     //! \param[in] path: file path.
     //! \return bool isRelative
-
     static bool isRelativePath(const std::string& path);
-
-#if 0
-    //! \brief Makes the absolute path relative to the path given in relativeTo
-    //! \param[in] absolutePath
-    //! \param[in] relativeTo
-    //! \return bool success
-    static bool makePathRelative(std::string& absolutePath,
-                                 const std::string& relativeTo);
-
-    //! \brief Makes the relative path absolute to the path given in absoluteTo
-    //! \param[in] relativePath
-    //! \param[in] absoluteTo
-    //! \return bool success
-    static bool makePathAbsolute(std::string& relativePath,
-                                 const std::string& absoluteTo);
-#endif
 
     //! \brief This substitute ../ ie foo/../bar will return bar
     static std::string normalize(const std::string& path);
@@ -239,24 +197,6 @@ public:
     //! \return size_t File size in bytes, or 0 if the file does not exist or is
     //! not a file.
     static size_t getFileSize(const std::string& path);
-
-private:
-
-#if 0
-    //! \brief This private methods checks whether the active section matches the
-    //! specified patter. The section is automatically advanced to allow
-    //! repeated calls. On the first call 'at' must be 0. The parameters
-    //! 'at' and 'after' must not be changed outside this method.
-    //! \param[in] name
-    //! \param[in] pattern
-    //! \param[out] at
-    //! \param[out] after
-    //! \return bool match
-    static bool matchInternal(const std::string& name,
-                              const std::string pattern,
-                              std::string::size_type& at,
-                              std::string::size_type& after);
-#endif
 };
 
 } // namespace zipper
