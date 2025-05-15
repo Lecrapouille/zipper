@@ -2,7 +2,7 @@
 
 [Zipper](https://github.com/lecrapouille/zipper) is a C++11 wrapper around the minizip compression library. Its goal is to bring the power and simplicity of minizip to a more object-oriented and C++ user-friendly library.
 
-This project is a continuation of the original [project](https://github.com/sebastiandev/zipper/tree). The original project was created out of the need for a compression library that would be reliable, simple, and flexible. By flexibility, we mean supporting various types of inputs and outputs, specifically the ability to compress into memory instead of being restricted to file compression only, and using data from memory instead of just files.
+This project is a continuation of the original [project](https://github.com/sebastiandev/zipper). The original project was created out of the need for a compression library that would be reliable, simple, and flexible. By flexibility, we mean supporting various types of inputs and outputs, specifically the ability to compress into memory instead of being restricted to file compression only, and using data from memory instead of just files.
 
 This current fork repository was created because the original project was no longer maintained by its authors, and I, Lecrapouille, encountered issues due to missing administrative rights (needed for CI, branch management, API breaking changes, etc.).
 
