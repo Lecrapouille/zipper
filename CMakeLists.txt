@@ -50,6 +50,7 @@ target_include_directories(minizip PUBLIC
 set(ZIPPER_SOURCES
     src/utils/Path.cpp
     src/utils/Timestamp.cpp
+    src/utils/glob.cpp
     src/Zipper.cpp
     src/Unzipper.cpp
 )
