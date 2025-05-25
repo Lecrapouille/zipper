@@ -305,18 +305,6 @@ public:
             }
 
             err = extractToFile(p_file_name, p_entry_info, p_overwrite);
-            if (UNZ_OK == err)
-            {
-                err = unzCloseCurrentFile(m_zip_handler);
-                if (UNZ_OK != err)
-                {
-                    std::stringstream str;
-                    str << "Failed closing file '" << p_entry_info.name << "'";
-                    m_error_code = make_error_code(
-                        UnzipperError::INTERNAL_ERROR, str.str());
-                    return false;
-                }
-            }
         }
 
         return UNZ_OK == err;
@@ -337,17 +325,6 @@ public:
         }
 
         err = extractToStream(p_stream, p_entry_info);
-        if (UNZ_OK == err)
-        {
-            err = unzCloseCurrentFile(m_zip_handler);
-            if (UNZ_OK != err)
-            {
-                std::stringstream str;
-                str << "Failed closing file '" << p_entry_info.name << "'";
-                m_error_code =
-                    make_error_code(UnzipperError::INTERNAL_ERROR, str.str());
-            }
-        }
 
         return UNZ_OK == err;
     }
@@ -368,17 +345,6 @@ public:
         }
 
         err = extractToMemory(p_output_vector, p_entry_info);
-        if (UNZ_OK == err)
-        {
-            err = unzCloseCurrentFile(m_zip_handler);
-            if (UNZ_OK != err)
-            {
-                std::stringstream str;
-                str << "Failed closing file '" << p_entry_info.name << "'";
-                m_error_code =
-                    make_error_code(UnzipperError::INTERNAL_ERROR, str.str());
-            }
-        }
 
         return UNZ_OK == err;
     }
@@ -497,14 +463,17 @@ public:
         if (output_file.good())
         {
             int err = extractToStream(output_file, p_entry_info);
-
             output_file.close();
 
-            // Set the time of the file that has been unzipped
-            tm_zip timeaux;
-            memcpy(&timeaux, &p_entry_info.unix_date, sizeof(timeaux));
+            if (err == UNZ_OK)
+            {
+                // Set the time of the file that has been unzipped
+                tm_zip timeaux;
+                memcpy(&timeaux, &p_entry_info.unix_date, sizeof(timeaux));
+                changeFileDate(
+                    p_filename.c_str(), p_entry_info.dos_date, timeaux);
+            }
 
-            changeFileDate(p_filename.c_str(), p_entry_info.dos_date, timeaux);
             return err;
         }
         else
@@ -574,6 +543,15 @@ public:
             } while (bytes > 0);
 
             p_stream.flush();
+
+            err = unzCloseCurrentFile(m_zip_handler);
+            if (UNZ_OK != err)
+            {
+                std::stringstream str;
+                str << "Failed closing file '" << p_entry_info.name << "'";
+                m_error_code =
+                    make_error_code(UnzipperError::INTERNAL_ERROR, str.str());
+            }
         }
         else
         {
@@ -619,6 +597,15 @@ public:
                                  m_uchar_buffer.data(),
                                  m_uchar_buffer.data() + bytes);
             } while (bytes > 0);
+
+            err = unzCloseCurrentFile(m_zip_handler);
+            if (UNZ_OK != err)
+            {
+                std::stringstream str;
+                str << "Failed closing file '" << p_info.name << "'";
+                m_error_code =
+                    make_error_code(UnzipperError::INTERNAL_ERROR, str.str());
+            }
         }
         else
         {
@@ -849,6 +836,11 @@ public:
                             m_progress.status = Progress::Status::KO;
                             m_progress_callback(m_progress);
                         }
+                    }
+                    else if (m_progress_callback)
+                    {
+                        m_progress.files_extracted++;
+                        m_progress_callback(m_progress);
                     }
                 }
             }
