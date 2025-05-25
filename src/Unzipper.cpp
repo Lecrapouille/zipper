@@ -311,26 +311,6 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    bool
-    extractCurrentEntryToMemory(ZipEntry& p_entry_info,
-                                std::vector<unsigned char>& p_output_vector)
-    {
-        int err = UNZ_OK;
-
-        // Update progress before starting extraction
-        if (m_progress_callback)
-        {
-            m_progress.current_file = p_entry_info.name;
-            m_progress.status = Progress::Status::InProgress;
-            m_progress_callback(m_progress);
-        }
-
-        err = extractToMemory(p_output_vector, p_entry_info);
-
-        return UNZ_OK == err;
-    }
-
-    // -------------------------------------------------------------------------
     void changeFileDate(std::string const& p_filename,
                         uLong p_dos_date,
                         const tm_zip& p_tmu_date)
@@ -911,14 +891,26 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    bool extractEntryToMemory(std::string const& p_name,
-                              std::vector<unsigned char>& p_vec)
+    bool extractEntryToMemory(std::string const& p_entry_name,
+                              std::vector<unsigned char>& p_output_vector)
     {
         ZipEntry entry;
-
         m_error_code.clear();
-        return locateEntry(p_name) && currentEntryInfo(entry) &&
-               extractCurrentEntryToMemory(entry, p_vec);
+
+        // Check if the entry exists and get its information
+        if (!(locateEntry(p_entry_name) && currentEntryInfo(entry)))
+        {
+            if (m_progress_callback)
+            {
+                m_progress.current_file = p_entry_name;
+                m_progress.status = Progress::Status::InProgress;
+                m_progress_callback(m_progress);
+            }
+
+            return false;
+        }
+
+        return extractToMemory(p_output_vector, entry) == UNZ_OK;
     }
 };
 
