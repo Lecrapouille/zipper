@@ -45,7 +45,7 @@ static void displayProgress(const zipper::Unzipper::Progress& progress)
     // Display the current file and the number of files
     std::cout << "(" << progress.files_extracted << "/" << progress.total_files
               << ") ";
-    std::cout << progress.current_file;
+    std::cout << "'" << progress.current_file << "'";
 
     // Clean the line
     std::cout << std::string(20, ' ') << "\r" << std::flush;

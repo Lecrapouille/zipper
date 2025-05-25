@@ -61,6 +61,16 @@ public:
             InProgress //!< Extraction in progress
         };
 
+        void reset()
+        {
+            status = Status::InProgress;
+            current_file.clear();
+            bytes_read = 0;
+            total_bytes = 0;
+            files_extracted = 0;
+            total_files = 1;
+        }
+
         Status status = Status::InProgress; //!< Current status
         std::string current_file;   //!< Name of the file being extracted
         uint64_t bytes_read = 0;    //!< Number of bytes read so far

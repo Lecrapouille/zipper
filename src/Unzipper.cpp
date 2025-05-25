@@ -205,6 +205,7 @@ private:
                                 file_info.tmu_date.tm_min,
                                 file_info.tmu_date.tm_sec,
                                 file_info.dos_date);
+
         return true;
     }
 
@@ -271,46 +272,6 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    bool extractCurrentEntryToFile(ZipEntry& p_entry_info,
-                                   std::string const& p_file_name,
-                                   Unzipper::OverwriteMode p_overwrite)
-    {
-        int err = UNZ_OK;
-
-        // if (!entryinfo.uncompressed_size) was not a good method to
-        // distinguish dummy file from folder. See
-        // https://github.com/Lecrapouille/zipper/issues/5
-        if (Path::hasTrailingSlash(p_entry_info.name))
-        {
-            // Folder name may have an extension file, so we do not add checks
-            // if folder name ends with folder slash.
-            if (!Path::createDir(p_file_name))
-            {
-                std::stringstream str;
-                str << "Failed creating folder '"
-                    << Path::toNativeSeparators(p_file_name) << "'";
-                m_error_code =
-                    make_error_code(UnzipperError::EXTRACT_ERROR, str.str());
-                err = UNZ_ERRNO;
-            }
-        }
-        else
-        {
-            // Update progress before starting extraction
-            if (m_progress_callback)
-            {
-                m_progress.current_file = p_entry_info.name;
-                m_progress.status = Progress::Status::InProgress;
-                m_progress_callback(m_progress);
-            }
-
-            err = extractToFile(p_file_name, p_entry_info, p_overwrite);
-        }
-
-        return UNZ_OK == err;
-    }
-
-    // -------------------------------------------------------------------------
     void changeFileDate(std::string const& p_filename,
                         uLong p_dos_date,
                         const tm_zip& p_tmu_date)
@@ -362,6 +323,25 @@ public:
                       ZipEntry& p_entry_info,
                       Unzipper::OverwriteMode p_overwrite)
     {
+        // if (!entryinfo.uncompressed_size) is not a good method to
+        // distinguish dummy file from folder. See
+        // https://github.com/Lecrapouille/zipper/issues/5
+        if (Path::hasTrailingSlash(p_entry_info.name))
+        {
+            // Folder name may have an extension file, so we do not add checks
+            // if folder name ends with folder slash.
+            if (!Path::createDir(p_filename))
+            {
+                std::stringstream str;
+                str << "Failed creating folder '"
+                    << Path::toNativeSeparators(p_filename) << "'";
+                m_error_code =
+                    make_error_code(UnzipperError::EXTRACT_ERROR, str.str());
+                return UNZ_ERRNO;
+            }
+            return UNZ_OK;
+        }
+
         // If zip file path contains a directory then create it on disk
         std::string folder = Path::dirName(p_filename);
         if (!folder.empty())
@@ -458,14 +438,6 @@ public:
     {
         int err;
         int bytes = 0;
-
-        // Update progress
-        if (m_progress_callback)
-        {
-            m_progress.current_file = p_entry_info.name;
-            m_progress.status = Progress::Status::InProgress;
-            m_progress_callback(m_progress);
-        }
 
         // Open the file with the password. UNZ_OK is returned even if the
         // password is not valid.
@@ -739,19 +711,15 @@ public:
 
         if (m_progress_callback)
         {
+            m_progress.reset();
+
             // Get total number of files and bytes
-            m_progress.total_bytes = 0;
-            std::vector<ZipEntry> entries = this->entries();
-            for (const auto& entry : entries)
+            std::vector<ZipEntry> _entries = entries();
+            for (const auto& entry : _entries)
             {
                 m_progress.total_bytes += entry.uncompressed_size;
             }
-
-            // Initialize progress
-            m_progress.status = Progress::Status::InProgress;
-            m_progress.total_files = entries.size();
-            m_progress.files_extracted = 0;
-            m_progress.bytes_read = 0;
+            m_progress.total_files = _entries.size();
             m_progress_callback(m_progress);
         }
 
@@ -769,12 +737,26 @@ public:
         {
             m_error_code = make_error_code(UnzipperError::INTERNAL_ERROR,
                                            "Failed going to first entry");
+            if (m_progress_callback)
+            {
+                m_progress.status = Progress::Status::KO;
+                m_progress_callback(m_progress);
+            }
+            return false;
         }
+
         while (err == UNZ_OK)
         {
             ZipEntry entry;
             if (currentEntryInfo(entry) && isEntryValid(entry))
             {
+                if (m_progress_callback)
+                {
+                    m_progress.current_file = entry.name;
+                    m_progress.status = Progress::Status::InProgress;
+                    m_progress_callback(m_progress);
+                }
+
                 // If the entry name matches the glob pattern, extract it else
                 // skip it.
                 if ((p_glob_pattern.empty()) ||
@@ -790,8 +772,7 @@ public:
                         file_path += entry.name;
 
                     // Extract the current entry to the destination file.
-                    if (!extractCurrentEntryToFile(
-                            entry, file_path, p_overwrite))
+                    if (extractToFile(file_path, entry, p_overwrite) != UNZ_OK)
                     {
                         failures++;
                         if (m_progress_callback)
@@ -803,6 +784,7 @@ public:
                     else if (m_progress_callback)
                     {
                         m_progress.files_extracted++;
+                        m_progress.status = Progress::Status::InProgress;
                         m_progress_callback(m_progress);
                     }
                 }
@@ -812,6 +794,7 @@ public:
                 failures++;
                 if (m_progress_callback)
                 {
+                    m_progress.current_file = "???";
                     m_progress.status = Progress::Status::KO;
                     m_progress_callback(m_progress);
                 }
@@ -851,20 +834,63 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    bool extractEntry(std::string const& p_name,
+    bool extractEntry(std::string const& p_entry_name,
                       std::string const& p_destination,
                       Unzipper::OverwriteMode p_overwrite)
     {
         ZipEntry entry;
-        std::string outputFile =
-            p_destination.empty()
-                ? p_name
-                : Path::folderNameWithSeparator(p_destination) + p_name;
-        std::string canonOutputFile = Path::normalize(outputFile);
-
         m_error_code.clear();
-        return locateEntry(p_name) && currentEntryInfo(entry) &&
-               extractCurrentEntryToFile(entry, canonOutputFile, p_overwrite);
+
+        // Update progress
+        if (m_progress_callback)
+        {
+            m_progress.reset();
+            m_progress_callback(m_progress);
+        }
+
+        // Check if the entry exists and get its information
+        if (!(locateEntry(p_entry_name) && currentEntryInfo(entry)))
+        {
+            if (m_progress_callback)
+            {
+                m_progress.current_file = p_entry_name;
+                m_progress.status = Progress::Status::KO;
+                m_progress_callback(m_progress);
+            }
+
+            return false;
+        }
+
+        // Get the canonical output file name
+        std::string canon_output_file =
+            p_destination.empty()
+                ? Path::normalize(p_entry_name)
+                : Path::normalize(Path::folderNameWithSeparator(p_destination) +
+                                  p_entry_name);
+
+        // Update progress
+        if (m_progress_callback)
+        {
+            m_progress.total_bytes = entry.uncompressed_size;
+            m_progress.current_file = canon_output_file;
+            m_progress.status = Progress::Status::InProgress;
+            m_progress_callback(m_progress);
+        }
+
+        // Extract the current entry to the destination file.
+        bool result =
+            extractToFile(canon_output_file, entry, p_overwrite) == UNZ_OK;
+
+        // Update progress
+        if (m_progress_callback)
+        {
+            m_progress.files_extracted = result ? 1 : 0;
+            m_progress.status =
+                result ? Progress::Status::OK : Progress::Status::KO;
+            m_progress_callback(m_progress);
+        }
+
+        return result;
     }
 
     // -------------------------------------------------------------------------
@@ -874,20 +900,48 @@ public:
         ZipEntry entry;
         m_error_code.clear();
 
+        // Update progress
+        if (m_progress_callback)
+        {
+            m_progress.reset();
+            m_progress_callback(m_progress);
+        }
+
         // Check if the entry exists and get its information
         if (!(locateEntry(p_entry_name) && currentEntryInfo(entry)))
         {
             if (m_progress_callback)
             {
                 m_progress.current_file = p_entry_name;
-                m_progress.status = Progress::Status::InProgress;
+                m_progress.status = Progress::Status::KO;
                 m_progress_callback(m_progress);
             }
 
             return false;
         }
 
-        return extractToStream(p_output_stream, entry) == UNZ_OK;
+        // Update progress
+        if (m_progress_callback)
+        {
+            m_progress.total_bytes = entry.uncompressed_size;
+            m_progress.current_file = p_entry_name;
+            m_progress.status = Progress::Status::InProgress;
+            m_progress_callback(m_progress);
+        }
+
+        // Extract the current entry to the destination file.
+        bool result = extractToStream(p_output_stream, entry) == UNZ_OK;
+
+        // Update progress
+        if (m_progress_callback)
+        {
+            m_progress.files_extracted = result ? 1 : 0;
+            m_progress.status =
+                result ? Progress::Status::OK : Progress::Status::KO;
+            m_progress_callback(m_progress);
+        }
+
+        return result;
     }
 
     // -------------------------------------------------------------------------
@@ -897,20 +951,48 @@ public:
         ZipEntry entry;
         m_error_code.clear();
 
+        // Update progress
+        if (m_progress_callback)
+        {
+            m_progress.reset();
+            m_progress_callback(m_progress);
+        }
+
         // Check if the entry exists and get its information
         if (!(locateEntry(p_entry_name) && currentEntryInfo(entry)))
         {
             if (m_progress_callback)
             {
                 m_progress.current_file = p_entry_name;
-                m_progress.status = Progress::Status::InProgress;
+                m_progress.status = Progress::Status::KO;
                 m_progress_callback(m_progress);
             }
 
             return false;
         }
 
-        return extractToMemory(p_output_vector, entry) == UNZ_OK;
+        // Update progress
+        if (m_progress_callback)
+        {
+            m_progress.total_bytes = entry.uncompressed_size;
+            m_progress.current_file = p_entry_name;
+            m_progress.status = Progress::Status::InProgress;
+            m_progress_callback(m_progress);
+        }
+
+        // Extract the current entry to the destination file.
+        bool result = extractToMemory(p_output_vector, entry) == UNZ_OK;
+
+        // Update progress
+        if (m_progress_callback)
+        {
+            m_progress.files_extracted = result ? 1 : 0;
+            m_progress.status =
+                result ? Progress::Status::OK : Progress::Status::KO;
+            m_progress_callback(m_progress);
+        }
+
+        return result;
     }
 };
 
