@@ -311,25 +311,6 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    bool extractCurrentEntryToStream(ZipEntry& p_entry_info,
-                                     std::ostream& p_stream)
-    {
-        int err = UNZ_OK;
-
-        // Update progress before starting extraction
-        if (m_progress_callback)
-        {
-            m_progress.current_file = p_entry_info.name;
-            m_progress.status = Progress::Status::InProgress;
-            m_progress_callback(m_progress);
-        }
-
-        err = extractToStream(p_stream, p_entry_info);
-
-        return UNZ_OK == err;
-    }
-
-    // -------------------------------------------------------------------------
     bool
     extractCurrentEntryToMemory(ZipEntry& p_entry_info,
                                 std::vector<unsigned char>& p_output_vector)
@@ -502,6 +483,8 @@ public:
         if (m_progress_callback)
         {
             m_progress.current_file = p_entry_info.name;
+            m_progress.status = Progress::Status::InProgress;
+            m_progress_callback(m_progress);
         }
 
         // Open the file with the password. UNZ_OK is returned even if the
@@ -905,13 +888,26 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    bool extractEntryToStream(std::string const& p_name, std::ostream& p_stream)
+    bool extractEntryToStream(std::string const& p_entry_name,
+                              std::ostream& p_output_stream)
     {
         ZipEntry entry;
-
         m_error_code.clear();
-        return locateEntry(p_name) && currentEntryInfo(entry) &&
-               extractCurrentEntryToStream(entry, p_stream);
+
+        // Check if the entry exists and get its information
+        if (!(locateEntry(p_entry_name) && currentEntryInfo(entry)))
+        {
+            if (m_progress_callback)
+            {
+                m_progress.current_file = p_entry_name;
+                m_progress.status = Progress::Status::InProgress;
+                m_progress_callback(m_progress);
+            }
+
+            return false;
+        }
+
+        return extractToStream(p_output_stream, entry) == UNZ_OK;
     }
 
     // -------------------------------------------------------------------------
