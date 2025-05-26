@@ -576,20 +576,21 @@ TEST(TestSlipAttack, ZipSlipDetection)
     EXPECT_TRUE(Path::isZipSlip("../evil.txt", "/safe/dir/"));
     EXPECT_TRUE(Path::isZipSlip("../../../../etc/passwd", "/safe/dir"));
     EXPECT_TRUE(Path::isZipSlip("../../../../etc/passwd", "/safe/dir/"));
-    EXPECT_FALSE(Path::isZipSlip("/absolute/evil", "/safe/dir"));
+    EXPECT_TRUE(Path::isZipSlip("/absolute/evil", "/safe/dir"));
     EXPECT_TRUE(Path::isZipSlip("/absolute/evil", ""));
     EXPECT_FALSE(Path::isZipSlip("/absolute/evil", "/"));
     EXPECT_FALSE(Path::isZipSlip("/absolute/not/evil", "/"));
+    EXPECT_FALSE(Path::isZipSlip("absolute/not/evil", "/"));
 
     // Nasty case
     // https://www.sonarsource.com/blog/openrefine-zip-slip/
-    EXPECT_FALSE(Path::isZipSlip("/home/johnny/.ssh/id_rsa", "/home/john"));
-    EXPECT_FALSE(Path::isZipSlip("/home/johnny/.ssh/id_rsa", "/home/john/"));
+    EXPECT_TRUE(Path::isZipSlip("/home/johnny/.ssh/id_rsa", "/home/john"));
+    EXPECT_TRUE(Path::isZipSlip("/home/johnny/.ssh/id_rsa", "/home/john/"));
     EXPECT_FALSE(Path::isZipSlip("ny/.ssh/id_rsa", "/home/john"));
     EXPECT_FALSE(Path::isZipSlip("ny/.ssh/id_rsa", "/home/john/"));
 
     // Edge cases
-    EXPECT_TRUE(Path::isZipSlip("", "/safe/dir"));
+    EXPECT_FALSE(Path::isZipSlip("", "/safe/dir"));
     EXPECT_FALSE(Path::isZipSlip("subdir/../legal.txt", "/safe/dir"));
     EXPECT_TRUE(Path::isZipSlip("subdir/../../evil.txt", "/safe/dir"));
     EXPECT_FALSE(Path::isZipSlip("a/b/c/../../evil.txt", "/safe/dir/"));
@@ -597,4 +598,25 @@ TEST(TestSlipAttack, ZipSlipDetection)
     // Windows-style paths
     EXPECT_TRUE(Path::isZipSlip("..\\evil.txt", "C:\\safe\\dir"));
     EXPECT_TRUE(Path::isZipSlip("C:\\evil.txt", "C:\\safe\\dir"));
+
+    // Test with current path
+    EXPECT_FALSE(Path::isZipSlip("issue_05/", ""));
+    EXPECT_FALSE(Path::isZipSlip("issue_05/Nouveau dossier/", ""));
+    EXPECT_FALSE(Path::isZipSlip("issue_05/Nouveau fichier vide", ""));
+    EXPECT_FALSE(Path::isZipSlip("issue_05/foo/", ""));
+    EXPECT_FALSE(Path::isZipSlip("issue_05/foo/bar", ""));
+
+    // Test with current path
+    EXPECT_FALSE(Path::isZipSlip("issue_05/", "."));
+    EXPECT_FALSE(Path::isZipSlip("issue_05/Nouveau dossier/", "."));
+    EXPECT_FALSE(Path::isZipSlip("issue_05/Nouveau fichier vide", "."));
+    EXPECT_FALSE(Path::isZipSlip("issue_05/foo/", "."));
+    EXPECT_FALSE(Path::isZipSlip("issue_05/foo/bar", "."));
+
+    // Test with current path
+    EXPECT_FALSE(Path::isZipSlip("issue_05/", "./"));
+    EXPECT_FALSE(Path::isZipSlip("issue_05/Nouveau dossier/", "./"));
+    EXPECT_FALSE(Path::isZipSlip("issue_05/Nouveau fichier vide", "./"));
+    EXPECT_FALSE(Path::isZipSlip("issue_05/foo/", "./"));
+    EXPECT_FALSE(Path::isZipSlip("issue_05/foo/bar", "./"));
 }

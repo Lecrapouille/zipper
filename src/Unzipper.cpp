@@ -319,22 +319,37 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    int extractToFile(std::string const& p_filename,
-                      ZipEntry& p_zip_entry,
+    int extractToFile(ZipEntry& p_zip_entry,
+                      std::string const& p_destination,
+                      std::string const& p_canon_output_file,
                       Unzipper::OverwriteMode p_overwrite)
     {
-        // if (!entryinfo.uncompressed_size) is not a good method to
+        // Prevent against zip slip attack (See ticket #33)
+        if (Path::isZipSlip(p_zip_entry.name, p_destination))
+        {
+            std::stringstream str;
+            str << "Security error: entry '"
+                << Path::toNativeSeparators(p_canon_output_file)
+                << "' would be outside your target directory";
+
+            m_error_code =
+                make_error_code(UnzipperError::EXTRACT_ERROR, str.str());
+            return UNZ_ERRNO;
+        }
+
+        // Create the folder if the entry is a folder.
+        // Note: if (!entryinfo.uncompressed_size) is not a good method to
         // distinguish dummy file from folder. See
         // https://github.com/Lecrapouille/zipper/issues/5
         if (Path::hasTrailingSlash(p_zip_entry.name))
         {
             // Folder name may have an extension file, so we do not add checks
             // if folder name ends with folder slash.
-            if (!Path::createDir(p_filename))
+            if (!Path::createDir(p_canon_output_file))
             {
                 std::stringstream str;
                 str << "Failed creating folder '"
-                    << Path::toNativeSeparators(p_filename) << "'";
+                    << Path::toNativeSeparators(p_canon_output_file) << "'";
                 m_error_code =
                     make_error_code(UnzipperError::EXTRACT_ERROR, str.str());
                 return UNZ_ERRNO;
@@ -342,23 +357,10 @@ public:
             return UNZ_OK;
         }
 
-        // If zip file path contains a directory then create it on disk
-        std::string folder = Path::dirName(p_filename);
+        // If zip file path contains directories then create them
+        std::string folder = Path::dirName(p_canon_output_file);
         if (!folder.empty())
         {
-            std::string canon = Path::normalize(folder);
-            if (!canon.empty() && canon.find("..") != std::string::npos)
-            {
-                // Prevent Zip Slip attack (See ticket #33)
-                std::stringstream str;
-                str << "Security error: entry '"
-                    << Path::toNativeSeparators(p_filename)
-                    << "' would be outside your target directory";
-
-                m_error_code =
-                    make_error_code(UnzipperError::SECURITY_ERROR, str.str());
-                return UNZ_ERRNO;
-            }
             if (!Path::createDir(folder))
             {
                 std::stringstream str;
@@ -372,12 +374,13 @@ public:
             }
         }
 
-        // Avoid replacing the file. Prevent Zip Slip attack (See ticket #33)
+        // Avoid replacing the file.
         if ((p_overwrite == Unzipper::OverwriteMode::DoNotOverwrite) &&
-            Path::exist(p_filename))
+            Path::exist(p_canon_output_file))
         {
             std::stringstream str;
-            str << "Security Error: '" << Path::toNativeSeparators(p_filename)
+            str << "Security Error: '"
+                << Path::toNativeSeparators(p_canon_output_file)
                 << "' already exists and would have been replaced!";
 
             m_error_code =
@@ -385,22 +388,9 @@ public:
             return UNZ_ERRNO;
         }
 
-        // Check if the filename is valid
-        std::string canon = Path::normalize(p_filename);
-        if (!canon.empty() && canon.find("..") != std::string::npos)
-        {
-            std::stringstream str;
-            str << "Security error: entry '"
-                << Path::toNativeSeparators(p_filename)
-                << "' would be outside your target directory";
-
-            m_error_code =
-                make_error_code(UnzipperError::EXTRACT_ERROR, str.str());
-            return UNZ_ERRNO;
-        }
-
         // Create the file on disk so we can unzip to it
-        std::ofstream output_file(p_filename.c_str(), std::ofstream::binary);
+        std::ofstream output_file(p_canon_output_file.c_str(),
+                                  std::ofstream::binary);
         if (output_file.good())
         {
             int err = extractToStream(output_file, p_zip_entry);
@@ -412,7 +402,7 @@ public:
                 tm_zip timeaux;
                 memcpy(&timeaux, &p_zip_entry.unix_date, sizeof(timeaux));
                 changeFileDate(
-                    p_filename.c_str(), p_zip_entry.dos_date, timeaux);
+                    p_canon_output_file.c_str(), p_zip_entry.dos_date, timeaux);
             }
 
             return err;
@@ -423,7 +413,7 @@ public:
             // is not very explicit.
             std::stringstream str;
             str << "Failed creating file '"
-                << Path::toNativeSeparators(p_filename)
+                << Path::toNativeSeparators(p_canon_output_file)
                 << "' because: " << OS_STRERROR(errno);
 
             m_error_code =
@@ -717,6 +707,7 @@ public:
             std::vector<ZipEntry> _entries = entries();
             for (const auto& entry : _entries)
             {
+                // TODO: ICI mettre glob pattern
                 m_progress.total_bytes += entry.uncompressed_size;
             }
             m_progress.total_files = _entries.size();
@@ -730,6 +721,8 @@ public:
         {
             destination = Path::folderNameWithSeparator(p_destination_folder);
         }
+
+        // TODO: ici iterer sur _entries et appeller directement extractToFile
 
         // Traverse the zip file sequentially in a single pass
         int err = unzGoToFirstFile(m_zip_handler);
@@ -750,13 +743,6 @@ public:
             ZipEntry entry;
             if (currentEntryInfo(entry) && isEntryValid(entry))
             {
-                if (m_progress_callback)
-                {
-                    m_progress.current_file = entry.name;
-                    m_progress.status = Progress::Status::InProgress;
-                    m_progress_callback(m_progress);
-                }
-
                 // If the entry name matches the glob pattern, extract it else
                 // skip it.
                 if ((p_glob_pattern.empty()) ||
@@ -770,9 +756,20 @@ public:
                         file_path += alt->second;
                     else
                         file_path += entry.name;
+                    std::string canon_output_file = Path::normalize(file_path);
 
-                    // Extract the current entry to the destination file.
-                    if (extractToFile(file_path, entry, p_overwrite) != UNZ_OK)
+                    // Update progress
+                    if (m_progress_callback)
+                    {
+                        m_progress.current_file = canon_output_file;
+                        m_progress.status = Progress::Status::InProgress;
+                        m_progress_callback(m_progress);
+                    }
+
+                    if (extractToFile(entry,
+                                      destination,
+                                      canon_output_file,
+                                      p_overwrite) != UNZ_OK)
                     {
                         failures++;
                         if (m_progress_callback)
@@ -835,7 +832,7 @@ public:
 
     // -------------------------------------------------------------------------
     bool extractEntry(std::string const& p_entry_name,
-                      std::string const& p_destination,
+                      std::string const& p_destination_folder,
                       Unzipper::OverwriteMode p_overwrite)
     {
         ZipEntry entry;
@@ -862,11 +859,13 @@ public:
         }
 
         // Get the canonical output file name
+        std::string destination;
+        if (!p_destination_folder.empty())
+        {
+            destination = Path::folderNameWithSeparator(p_destination_folder);
+        }
         std::string canon_output_file =
-            p_destination.empty()
-                ? Path::normalize(p_entry_name)
-                : Path::normalize(Path::folderNameWithSeparator(p_destination) +
-                                  p_entry_name);
+            Path::normalize(destination + p_entry_name);
 
         // Update progress
         if (m_progress_callback)
@@ -878,8 +877,10 @@ public:
         }
 
         // Extract the current entry to the destination file.
-        bool result =
-            extractToFile(canon_output_file, entry, p_overwrite) == UNZ_OK;
+        bool result = extractToFile(entry,
+                                    p_destination_folder,
+                                    canon_output_file,
+                                    p_overwrite) == UNZ_OK;
 
         // Update progress
         if (m_progress_callback)

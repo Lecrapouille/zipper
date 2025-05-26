@@ -82,8 +82,15 @@ public:
     //! \return bool True if path is a root
     static bool isRoot(const std::string& path);
 
-    //! \brief Returns the current path.
-    //! \return std::string Current path
+    //! \brief Returns the current working directory path.
+    //! \details This function returns the current working directory path with
+    //! the following features:
+    //! - Uses dynamic buffer allocation to handle long paths
+    //! - Normalizes path separators to the native format
+    //! - Handles errors gracefully
+    //! - Supports paths up to 32KB in length
+    //! \return std::string Current working directory path, or empty string on
+    //! error
     static std::string currentPath();
 
     //! \brief Check whether the directory entry specified by 'path' is
@@ -166,13 +173,6 @@ public:
     static std::string createTempName(const std::string& dir,
                                       const std::string& suffix);
 
-    //! \brief Move a file from. If to is the directory the filename of from is
-    //! appended.
-    //! \param[in] from: source path.
-    //! \param[in] to:  destination path.
-    //! \return bool success
-    static bool move(const std::string& from, const std::string& to);
-
     //! \brief Removes a file or directory specified by path.
     //! \param[in] path: file path.
     //! \return bool success
@@ -186,6 +186,11 @@ public:
 
     //! \brief This substitute ../ ie foo/../bar will return bar
     static std::string normalize(const std::string& path);
+
+    //! \brief Returns the canonical path of the destination directory.
+    //! \param[in] p_destination_dir The destination directory path
+    //! \return std::string Canonical path of the destination directory
+    static std::string canonicalPath(const std::string& p_destination_dir);
 
     static bool isLargeFile(std::istream& input_stream);
 

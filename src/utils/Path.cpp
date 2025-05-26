@@ -38,9 +38,38 @@ char Path::preferredSeparator(const std::string& path)
 // -----------------------------------------------------------------------------
 std::string Path::currentPath()
 {
-    char buffer[1024u];
-    return (OS_GETCWD(buffer, sizeof(buffer)) ? std::string(buffer)
-                                              : std::string(""));
+    // Start with a reasonable buffer size
+    size_t buffer_size = 1024u;
+    std::string result;
+
+    while (true)
+    {
+        std::vector<char> buffer(buffer_size);
+        if (OS_GETCWD(buffer.data(), buffer_size))
+        {
+            result = buffer.data();
+            // Normalize separators to the preferred format
+            result = toNativeSeparators(result);
+            break;
+        }
+
+        // If buffer is too small, double its size
+        if (errno == ERANGE)
+        {
+            buffer_size *= 2;
+            // Prevent infinite loop with a reasonable maximum size
+            if (buffer_size > 4u * 1024u)
+            {
+                return std::string();
+            }
+            continue;
+        }
+
+        // Other errors
+        return std::string();
+    }
+
+    return result;
 }
 
 // -----------------------------------------------------------------------------
@@ -745,11 +774,22 @@ size_t Path::getFileSize(const std::string& p_path)
 }
 
 // -----------------------------------------------------------------------------
-bool Path::isZipSlip(const std::string& p_file_path,
-                     const std::string& p_destination_dir)
+std::string Path::canonicalPath(const std::string& p_destination_dir)
 {
-    std::string dest = p_destination_dir.empty() ? "." : p_destination_dir;
-    dest = Path::normalize(dest);
+    std::string dest;
+
+    if (p_destination_dir.empty())
+    {
+        dest = Path::normalize(currentPath());
+    }
+    else if (Path::root(p_destination_dir).empty())
+    {
+        dest = Path::normalize(currentPath() + "/" + p_destination_dir);
+    }
+    else
+    {
+        dest = Path::normalize(p_destination_dir);
+    }
 
     // Trailing slash is mandatory to avoid matching "john" and "johnny".
     // The if is important to avoid adding an extra trailing slash if
@@ -757,7 +797,22 @@ bool Path::isZipSlip(const std::string& p_file_path,
     if (!hasTrailingSlash(dest))
         dest += "/";
 
-    // A slip slip attack uses '../' which will change the destination path.
-    std::string file = Path::normalize(dest + p_file_path);
-    return file.find(dest) != 0;
+    return dest;
+}
+
+// -----------------------------------------------------------------------------
+bool Path::isZipSlip(const std::string& p_file_path,
+                     const std::string& p_destination_dir)
+{
+    std::string dest = Path::canonicalPath(p_destination_dir);
+    std::string file;
+    if (Path::root(p_file_path).empty())
+    {
+        file = Path::canonicalPath(dest + p_file_path);
+    }
+    else
+    {
+        file = p_file_path;
+    }
+    return file.compare(0, dest.length(), dest) != 0;
 }
