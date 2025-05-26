@@ -158,7 +158,7 @@ private:
     }
 
     // -------------------------------------------------------------------------
-    bool currentEntryInfo(ZipEntry& p_entry_info)
+    bool currentEntryInfo(ZipEntry& p_zip_entry)
     {
         unz_file_info64 file_info;
 
@@ -169,7 +169,7 @@ private:
         {
             std::stringstream str;
             str << "Invalid zip entry info '"
-                << Path::toNativeSeparators(p_entry_info.name) << "'";
+                << Path::toNativeSeparators(p_zip_entry.name) << "'";
             m_error_code = make_error_code(UnzipperError::BAD_ENTRY, str.str());
             return false;
         }
@@ -190,29 +190,29 @@ private:
         {
             std::stringstream str;
             str << "Invalid zip entry info '"
-                << Path::toNativeSeparators(p_entry_info.name) << "'";
+                << Path::toNativeSeparators(p_zip_entry.name) << "'";
             m_error_code = make_error_code(UnzipperError::BAD_ENTRY, str.str());
             return false;
         }
 
-        p_entry_info = ZipEntry(std::string(filename_inzip.data()),
-                                file_info.compressed_size,
-                                file_info.uncompressed_size,
-                                file_info.tmu_date.tm_year,
-                                file_info.tmu_date.tm_mon,
-                                file_info.tmu_date.tm_mday,
-                                file_info.tmu_date.tm_hour,
-                                file_info.tmu_date.tm_min,
-                                file_info.tmu_date.tm_sec,
-                                file_info.dos_date);
+        p_zip_entry = ZipEntry(std::string(filename_inzip.data()),
+                               file_info.compressed_size,
+                               file_info.uncompressed_size,
+                               file_info.tmu_date.tm_year,
+                               file_info.tmu_date.tm_mon,
+                               file_info.tmu_date.tm_mday,
+                               file_info.tmu_date.tm_hour,
+                               file_info.tmu_date.tm_min,
+                               file_info.tmu_date.tm_sec,
+                               file_info.dos_date);
 
         return true;
     }
 
     // -------------------------------------------------------------------------
-    bool isEntryValid(ZipEntry const& p_entry_info)
+    bool isEntryValid(ZipEntry const& p_zip_entry)
     {
-        return !p_entry_info.name.empty();
+        return !p_zip_entry.name.empty();
     }
 
 public:
@@ -245,10 +245,10 @@ public:
         do
         {
             // Get the current entry info
-            ZipEntry entry_info;
-            if (currentEntryInfo(entry_info) && isEntryValid(entry_info))
+            ZipEntry entry;
+            if (currentEntryInfo(entry) && isEntryValid(entry))
             {
-                entries.push_back(entry_info);
+                entries.push_back(entry);
                 err = unzGoToNextFile(m_zip_handler);
             }
             else
@@ -320,13 +320,13 @@ public:
 
     // -------------------------------------------------------------------------
     int extractToFile(std::string const& p_filename,
-                      ZipEntry& p_entry_info,
+                      ZipEntry& p_zip_entry,
                       Unzipper::OverwriteMode p_overwrite)
     {
         // if (!entryinfo.uncompressed_size) is not a good method to
         // distinguish dummy file from folder. See
         // https://github.com/Lecrapouille/zipper/issues/5
-        if (Path::hasTrailingSlash(p_entry_info.name))
+        if (Path::hasTrailingSlash(p_zip_entry.name))
         {
             // Folder name may have an extension file, so we do not add checks
             // if folder name ends with folder slash.
@@ -403,16 +403,16 @@ public:
         std::ofstream output_file(p_filename.c_str(), std::ofstream::binary);
         if (output_file.good())
         {
-            int err = extractToStream(output_file, p_entry_info);
+            int err = extractToStream(output_file, p_zip_entry);
             output_file.close();
 
             if (err == UNZ_OK)
             {
                 // Set the time of the file that has been unzipped
                 tm_zip timeaux;
-                memcpy(&timeaux, &p_entry_info.unix_date, sizeof(timeaux));
+                memcpy(&timeaux, &p_zip_entry.unix_date, sizeof(timeaux));
                 changeFileDate(
-                    p_filename.c_str(), p_entry_info.dos_date, timeaux);
+                    p_filename.c_str(), p_zip_entry.dos_date, timeaux);
             }
 
             return err;
@@ -434,7 +434,7 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    int extractToStream(std::ostream& p_stream, const ZipEntry& p_entry_info)
+    int extractToStream(std::ostream& p_stream, const ZipEntry& p_zip_entry)
     {
         int err;
         int bytes = 0;
@@ -483,7 +483,7 @@ public:
             if (UNZ_OK != err)
             {
                 std::stringstream str;
-                str << "Failed closing file '" << p_entry_info.name << "'";
+                str << "Failed closing file '" << p_zip_entry.name << "'";
                 m_error_code =
                     make_error_code(UnzipperError::INTERNAL_ERROR, str.str());
             }
