@@ -8,7 +8,8 @@
 #ifndef ZIPPER_UTILS_OS_HPP
 #define ZIPPER_UTILS_OS_HPP
 
-extern "C" {
+extern "C"
+{
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -28,7 +29,7 @@ extern "C" {
 #if defined(_WIN32)
 #    include <direct.h>
 #    include <io.h>
-typedef struct _stat STAT;
+    typedef struct _stat STAT;
 #    define stat _stat
 #    define S_IFREG _S_IFREG
 #    define S_IFDIR _S_IFDIR
@@ -40,7 +41,7 @@ typedef struct _stat STAT;
 #    include <sys/types.h>
 #    include <unistd.h>
 #    include <utime.h>
-typedef struct stat STAT;
+    typedef struct stat STAT;
 #endif
 
 #if defined(_WIN32)

@@ -20,7 +20,8 @@
 #    define ZIPPER_WRITE_BUFFER_SIZE (65536u)
 #endif
 
-namespace zipper {
+namespace zipper
+{
 
 enum class ZipperError
 {
@@ -64,7 +65,7 @@ static std::error_code make_error_code(ZipperError p_error,
                                        std::string const& p_message)
 {
     theZipperErrorCategory.custom_message = p_message;
-    return {static_cast<int>(p_error), theZipperErrorCategory};
+    return { static_cast<int>(p_error), theZipperErrorCategory };
 }
 
 // -----------------------------------------------------------------------------
@@ -145,7 +146,7 @@ struct Zipper::Impl
 
         // Open the zip file
 #if defined(_WIN32)
-        zlib_filefunc64_def ffunc = {0};
+        zlib_filefunc64_def ffunc = { 0 };
         fill_win32_filefunc64A(&ffunc);
         m_zip_handler = zipOpen2_64(p_filename.c_str(), mode, nullptr, &ffunc);
 #else
@@ -392,7 +393,8 @@ struct Zipper::Impl
             case Zipper::ZipFlags::Medium:
                 compress_level = 5;
                 break;
-            default: {
+            default:
+            {
                 std::stringstream str;
                 str << "Invalid compression level flag: " << p_flags;
                 m_error_code =

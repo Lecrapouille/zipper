@@ -15,7 +15,8 @@ using namespace zipper;
 //=============================================================================
 // Helper functions for tests
 //=============================================================================
-namespace helper {
+namespace helper
+{
 
 /**
  * @brief Creates a file with content and adds it to the zipper.
@@ -134,7 +135,7 @@ TEST(ZipperFileOps, NominalOpenings)
     const std::string content2 = "content nominal 2";
     const std::string content3 = "content nominal 3";
 
-    std::vector<std::string> passwords = {"", "1234567890"};
+    std::vector<std::string> passwords = { "", "1234567890" };
 
     for (const auto& password : passwords)
     {
@@ -273,8 +274,9 @@ TEST(ZipperFileOps, NominalOpenings)
 //=============================================================================
 TEST(ZipperFileOps, TryOpeningFolderInsteadOfZipFile)
 {
-    const std::vector<std::string> folder_paths = {
-        "ziptest_folder", "ziptest_folder.zip", "ziptest_folder.zip.txt"};
+    const std::vector<std::string> folder_paths = { "ziptest_folder",
+                                                    "ziptest_folder.zip",
+                                                    "ziptest_folder.zip.txt" };
 
     for (const auto& folder_path : folder_paths)
     {
@@ -313,7 +315,7 @@ TEST(ZipperFileOps, TryOpeningFolderInsteadOfZipFile)
 //=============================================================================
 TEST(ZipperFileOps, TryOpeningFakeZipFiles)
 {
-    const std::vector<std::string> fake_zip_filenames = {"foobar.txt"};
+    const std::vector<std::string> fake_zip_filenames = { "foobar.txt" };
 
     for (const auto& fake_zip_filename : fake_zip_filenames)
     {
@@ -572,7 +574,7 @@ TEST(ZipperFileOps, AddOperations)
     const std::string emptyFolder = "empty_folder_add/";
     const std::string extractDir = "extract_dir/";
 
-    std::vector<std::string> passwords = {"", "1234567890"};
+    std::vector<std::string> passwords = { "", "1234567890" };
 
     for (const auto& password : passwords)
     {

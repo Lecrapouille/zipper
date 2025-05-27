@@ -11,7 +11,8 @@ std::regex globToRegex(const std::string& glob)
     for (size_t i = 0; i < glob.size(); ++i)
     {
         char c = glob[i];
-        switch (c) {
+        switch (c)
+        {
             case '*':
                 regex_pattern += ".*"; // * correspond to any number of characters
                 break;

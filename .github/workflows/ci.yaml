@@ -42,7 +42,7 @@ jobs:
         run: |
           sudo make install
           # Read version from VERSION.txt
-          VERSION=$(make get-version)
+          VERSION=$(make project-version)
           MAJOR=$(echo $VERSION | cut -d. -f1)
           MINOR=$(echo $VERSION | cut -d. -f2)
           PATCH=$(echo $VERSION | cut -d. -f3)
@@ -106,7 +106,7 @@ jobs:
         run: |
           sudo make install
           # Read version from VERSION.txt
-          VERSION=$(make get-version)
+          VERSION=$(make project-version)
           # Check static and shared libraries
           test -f /usr/local/lib/libzipper.a
           test -f /usr/local/lib/libzipper.dylib

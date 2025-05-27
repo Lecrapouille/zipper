@@ -17,7 +17,8 @@
 #include <string>
 #include <time.h>
 
-namespace zipper {
+namespace zipper
+{
 
 // *****************************************************************************
 //! \brief Creates a timestap either from file or just current time If it fails

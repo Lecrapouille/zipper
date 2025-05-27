@@ -31,7 +31,8 @@
 #else
 #    define ZIPPER_EXPORT
 #endif
-namespace zipper {
+namespace zipper
+{
 
 // *****************************************************************************
 //! \brief This class provides an OS independent interface to directory entries

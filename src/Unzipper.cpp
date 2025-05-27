@@ -28,7 +28,8 @@
 #    define ZIPPER_WRITE_BUFFER_SIZE (32768u)
 #endif
 
-namespace zipper {
+namespace zipper
+{
 
 enum class UnzipperError
 {
@@ -72,7 +73,7 @@ static std::error_code make_error_code(UnzipperError p_error,
                                        std::string const& p_message)
 {
     theUnzipperErrorCategory.custom_message = p_message;
-    return {static_cast<int>(p_error), theUnzipperErrorCategory};
+    return { static_cast<int>(p_error), theUnzipperErrorCategory };
 }
 
 // *************************************************************************

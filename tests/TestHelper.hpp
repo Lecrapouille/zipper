@@ -11,7 +11,8 @@
 //=============================================================================
 // Helper functions for tests
 //=============================================================================
-namespace helper {
+namespace helper
+{
 
 /**
  * @brief Reads and returns the content of a file.

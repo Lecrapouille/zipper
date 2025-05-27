@@ -28,7 +28,8 @@
 #    define ZIPPER_EXPORT
 #endif
 
-namespace zipper {
+namespace zipper
+{
 
 class ZipEntry;
 
