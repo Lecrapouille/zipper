@@ -816,3 +816,64 @@ bool Path::isZipSlip(const std::string& p_file_path,
     }
     return file.compare(0, dest.length(), dest) != 0;
 }
+
+// -----------------------------------------------------------------------------
+Path::InvalidEntryReason Path::isValidEntry(std::string const& p_entry_name)
+{
+    static const std::string forbiddenChars = "<>:\"|?*";
+
+    if (p_entry_name.empty())
+        return InvalidEntryReason::EMPTY_ENTRY;
+
+    for (size_t i = 0; i < p_entry_name.size(); ++i)
+    {
+        unsigned char c = static_cast<unsigned char>(p_entry_name[i]);
+
+        // Check for forbidden characters (ASCII codes 0-127)
+        if ((c < 128) && (forbiddenChars.find(char(c)) != std::string::npos))
+        {
+            return InvalidEntryReason::FORBIDDEN_CHARACTERS;
+        }
+
+        // Check for control characters (ASCII codes 0-31)
+        if (c < 32)
+        {
+            return InvalidEntryReason::CONTROL_CHARACTERS;
+        }
+    }
+
+    // Absolute paths are not valid entry names
+    if (!Path::root(p_entry_name).empty())
+    {
+        return InvalidEntryReason::ABSOLUTE_PATH;
+    }
+
+    // Check for Zip Slip attack
+    if (p_entry_name.find_first_of("..") == 0u)
+    {
+        return InvalidEntryReason::ZIP_SLIP;
+    }
+
+    return InvalidEntryReason::VALID_ENTRY;
+}
+
+std::string Path::getInvalidEntryReason(InvalidEntryReason p_reason)
+{
+    switch (p_reason)
+    {
+        case InvalidEntryReason::VALID_ENTRY:
+            return "Valid entry";
+        case InvalidEntryReason::EMPTY_ENTRY:
+            return "cannot be empty";
+        case InvalidEntryReason::FORBIDDEN_CHARACTERS:
+            return "contains forbidden characters";
+        case InvalidEntryReason::CONTROL_CHARACTERS:
+            return "contains control characters";
+        case InvalidEntryReason::ABSOLUTE_PATH:
+            return "is an absolute path";
+        case InvalidEntryReason::ZIP_SLIP:
+            return "could be used to escape the destination directory";
+        default:
+            return "Unknown reason";
+    }
+}

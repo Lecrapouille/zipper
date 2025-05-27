@@ -355,25 +355,24 @@ struct Zipper::Impl
         zi.tmz_date.tm_mon = static_cast<uInt>(p_timestamp.tm_mon);
         zi.tmz_date.tm_year = static_cast<uInt>(p_timestamp.tm_year);
 
-        if (p_name_in_zip.empty())
+        // Check if the entry name is valid to prevent security issues
+        Path::InvalidEntryReason reason = Path::isValidEntry(p_name_in_zip);
+        if ((reason != Path::InvalidEntryReason::VALID_ENTRY) &&
+            (reason != Path::InvalidEntryReason::ABSOLUTE_PATH))
         {
-            m_error_code = make_error_code(ZipperError::BAD_ENTRY,
-                                           "Zip entry name cannot be empty");
+            m_error_code = make_error_code(
+                ZipperError::SECURITY_ERROR,
+                "Zip entry name '" + p_name_in_zip + "' is invalid because " +
+                    Path::getInvalidEntryReason(reason));
             return false;
         }
-
         std::string canon_name_in_zip = Path::normalize(p_name_in_zip);
 
-        // Prevent Zip Slip attack (See ticket #33)
-        if (canon_name_in_zip.find_first_of("..") == 0u)
+        // Silently remove the absolute path from the entry name
+        if (reason == Path::InvalidEntryReason::ABSOLUTE_PATH)
         {
-            std::stringstream str;
-            str << "Security error: forbidden insertion of '" << p_name_in_zip
-                << "' (canonical: '" << canon_name_in_zip
-                << "') to prevent possible Zip Slip attack";
-            m_error_code =
-                make_error_code(ZipperError::SECURITY_ERROR, str.str());
-            return false;
+            canon_name_in_zip = canon_name_in_zip.substr(
+                Path::root(canon_name_in_zip).length());
         }
 
         // Determine compression level from flags (mask out hierarchy flag)

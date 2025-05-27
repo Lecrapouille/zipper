@@ -196,10 +196,8 @@ TEST(ZipTests, Issue33_zipping)
         Zipper zipper("ziptest.zip", Zipper::OpenFlags::Overwrite);
         EXPECT_FALSE(
             helper::zipAddFile(zipper, "Test1.txt", "hello", "../Test1"));
-        EXPECT_STREQ(
-            zipper.error().message().c_str(),
-            "Security error: forbidden insertion of '../Test1' "
-            "(canonical: '../Test1') to prevent possible Zip Slip attack");
+        ASSERT_THAT(zipper.error().message(),
+                    testing::HasSubstr("escape the destination directory"));
         zipper.close();
 
         // Verify no entries were not added.

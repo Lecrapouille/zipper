@@ -106,45 +106,8 @@ private:
     }
 
     // -------------------------------------------------------------------------
-    bool isValidEntry(std::string const& p_entry_name)
-    {
-        static const std::string forbiddenChars = "<>:\"|?*";
-
-        for (size_t i = 0; i < p_entry_name.size(); ++i)
-        {
-            unsigned char c = static_cast<unsigned char>(p_entry_name[i]);
-
-            // Check for forbidden characters (ASCII codes 0-127)
-            if ((c < 128) &&
-                (forbiddenChars.find(char(c)) != std::string::npos))
-            {
-                return false;
-            }
-
-            // Check for control characters (ASCII codes 0-31)
-            if (c < 32)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    // -------------------------------------------------------------------------
     bool locateEntry(std::string const& p_entry_name)
     {
-        if (!isValidEntry(p_entry_name))
-        {
-            std::stringstream str;
-            str << "Invalid entry name '"
-                << Path::toNativeSeparators(p_entry_name) << "' Reason: "
-                << "contains forbidden characters";
-            m_error_code =
-                make_error_code(UnzipperError::SECURITY_ERROR, str.str());
-            return false;
-        }
-
         if (unzLocateFile(m_zip_handler, p_entry_name.c_str(), nullptr) !=
             UNZ_OK)
         {

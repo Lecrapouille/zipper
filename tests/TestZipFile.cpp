@@ -542,7 +542,7 @@ TEST(ZipperFileOps, DummyStuffs)
     // Empty entry zip name: forbidden
     ASSERT_FALSE(helper::zipAddFile(zipper2, "dummy.txt", "", ""));
     ASSERT_THAT(zipper2.error().message(),
-                testing::HasSubstr("Zip entry name cannot be empty"));
+                testing::HasSubstr("cannot be empty"));
 
     // Add a dummy directory: allowed
     helper::createDir("dummy_dir");

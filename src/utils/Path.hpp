@@ -209,6 +209,27 @@ public:
     //! \return true if the entry could escape the destination directory
     static bool isZipSlip(const std::string& p_entry_path,
                           const std::string& p_target_dir);
+
+    enum class InvalidEntryReason
+    {
+        VALID_ENTRY = 0,
+        EMPTY_ENTRY = 1,
+        FORBIDDEN_CHARACTERS = 2,
+        CONTROL_CHARACTERS = 3,
+        ABSOLUTE_PATH = 4,
+        ZIP_SLIP = 5
+    };
+
+    //! \brief Checks if a ZIP entry name is valid
+    //! \param[in] p_entry_name The entry name to check
+    //! \return true if the entry name is valid
+    static InvalidEntryReason isValidEntry(const std::string& p_entry_name);
+
+    //! \brief Returns a string describing the reason why a ZIP entry name is
+    //! invalid
+    //! \param[in] p_reason The reason why the entry name is invalid
+    //! \return std::string Description of the reason
+    static std::string getInvalidEntryReason(InvalidEntryReason p_reason);
 };
 
 } // namespace zipper
