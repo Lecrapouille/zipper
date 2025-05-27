@@ -139,13 +139,15 @@ private:
         }
 
         // Dynamic allocation of the exact size needed
-        std::vector<char> filename_inzip(file_info.size_filename + 1, 0);
+        uint16_t size_filename =
+            static_cast<uint16_t>(file_info.size_filename + 1u);
+        std::vector<char> filename_inzip(size_filename, 0);
 
         // Second pass to get the file name
         err = unzGetCurrentFileInfo64(m_zip_handler,
                                       &file_info,
                                       filename_inzip.data(),
-                                      file_info.size_filename + 1,
+                                      size_filename,
                                       nullptr,
                                       0,
                                       nullptr,

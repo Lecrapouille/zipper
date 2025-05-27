@@ -121,7 +121,7 @@ Timestamp::Timestamp(const std::string& filepath)
 #    if defined(__APPLE__)
     auto timet = static_cast<time_t>(buf.st_mtimespec.tv_sec);
 #    else
-    auto timet = static_cast<time_t>(buf.st_mtim.tv_sec);
+    auto timet = buf.st_mtim.tv_sec;
 #    endif
 
     safe_localtime(&timet, &timestamp);
