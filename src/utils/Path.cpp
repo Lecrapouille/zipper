@@ -818,40 +818,53 @@ bool Path::isZipSlip(const std::string& p_file_path,
 }
 
 // -----------------------------------------------------------------------------
-Path::InvalidEntryReason Path::isValidEntry(std::string const& p_entry_name)
+Path::InvalidEntryReason
+Path::checkControlCharacters(const std::string& p_entry_name)
 {
-    static const std::string forbiddenChars = "<>:\"|?*";
-
-    if (p_entry_name.empty())
-        return InvalidEntryReason::EMPTY_ENTRY;
-
     for (size_t i = 0; i < p_entry_name.size(); ++i)
     {
         unsigned char c = static_cast<unsigned char>(p_entry_name[i]);
 
-        // Check for forbidden characters (ASCII codes 0-127)
-        if ((c < 128) && (forbiddenChars.find(char(c)) != std::string::npos))
-        {
-            return InvalidEntryReason::FORBIDDEN_CHARACTERS;
-        }
-
         // Check for control characters (ASCII codes 0-31)
         if (c < 32)
         {
-            return InvalidEntryReason::CONTROL_CHARACTERS;
+            return Path::InvalidEntryReason::CONTROL_CHARACTERS;
+        }
+
+        // Check for allowed characters (A-Za-z0-9._-/\)
+        if (!isalnum(c) && (c != '.') && (c != '_') && (c != '-') &&
+            (c != '/') && (c != '\\') && (c != ' '))
+        {
+            return Path::InvalidEntryReason::FORBIDDEN_CHARACTERS;
         }
     }
 
-    // Absolute paths are not valid entry names
-    if (!Path::root(p_entry_name).empty())
+    return InvalidEntryReason::VALID_ENTRY;
+}
+
+// -----------------------------------------------------------------------------
+Path::InvalidEntryReason Path::isValidEntry(std::string const& p_entry_name)
+{
+    if (p_entry_name.empty())
+        return InvalidEntryReason::EMPTY_ENTRY;
+
+    // Check for control characters
+    auto result = Path::checkControlCharacters(p_entry_name);
+    if (result != Path::InvalidEntryReason::VALID_ENTRY)
     {
-        return InvalidEntryReason::ABSOLUTE_PATH;
+        return result;
     }
 
     // Check for Zip Slip attack
     if (p_entry_name.find_first_of("..") == 0u)
     {
         return InvalidEntryReason::ZIP_SLIP;
+    }
+
+    // Absolute paths are not valid entry names
+    if (!Path::root(p_entry_name).empty())
+    {
+        return InvalidEntryReason::ABSOLUTE_PATH;
     }
 
     return InvalidEntryReason::VALID_ENTRY;

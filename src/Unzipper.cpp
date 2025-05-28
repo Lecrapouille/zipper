@@ -172,13 +172,18 @@ private:
                                file_info.tmu_date.tm_sec,
                                file_info.dos_date);
 
+        // Note: return isEntryValid(entry) is not needed here because invalid
+        // entries will be detected later during the extraction.
         return true;
     }
 
     // -------------------------------------------------------------------------
-    bool isEntryValid(ZipEntry const& p_zip_entry)
+    inline bool isEntryValid(ZipEntry const& p_zip_entry) const
     {
-        return !p_zip_entry.name.empty();
+        auto result = Path::isValidEntry(Path::normalize(p_zip_entry.name));
+        std::cout << "isEntryValid: " << p_zip_entry.name << " "
+                  << Path::getInvalidEntryReason(result) << std::endl;
+        return result == Path::InvalidEntryReason::VALID_ENTRY;
     }
 
 public:
@@ -212,7 +217,7 @@ public:
         {
             // Get the current entry info
             ZipEntry entry;
-            if (currentEntryInfo(entry) && isEntryValid(entry))
+            if (currentEntryInfo(entry))
             {
                 entries.push_back(entry);
                 err = unzGoToNextFile(m_zip_handler);
@@ -301,6 +306,16 @@ public:
             m_error_code =
                 make_error_code(UnzipperError::EXTRACT_ERROR, str.str());
             return UNZ_ERRNO;
+        }
+
+        // Check for control characters
+        if (Path::checkControlCharacters(p_zip_entry.name) !=
+            Path::InvalidEntryReason::VALID_ENTRY)
+        {
+            std::stringstream str;
+            str << "Security error: entry '"
+                << Path::toNativeSeparators(p_zip_entry.name)
+                << "' contains control characters";
         }
 
         // Create the folder if the entry is a folder.
@@ -707,7 +722,7 @@ public:
         while (err == UNZ_OK)
         {
             ZipEntry entry;
-            if (currentEntryInfo(entry) && isEntryValid(entry))
+            if (currentEntryInfo(entry))
             {
                 // If the entry name matches the glob pattern, extract it else
                 // skip it.

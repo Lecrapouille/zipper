@@ -118,3 +118,56 @@ TEST(ZipSlipTests, ZipBomb)
 
     ASSERT_TRUE(helper::removeFileOrDir(temp_dir));
 }
+
+//=============================================================================
+// Try add corrupted file to zip
+//=============================================================================
+TEST(ZipSlipTests, CorruptedFile)
+{
+    std::vector<std::string> forbidden_entries = {
+        "corr<.txt", "corr>.txt", "corr:.txt", "corr\".txt",
+        "corr|.txt", "corr*.txt", "corr?.txt",
+    };
+
+    Zipper zipper("corrupted.zip", Zipper::OpenFlags::Overwrite);
+
+    // Forbidden characters
+    for (const auto& forbidden_entry : forbidden_entries)
+    {
+        ASSERT_FALSE(helper::zipAddFile(
+            zipper, "corrupted.txt", "corrupted", forbidden_entry.c_str()));
+        ASSERT_THAT(zipper.error().message(),
+                    testing::HasSubstr("contains forbidden characters"));
+    }
+
+    // Control characters
+    ASSERT_FALSE(helper::zipAddFile(
+        zipper, "corrupted.txt", "corrupted", "\x00corrupted.txt"));
+    ASSERT_THAT(zipper.error().message(),
+                testing::HasSubstr("contains control characters"));
+
+    // Absolute path: allowed: the leading slash is removed
+    ASSERT_TRUE(helper::zipAddFile(
+        zipper, "corrupted.txt", "corrupted", "/foo/bar/corrupted1.txt"));
+
+    // Zip slip: allowed: the leading slash is removed
+    ASSERT_TRUE(helper::zipAddFile(
+        zipper, "corrupted.txt", "corrupted", "/../corrupted2.txt"));
+
+    // Zip slip: not allowed: the leading slash is not removed
+    ASSERT_FALSE(helper::zipAddFile(
+        zipper, "corrupted.txt", "corrupted", "../corrupted3.txt"));
+    ASSERT_THAT(zipper.error().message(),
+                testing::HasSubstr(
+                    "could be used to escape the destination directory"));
+    zipper.close();
+
+    // Check contents
+    Unzipper unzipper("corrupted.zip");
+    ASSERT_EQ(unzipper.entries().size(), 2);
+    ASSERT_EQ(unzipper.entries()[0].name, "foo/bar/corrupted1.txt");
+    ASSERT_EQ(unzipper.entries()[1].name, "corrupted2.txt");
+    unzipper.close();
+
+    ASSERT_TRUE(helper::removeFileOrDir("corrupted.zip"));
+}

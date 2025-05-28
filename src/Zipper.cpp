@@ -357,7 +357,8 @@ struct Zipper::Impl
         zi.tmz_date.tm_year = static_cast<uInt>(p_timestamp.tm_year);
 
         // Check if the entry name is valid to prevent security issues
-        Path::InvalidEntryReason reason = Path::isValidEntry(p_name_in_zip);
+        std::string canon_name_in_zip = Path::normalize(p_name_in_zip);
+        Path::InvalidEntryReason reason = Path::isValidEntry(canon_name_in_zip);
         if ((reason != Path::InvalidEntryReason::VALID_ENTRY) &&
             (reason != Path::InvalidEntryReason::ABSOLUTE_PATH))
         {
@@ -367,7 +368,6 @@ struct Zipper::Impl
                     Path::getInvalidEntryReason(reason));
             return false;
         }
-        std::string canon_name_in_zip = Path::normalize(p_name_in_zip);
 
         // Silently remove the absolute path from the entry name
         if (reason == Path::InvalidEntryReason::ABSOLUTE_PATH)

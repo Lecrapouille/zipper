@@ -221,6 +221,12 @@ public:
         ZIP_SLIP = 5
     };
 
+    //! \brief Checks if a ZIP entry name has control characters
+    //! \param[in] p_entry_name The entry name to check
+    //! \return true if the entry name has control characters
+    static InvalidEntryReason
+    checkControlCharacters(const std::string& p_entry_name);
+
     //! \brief Checks if a ZIP entry name is valid
     //! \param[in] p_entry_name The entry name to check
     //! \return true if the entry name is valid
