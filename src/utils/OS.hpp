@@ -71,7 +71,7 @@ extern "C"
 #    define OS_STRERROR ::strerror // FIXME win_strerror
 #    define OS_MKDIR(d, v) ::_mkdir(d)
 #    define OS_CHDIR(d) ::_chdir(d)
-#    define OS_GETCWD(b, s) ::_getcwd(b, s)
+#    define OS_GETCWD(b, s) ::_getcwd(b, int(s))
 #    define OS_UNLINK(f) ::_unlink(f)
 #    define OS_RMDIR(d) ::_rmdir(d)
 #    define OS_REMOVE(f) ::remove(f)

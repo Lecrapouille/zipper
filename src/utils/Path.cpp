@@ -784,7 +784,8 @@ std::string Path::canonicalPath(const std::string& p_destination_dir)
     }
     else if (Path::root(p_destination_dir).empty())
     {
-        dest = Path::normalize(currentPath() + "/" + p_destination_dir);
+        dest = Path::normalize(currentPath() + DIRECTORY_SEPARATOR +
+                               p_destination_dir);
     }
     else
     {
@@ -795,7 +796,7 @@ std::string Path::canonicalPath(const std::string& p_destination_dir)
     // The if is important to avoid adding an extra trailing slash if
     // destination is a root path.
     if (!hasTrailingSlash(dest))
-        dest += "/";
+        dest += Path::preferredSeparator(dest);
 
     return dest;
 }
