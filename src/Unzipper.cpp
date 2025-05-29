@@ -307,6 +307,19 @@ public:
                 make_error_code(UnzipperError::EXTRACT_ERROR, str.str());
             return UNZ_ERRNO;
         }
+        else if (Path::isValidEntry(p_zip_entry.name) !=
+                 Path::InvalidEntryReason::VALID_ENTRY)
+        {
+            std::stringstream str;
+            str << "Security error: entry '"
+                << Path::toNativeSeparators(p_canon_output_file) << "' reason: "
+                << Path::getInvalidEntryReason(
+                       Path::isValidEntry(p_zip_entry.name));
+
+            m_error_code =
+                make_error_code(UnzipperError::EXTRACT_ERROR, str.str());
+            return UNZ_ERRNO;
+        }
 
         // Check for control characters
         if (Path::checkControlCharacters(p_zip_entry.name) !=

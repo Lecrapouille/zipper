@@ -12,6 +12,10 @@
 
 using namespace zipper;
 
+#ifndef PWD
+#    error "PWD shall be defined"
+#endif
+
 //=============================================================================
 // https://github.com/Lecrapouille/zipper/issues/5
 //=============================================================================

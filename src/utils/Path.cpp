@@ -826,17 +826,11 @@ Path::checkControlCharacters(const std::string& p_entry_name)
     {
         unsigned char c = static_cast<unsigned char>(p_entry_name[i]);
 
-        // Check for control characters (ASCII codes 0-31)
-        if (c < 32)
+        // Check for control characters (ASCII codes 0-31) except for UTF-8
+        // continuation bytes
+        if (c < 32 && (i == 0 || (c & 0xC0) != 0x80))
         {
             return Path::InvalidEntryReason::CONTROL_CHARACTERS;
-        }
-
-        // Check for allowed characters (A-Za-z0-9._-/\)
-        if (!isalnum(c) && (c != '.') && (c != '_') && (c != '-') &&
-            (c != '/') && (c != '\\') && (c != ' '))
-        {
-            return Path::InvalidEntryReason::FORBIDDEN_CHARACTERS;
         }
     }
 

@@ -12,6 +12,10 @@
 
 using namespace zipper;
 
+#ifndef PWD
+#    error "PWD shall be defined"
+#endif
+
 //=============================================================================
 // Tests for zip-slip vulnerability
 // From https://github.com/snyk/zip-slip-vulnerability/tree/master
@@ -190,10 +194,8 @@ TEST(ZipSlipTests, CorruptedFile)
     // Forbidden characters
     for (const auto& forbidden_entry : forbidden_entries)
     {
-        ASSERT_FALSE(helper::zipAddFile(
+        ASSERT_TRUE(helper::zipAddFile(
             zipper, "corrupted.txt", "corrupted", forbidden_entry.c_str()));
-        ASSERT_THAT(zipper.error().message(),
-                    testing::HasSubstr("contains forbidden characters"));
     }
 
     // Control characters
@@ -220,10 +222,69 @@ TEST(ZipSlipTests, CorruptedFile)
 
     // Check contents
     Unzipper unzipper("corrupted.zip");
-    ASSERT_EQ(unzipper.entries().size(), 2);
-    ASSERT_EQ(unzipper.entries()[0].name, "foo/bar/corrupted1.txt");
-    ASSERT_EQ(unzipper.entries()[1].name, "corrupted2.txt");
+    ASSERT_EQ(unzipper.entries().size(), 9u);
+    ASSERT_EQ(unzipper.entries()[0].name, "corr<.txt");
+    ASSERT_EQ(unzipper.entries()[1].name, "corr>.txt");
+    ASSERT_EQ(unzipper.entries()[2].name, "corr:.txt");
+    ASSERT_EQ(unzipper.entries()[3].name, "corr\".txt");
+    ASSERT_EQ(unzipper.entries()[4].name, "corr|.txt");
+    ASSERT_EQ(unzipper.entries()[5].name, "corr*.txt");
+    ASSERT_EQ(unzipper.entries()[6].name, "corr?.txt");
+    ASSERT_EQ(unzipper.entries()[7].name, "foo/bar/corrupted1.txt");
+    ASSERT_EQ(unzipper.entries()[8].name, "corrupted2.txt");
     unzipper.close();
 
     ASSERT_TRUE(helper::removeFileOrDir("corrupted.zip"));
+}
+
+//=============================================================================
+// Try extract corrupted file from zip
+//=============================================================================
+TEST(ZipSlipTests, CorruptedFileExtraction)
+{
+    std::string zip_path(PWD "/issues/nasty.zip");
+    std::string temp_dir = "corrupted/";
+    ASSERT_TRUE(helper::removeFileOrDir(temp_dir));
+
+    Unzipper unzipper(zip_path);
+
+    auto entries = unzipper.entries();
+    ASSERT_EQ(entries.size(), 5u);
+    ASSERT_EQ(entries[0].name, "corr*.txt");
+    ASSERT_EQ(entries[1].name, "\x00corrupted.txt");
+    ASSERT_EQ(entries[2].name, "/foo/bar/corrupted1.txt");
+    ASSERT_EQ(entries[3].name, "/../corrupted2.txt");
+    ASSERT_EQ(entries[4].name, "../corrupted3.txt");
+
+    // Check that the extraction fails
+    ASSERT_FALSE(unzipper.extractAll(temp_dir));
+    ASSERT_THAT(unzipper.error().message(),
+                testing::HasSubstr("Security error"));
+    std::cout << "error: " << unzipper.error().message() << std::endl;
+
+    // Check that the extraction fails for each entry
+    for (size_t i = 1u; i < entries.size(); ++i)
+    {
+        std::cout << "Extracting: " << entries[i].name << std::endl;
+        ASSERT_FALSE(unzipper.extract(
+            entries[i].name, temp_dir, Unzipper::OverwriteMode::Overwrite));
+        ASSERT_THAT(unzipper.error().message(),
+                    testing::HasSubstr("Security error"));
+
+        ASSERT_FALSE(unzipper.extract(entries[i].name,
+                                      Unzipper::OverwriteMode::Overwrite));
+        ASSERT_THAT(unzipper.error().message(),
+                    testing::HasSubstr("Security error"));
+    }
+
+    // The entry 0 is extracted without error
+    std::cout << "Extracting: " << entries[0].name << std::endl;
+    ASSERT_TRUE(unzipper.extract(
+        entries[0].name, temp_dir, Unzipper::OverwriteMode::Overwrite));
+    ASSERT_TRUE(
+        unzipper.extract(entries[0].name, Unzipper::OverwriteMode::Overwrite));
+
+    unzipper.close();
+    ASSERT_TRUE(helper::removeFileOrDir(temp_dir));
+    ASSERT_TRUE(helper::removeFileOrDir(entries[0].name));
 }
