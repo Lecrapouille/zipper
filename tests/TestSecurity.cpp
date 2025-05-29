@@ -119,6 +119,62 @@ TEST(ZipSlipTests, ZipBomb)
     ASSERT_TRUE(helper::removeFileOrDir(temp_dir));
 }
 
+#if 0
+//=============================================================================
+// This is not a test but just an helper to create a nasty zip file. You should
+// deactivate the security before. And
+//=============================================================================
+TEST(ZipSlipTests, CreateNastyZipFile)
+{
+    std::vector<std::string> forbidden_entries = {
+        "corr<.txt", "corr>.txt", "corr:.txt", "corr\".txt",
+        "corr|.txt", "corr*.txt", "corr?.txt",
+    };
+
+    std::string zip_path(PWD "/issues/nasty.zip");
+    Zipper zipper(zip_path, Zipper::OpenFlags::Overwrite);
+
+    // Forbidden characters
+    for (const auto& forbidden_entry : forbidden_entries)
+    {
+        ASSERT_TRUE(helper::zipAddFile(
+            zipper, "corrupted.txt", "corrupted", forbidden_entry.c_str()));
+    }
+    // Control characters
+    ASSERT_TRUE(helper::zipAddFile(
+        zipper, "corrupted.txt", "corrupted", "\x00corrupted.txt"));
+
+    // Absolute path: allowed: the leading slash is removed
+    ASSERT_TRUE(helper::zipAddFile(
+        zipper, "corrupted.txt", "corrupted", "/foo/bar/corrupted1.txt"));
+
+    // Zip slip: allowed: the leading slash is removed
+    ASSERT_TRUE(helper::zipAddFile(
+        zipper, "corrupted.txt", "corrupted", "/../corrupted2.txt"));
+
+    // Zip slip: not allowed: the leading slash is not removed
+    ASSERT_TRUE(helper::zipAddFile(
+        zipper, "corrupted.txt", "corrupted", "../corrupted3.txt"));
+
+    zipper.close();
+
+    // Check contents
+    size_t i = 0;
+    Unzipper unzipper(zip_path);
+    ASSERT_EQ(unzipper.entries().size(), forbidden_entries.size() + 4u);
+    for (i = 0; i < forbidden_entries.size(); ++i)
+    {
+        ASSERT_EQ(unzipper.entries()[i].name, forbidden_entries[i]);
+    }
+    ASSERT_STREQ(unzipper.entries()[i].name.c_str(), "\x00corrupted.txt");
+    ASSERT_STREQ(unzipper.entries()[i + 1].name.c_str(),
+                 "/foo/bar/corrupted1.txt");
+    ASSERT_STREQ(unzipper.entries()[i + 2].name.c_str(), "/../corrupted2.txt");
+    ASSERT_STREQ(unzipper.entries()[i + 3].name.c_str(), "../corrupted3.txt");
+    unzipper.close();
+}
+#endif
+
 //=============================================================================
 // Try add corrupted file to zip
 //=============================================================================
