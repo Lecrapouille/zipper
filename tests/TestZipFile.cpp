@@ -73,6 +73,8 @@ TEST(ZipperFileOps, OpenAndClose)
     ASSERT_FALSE(zipper1.isOpened());
     zipper1.close();
     ASSERT_FALSE(zipper1.isOpened());
+    zipper1.close(); // 2nd times
+    ASSERT_FALSE(zipper1.isOpened());
     zipper1.reopen();
     ASSERT_FALSE(zipper1.isOpened());
 
@@ -101,6 +103,9 @@ TEST(ZipperFileOps, OpenAndClose)
     ASSERT_TRUE(unzipper2.isOpened());
     unzipper2.close();
     ASSERT_FALSE(unzipper2.isOpened());
+    unzipper2.close(); // 2nd times
+    ASSERT_FALSE(unzipper2.isOpened());
+
     // TODO: to implement
     // unzipper2.open();
     // ASSERT_TRUE(zipper2.isOpened());
