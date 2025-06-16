@@ -192,6 +192,7 @@ public:
     std::vector<ZipEntry> entries()
     {
         std::vector<ZipEntry> entries;
+        m_error_code.clear();
 
         // Count the number of entries and prealloc
         unz_global_info64 gi;
@@ -208,7 +209,7 @@ public:
         {
             m_error_code =
                 make_error_code(UnzipperError::INTERNAL_ERROR,
-                                "Failed navigating inside zip entries");
+                                "Failed navigating to first zip entry");
             return {};
         }
 
@@ -309,7 +310,7 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    int extractToFile(ZipEntry& p_zip_entry,
+    int extractToFile(ZipEntry const& p_zip_entry,
                       std::string const& p_destination,
                       std::string const& p_canon_output_file,
                       Unzipper::OverwriteMode p_overwrite)
@@ -712,18 +713,24 @@ public:
         m_error_code.clear();
         size_t failures = 0;
 
+        // Get filtered entries directly
+        std::vector<ZipEntry> filtered_entries = entries(p_glob_pattern);
+        if (m_error_code.value() != int(UnzipperError::NO_ERROR_UNZIPPER))
+        {
+            return false;
+        }
+
+        // Update progress with filtered entries
         if (m_progress_callback)
         {
             m_progress.reset();
+            m_progress.total_files = filtered_entries.size();
 
-            // Get total number of files and bytes
-            std::vector<ZipEntry> _entries = entries();
-            for (const auto& entry : _entries)
+            // Calculate total bytes only for filtered entries
+            for (const auto& entry : filtered_entries)
             {
-                // TODO: ICI mettre glob pattern
                 m_progress.total_bytes += entry.uncompressed_size;
             }
-            m_progress.total_files = _entries.size();
             m_progress_callback(m_progress);
         }
 
@@ -735,97 +742,52 @@ public:
             destination = Path::folderNameWithSeparator(p_destination_folder);
         }
 
-        // TODO: ici iterer sur _entries et appeller directement extractToFile
-
-        // Traverse the zip file sequentially in a single pass
-        int err = unzGoToFirstFile(m_zip_handler);
-        if (err != UNZ_OK)
+        // Extract all filtered entries
+        for (const auto& entry : filtered_entries)
         {
-            m_error_code = make_error_code(UnzipperError::INTERNAL_ERROR,
-                                           "Failed going to first entry");
+            // If an alternative name is provided for this entry, use
+            // it, otherwise use the entry name.
+            std::string file_path = destination;
+            auto const& alt = p_alternative_names.find(entry.name);
+            if (alt != p_alternative_names.end())
+                file_path += alt->second;
+            else
+                file_path += entry.name;
+            std::string canon_output_file = Path::normalize(file_path);
+
+            // Update progress
             if (m_progress_callback)
             {
-                m_progress.status = Progress::Status::KO;
+                m_progress.current_file = canon_output_file;
+                m_progress.status = Progress::Status::InProgress;
                 m_progress_callback(m_progress);
             }
-            return false;
-        }
 
-        while (err == UNZ_OK)
-        {
-            ZipEntry entry;
-            if (currentEntryInfo(entry))
-            {
-                // If the entry name matches the glob pattern, extract it else
-                // skip it.
-                if ((p_glob_pattern.empty()) ||
-                    (std::regex_match(entry.name, globToRegex(p_glob_pattern))))
-                {
-                    // If an alternative name is provided for this entry, use
-                    // it, otherwise use the entry name.
-                    std::string file_path = destination;
-                    auto const& alt = p_alternative_names.find(entry.name);
-                    if (alt != p_alternative_names.end())
-                        file_path += alt->second;
-                    else
-                        file_path += entry.name;
-                    std::string canon_output_file = Path::normalize(file_path);
-
-                    // Update progress
-                    if (m_progress_callback)
-                    {
-                        m_progress.current_file = canon_output_file;
-                        m_progress.status = Progress::Status::InProgress;
-                        m_progress_callback(m_progress);
-                    }
-
-                    if (extractToFile(entry,
-                                      destination,
-                                      canon_output_file,
-                                      p_overwrite) != UNZ_OK)
-                    {
-                        failures++;
-                        if (m_progress_callback)
-                        {
-                            m_progress.status = Progress::Status::KO;
-                            m_progress_callback(m_progress);
-                        }
-                    }
-                    else if (m_progress_callback)
-                    {
-                        m_progress.files_extracted++;
-                        m_progress.status = Progress::Status::InProgress;
-                        m_progress_callback(m_progress);
-                    }
-                }
-            }
-            else
+            // Locate and extract the entry
+            if (locateEntry(entry.name) &&
+                extractToFile(entry,
+                              destination,
+                              canon_output_file,
+                              p_overwrite) != UNZ_OK)
             {
                 failures++;
                 if (m_progress_callback)
                 {
-                    m_progress.current_file = "???";
                     m_progress.status = Progress::Status::KO;
                     m_progress_callback(m_progress);
                 }
             }
-
-            // Go to the next entry.
-            err = unzGoToNextFile(m_zip_handler);
+            else if (m_progress_callback)
+            {
+                m_progress.files_extracted++;
+                m_progress.status = Progress::Status::InProgress;
+                m_progress_callback(m_progress);
+            }
         }
 
-        // If the end of the list of files has not been reached
-        if (((err != UNZ_END_OF_LIST_OF_FILE) && (err != UNZ_OK)) ||
-            (failures > 0u))
+        // If there were any failures
+        if (failures > 0u)
         {
-            /* TODO
-            std::stringstream msg;
-            msg << "Failed extracting "
-                << (failures == 0u ? "all" : std::to_string(failures))
-                << (failures == 1u ? " file" : " files") << std::endl;
-            m_error_code =
-                make_error_code(UnzipperError::EXTRACT_ERROR, msg.str());
-                */
             if (m_progress_callback)
             {
                 m_progress.status = Progress::Status::KO;

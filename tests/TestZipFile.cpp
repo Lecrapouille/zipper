@@ -1121,7 +1121,7 @@ TEST(UnzipperFileOps, EmptyZipHandling)
         Unzipper unzipper(emptyZipFilename);
         ASSERT_FALSE(unzipper.extractAll(Unzipper::OverwriteMode::Overwrite));
         ASSERT_THAT(unzipper.error().message(),
-                    testing::HasSubstr("Failed going to first entry"));
+                    testing::HasSubstr("Failed navigating to first zip entry"));
         unzipper.close();
     }
 

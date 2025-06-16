@@ -418,10 +418,10 @@ TEST(MemoryZipTests, Issue118)
         ASSERT_FALSE(
             unzipper.extractAll(Unzipper::OverwriteMode::DoNotOverwrite));
         ASSERT_THAT(unzipper.error().message(),
-                    testing::HasSubstr("Failed going to first entry"));
+                    testing::HasSubstr("Failed navigating to first zip entry"));
         ASSERT_FALSE(unzipper.extractAll(Unzipper::OverwriteMode::Overwrite));
         ASSERT_THAT(unzipper.error().message(),
-                    testing::HasSubstr("Failed going to first entry"));
+                    testing::HasSubstr("Failed navigating to first zip entry"));
         ASSERT_FALSE(
             unzipper.extract("test1.txt", Unzipper::OverwriteMode::Overwrite));
         ASSERT_THAT(unzipper.error().message(),
