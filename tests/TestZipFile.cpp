@@ -1545,3 +1545,126 @@ TEST(UnzipperFileOps, ExtractAllWithAlternativeNames)
     // Clean up
     helper::removeFileOrDir(zipFilename);
 }
+
+//=============================================================================
+// Test Suite for entries() with glob patterns
+//=============================================================================
+TEST(UnzipperFileOps, EntriesWithGlob)
+{
+    const std::string zipFilename = "ziptest_entries_glob.zip";
+    const std::string file1 = "test1.txt";
+    const std::string file2 = "test2.txt";
+    const std::string file3 = "doc/readme.txt";
+    const std::string file4 = "doc/manual.pdf";
+    const std::string file5 = "src/main.cpp";
+    const std::string file6 = "src/utils.hpp";
+    const std::string file7 = "data/config.json";
+    const std::string content = "test content";
+
+    // Create a zip file with various file types in different directories
+    {
+        Zipper zipper(zipFilename);
+        ASSERT_TRUE(helper::zipAddFile(zipper, file1, content, file1));
+        ASSERT_TRUE(helper::zipAddFile(zipper, file2, content, file2));
+        ASSERT_TRUE(helper::zipAddFile(zipper, file3, content, file3));
+        ASSERT_TRUE(helper::zipAddFile(zipper, file4, content, file4));
+        ASSERT_TRUE(helper::zipAddFile(zipper, file5, content, file5));
+        ASSERT_TRUE(helper::zipAddFile(zipper, file6, content, file6));
+        ASSERT_TRUE(helper::zipAddFile(zipper, file7, content, file7));
+        zipper.close();
+    }
+
+    // Test entries() with glob patterns
+    {
+        Unzipper unzipper(zipFilename);
+        ASSERT_FALSE(unzipper.error()) << unzipper.error().message();
+
+        // Test getting all entries with "*" pattern
+        auto allEntries = unzipper.entries("*");
+        ASSERT_EQ(allEntries.size(), 7u);
+
+        // Test filtering for .txt files with "*.txt" pattern
+        auto txtEntries = unzipper.entries("*.txt");
+        ASSERT_EQ(txtEntries.size(), 3u);
+        std::vector<std::string> txtNames;
+        for (const auto& entry : txtEntries)
+        {
+            txtNames.push_back(entry.name);
+        }
+        ASSERT_TRUE(std::find(txtNames.begin(), txtNames.end(), file1) != txtNames.end());
+        ASSERT_TRUE(std::find(txtNames.begin(), txtNames.end(), file2) != txtNames.end());
+        ASSERT_TRUE(std::find(txtNames.begin(), txtNames.end(), file3) != txtNames.end());
+
+        // Test filtering for files in doc/ directory with "doc/*" pattern
+        auto docEntries = unzipper.entries("doc/*");
+        ASSERT_EQ(docEntries.size(), 2u);
+        std::vector<std::string> docNames;
+        for (const auto& entry : docEntries)
+        {
+            docNames.push_back(entry.name);
+        }
+        ASSERT_TRUE(std::find(docNames.begin(), docNames.end(), file3) != docNames.end());
+        ASSERT_TRUE(std::find(docNames.begin(), docNames.end(), file4) != docNames.end());
+
+        // Test filtering for C++ source files with "*.cpp" pattern
+        auto cppEntries = unzipper.entries("*.cpp");
+        ASSERT_EQ(cppEntries.size(), 1u);
+        ASSERT_EQ(cppEntries[0].name, file5);
+
+        // Test filtering for header files with "*.hpp" pattern
+        auto hppEntries = unzipper.entries("*.hpp");
+        ASSERT_EQ(hppEntries.size(), 1u);
+        ASSERT_EQ(hppEntries[0].name, file6);
+
+        // Test filtering for files starting with "test" with "test*" pattern
+        auto testEntries = unzipper.entries("test*");
+        ASSERT_EQ(testEntries.size(), 2u);
+        std::vector<std::string> testNames;
+        for (const auto& entry : testEntries)
+        {
+            testNames.push_back(entry.name);
+        }
+        ASSERT_TRUE(std::find(testNames.begin(), testNames.end(), file1) != testNames.end());
+        ASSERT_TRUE(std::find(testNames.begin(), testNames.end(), file2) != testNames.end());
+
+        // Test filtering for files in src/ directory with "src/*" pattern
+        auto srcEntries = unzipper.entries("src/*");
+        ASSERT_EQ(srcEntries.size(), 2u);
+        std::vector<std::string> srcNames;
+        for (const auto& entry : srcEntries)
+        {
+            srcNames.push_back(entry.name);
+        }
+        ASSERT_TRUE(std::find(srcNames.begin(), srcNames.end(), file5) != srcNames.end());
+        ASSERT_TRUE(std::find(srcNames.begin(), srcNames.end(), file6) != srcNames.end());
+
+        // Test pattern that matches no files
+        auto noMatchEntries = unzipper.entries("*.xyz");
+        ASSERT_EQ(noMatchEntries.size(), 0u);
+
+        // Test empty pattern (should match nothing or all based on implementation)
+        auto emptyPatternEntries = unzipper.entries("");
+        // The behavior with empty pattern may vary, just check it doesn't crash
+
+        // Test that all matched entries have the correct properties
+        for (const auto& entry : allEntries)
+        {
+            ASSERT_FALSE(entry.name.empty());
+            ASSERT_GT(entry.uncompressed_size, 0u);
+            ASSERT_GE(entry.compressed_size, 0u);
+        }
+
+        unzipper.close();
+    }
+
+    // Test entries() with glob pattern on a closed archive
+    {
+        Unzipper unzipper(zipFilename);
+        unzipper.close();
+        auto entries = unzipper.entries("*");
+        ASSERT_EQ(entries.size(), 0u);
+    }
+
+    // Clean up
+    ASSERT_TRUE(helper::removeFileOrDir(zipFilename));
+}

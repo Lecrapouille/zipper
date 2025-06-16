@@ -174,6 +174,16 @@ public:
     std::vector<ZipEntry> entries();
 
     // -------------------------------------------------------------------------
+    //! \brief Returns all entries contained in the zip archive matching the
+    //! glob pattern.
+    //! \note If no entries are found, the vector is empty but this may comes
+    //! from an internal error. Call error() to get to distinguish between
+    //! an empty vector and an internal error.
+    //! \return Vector of ZipEntry objects.
+    // -------------------------------------------------------------------------
+    std::vector<ZipEntry> entries(std::string const& p_glob_pattern);
+
+    // -------------------------------------------------------------------------
     //! \brief Returns the total uncompressed size of all entries in the zip
     //! archive.
     //! \note Call this method before extractAll() to check if the total

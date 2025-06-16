@@ -243,6 +243,25 @@ public:
     }
 
     // -------------------------------------------------------------------------
+    std::vector<ZipEntry> entries(std::string const& p_glob_pattern)
+    {
+        std::vector<ZipEntry> all_entries = entries();
+        std::vector<ZipEntry> filtered_entries;
+        filtered_entries.reserve(all_entries.size());
+
+        for (const auto& entry : all_entries)
+        {
+            if (p_glob_pattern.empty() ||
+                std::regex_match(entry.name, globToRegex(p_glob_pattern)))
+            {
+                filtered_entries.push_back(entry);
+            }
+        }
+
+        return filtered_entries;
+    }
+
+    // -------------------------------------------------------------------------
     void changeFileDate(std::string const& p_filename,
                         uLong p_dos_date,
                         const tm_zip& p_tmu_date)
@@ -1094,6 +1113,28 @@ std::vector<ZipEntry> Unzipper::entries()
         return {};
 
     return m_impl->entries();
+}
+
+// -----------------------------------------------------------------------------
+std::vector<ZipEntry> Unzipper::entries(std::string const& p_glob_pattern)
+{
+    if (!checkValid())
+        return {};
+
+    std::vector<ZipEntry> all_entries = m_impl->entries();
+    std::vector<ZipEntry> filtered_entries;
+    filtered_entries.reserve(all_entries.size());
+
+    for (const auto& entry : all_entries)
+    {
+        if (p_glob_pattern.empty() ||
+            std::regex_match(entry.name, globToRegex(p_glob_pattern)))
+        {
+            filtered_entries.push_back(entry);
+        }
+    }
+
+    return filtered_entries;
 }
 
 // -----------------------------------------------------------------------------
