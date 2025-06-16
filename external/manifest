@@ -1,0 +1,8 @@
+### zlib replacement with optimizations for "next generation" systems.
+### License: zlib
+zlib-ng/zlib-ng
+
+### Minizip contrib in zlib with latest bug fixes that supports PKWARE disk
+### spanning, AES encryption, and IO buffering.
+### License: zlib
+Lecrapouille/minizip

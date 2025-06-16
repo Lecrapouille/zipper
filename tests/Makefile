@@ -11,7 +11,7 @@ include $(P)/Makefile.common
 TARGET_NAME := $(PROJECT_NAME)-tests
 TARGET_DESCRIPTION := Unit tests for $(PROJECT_NAME)
 COMPILATION_MODE := test
-CXX_STANDARD := --std=c++14
+CXX_STANDARD := --std=c++17
 include $(M)/project/Makefile
 
 ###################################################
@@ -26,10 +26,11 @@ DEFINES += -DHAVE_AES
 ifeq ($(ARCHI),Windows)
     LIB_FILES += $(P)/src/utils/dirent.c
 endif
-THIRDPART_LIBS := $(abspath $(THIRDPART_DIR)/minizip/build/libminizip.a)
-THIRDPART_LIBS += $(abspath $(THIRDPART_DIR)/minizip/build/libaes.a)
-THIRDPART_LIBS += $(abspath $(THIRDPART_DIR)/zlib-ng/build/libz.a)
+THIRD_PARTIES_LIBS := $(abspath $(THIRD_PARTIES_DIR)/minizip/build/libminizip.a)
+THIRD_PARTIES_LIBS += $(abspath $(THIRD_PARTIES_DIR)/minizip/build/libaes.a)
+THIRD_PARTIES_LIBS += $(abspath $(THIRD_PARTIES_DIR)/zlib-ng/build/libz.a)
 PKG_LIBS += gtest gmock
+USER_CXXFLAGS += -Wno-null-dereference
 
 ###################################################
 # Generic Makefile rules

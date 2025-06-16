@@ -10,6 +10,7 @@ M := $(P)/.makefile
 include $(P)/Makefile.common
 TARGET_NAME := $(PROJECT_NAME)
 TARGET_DESCRIPTION := Zipper is a C++ library for creating and reading zip archives.
+CXX_STANDARD := --std=c++14
 include $(M)/project/Makefile
 
 ###################################################
@@ -17,16 +18,16 @@ include $(M)/project/Makefile
 #
 LIB_FILES := $(call rwildcard,src,*.cpp)
 INCLUDES := $(P)/include $(P)/src $(P)
-VPATH := $(P)/src $(P)/src/utils $(THIRDPART_DIR)
+VPATH := $(P)/src $(P)/src/utils $(THIRD_PARTIES_DIR)
 ifeq ($(OS),Windows)
     LIB_FILES += src/utils/dirent.c
     DEFINES += -DHAVE_AES
 else
     DEFINES += -DHAVE_AES
 endif
-THIRDPART_LIBS := $(abspath $(THIRDPART_DIR)/minizip/build/libminizip.a)
-THIRDPART_LIBS += $(abspath $(THIRDPART_DIR)/minizip/build/libaes.a)
-THIRDPART_LIBS += $(abspath $(THIRDPART_DIR)/zlib-ng/build/libz.a)
+THIRD_PARTIES_LIBS := $(abspath $(THIRD_PARTIES_DIR)/minizip/build/libminizip.a)
+THIRD_PARTIES_LIBS += $(abspath $(THIRD_PARTIES_DIR)/minizip/build/libaes.a)
+THIRD_PARTIES_LIBS += $(abspath $(THIRD_PARTIES_DIR)/zlib-ng/build/libz.a)
 
 ###################################################
 # Documentation
