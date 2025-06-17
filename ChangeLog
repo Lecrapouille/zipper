@@ -1,3 +1,21 @@
+Version 3.0.0:
+    * Add CMake to compile for Windows.
+    * Fix memory corruptions found in minizip.
+    * Fix compilation issue for minizip and Windows preventing usage of AES.
+    * Fix regression in minizip when updated: timestamp for Linux.
+    * Breaking API:
+        - introduce dummy constructor and open() methods
+        - replace bool by enum for extraction
+        - reduce public method names
+        - allows operators & and | for zip flags.
+    * New API:
+        - Add glob pattern (extraction, entries)
+        - Add callback for making progressbar.
+    * Better prevention against zip slip attack.
+    * Cleaning C++ code.
+    * Refresh unit tests.
+    * Add clang-format and use C++ syntax convention for var and arguments.
+
 Version 2.2.0:
     * Optimized code by AI: same time for zipping/unzipping than Linux tool
     * Fix some issues with big names (entry, fake extraction below folder).
