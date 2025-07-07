@@ -42,14 +42,14 @@ make compile-external-libs
 make -j8
 ```
 
-Explainations of compilation comands:
+Explanations of compilation commands:
 
-- Git cloning needs the recursivity option to install the Makefile helper and third-party libs (`zlib` and `minizip`). They are based on fixed SHA1. They are installed in the folder `external`.
-- Optionally `make download-external-libs` will git clone HEADs of third-party libs (`zlib` and `minizip`) in the `external` folder. It is optional since it was iniitally used instead git submodule.
+- Git cloning requires the recursive option to install the Makefile helper and third-party libs (`zlib` and `minizip`) in the `external` folder. They are based on fixed SHA1. They are installed in the folder `external`.
+- Optionally `make download-external-libs` will git clone HEADs of third-party libs (`zlib` and `minizip`) in the `external` folder. It is optional since it was initially used instead of git submodule.
 - `make compile-external-libs` will compile third-party libs (`zlib` and `minizip`) but not install them on your operating system. They are compiled as static libraries and merged into this library inside the `build` folder.
-- `make` will compile this library against the third-party libs (`zlib` and `minizip`). A `build` folder is created with two demos inside. Note: `-j8` shall be adapted to your number of CPU cores.
+- `make` will compile this library against the third-party libs (`zlib` and `minizip`). A `build` folder is created with two demos inside. Note: `-j8` should be adapted to your number of CPU cores.
 
-See the [README](doc/demos/README.md) file for the usage of demos. To run demos, you can run them:
+See the [README](doc/demos/README.md) file for using the demos. To run demos, you can run them:
 
 ```shell
 cd build
@@ -73,7 +73,7 @@ You will see a message like:
 *** Installing: Zipper => /usr/include/Zipper-2.0.0
 ```
 
-For developers, you can run non regression tests. They depends on:
+For developers, you can run non regression tests. They depend on:
 
 - [googletest](https://github.com/google/googletest) framework
 - lcov for code coverage
@@ -84,7 +84,7 @@ make tests -j8
 
 ### Compiling / Installing with CMake (Linux, MacOs, Windows)
 
-As alternative, you can also build the project using CMake:
+As an alternative, you can also build the project using CMake:
 
 ```shell
 git clone https://github.com/lecrapouille/zipper.git --recursive
@@ -92,14 +92,16 @@ cd zipper
 mkdir build
 cd build
 cmake .. -DZIPPER_SHARED_LIB=ON -DZIPPER_BUILD_DEMOS=ON -DZIPPER_BUILD_TESTS=ON
+# Either:
 cmake --build . --config Release
+# Or: make -j8
 ```
 
 Optional options:
 
-- `-DZIPPER_SHARED_LIB=ON` allows to create a shared lib instead of static lib.
-- `-DZIPPER_BUILD_DEMOS=ON` allows to compile zipper and unzipper "hello world" demos.
-- `-DZIPPER_BUILD_TESTS=ON` allows to compile unit tests (if you are a developer).
+- `-DZIPPER_SHARED_LIB=ON` allows creating a shared lib instead of static lib.
+- `-DZIPPER_BUILD_DEMOS=ON` allows compiling zipper and unzipper "hello world" demos.
+- `-DZIPPER_BUILD_TESTS=ON` allows compiling unit tests (if you are a developer).
 
 ### Linking Zipper to your project
 
@@ -110,7 +112,7 @@ Optional options:
 #include <Zipper/Zipper.hpp>
 ```
 
-- To compile your project "as it" against Zipper, use pkg-config:
+- To compile your project "as it" against Zipper, the simplest way is to use the `pkg-config` command:
 
 ```shell
 g++ -W -Wall --std=c++14 main.cpp -o prog `pkg-config zipper --cflags --libs`
@@ -206,13 +208,13 @@ catch (std::runtime_error const& e)
 }
 ```
 
-- If this is not a desired behavior, you can choose the alternative dummy constructor followed by the `open` method which takes the same argument than constructors. This method does not throw but will return `false` in case of error, you can get the reason by calling `error()`.
+- If this is not a desired behavior, you can choose the alternative dummy constructor followed by the `open` method which takes the same arguments as constructors. This method does not throw but will return `false` in case of error, you can get the reason by calling `error()`.
 
 ```c++
 // Dummy constructor
 Zipper zipper;
 
-// Same argmuments than seen previously with constructors.
+// Same arguments than seen previously with constructors.
 if (!zipper.open(...))
 {
     std::cerr << zipper.error() << std::endl;
@@ -230,7 +232,7 @@ Zipper zipper("ziptest.zip", ...);
 zipper.close(); // Now Unzipper unzipper("ziptest.zip") can work
 ```
 
-After `close()` you can reopen the zip archive with `open()` without arguments. You can pass the same arguments than seen previously with constructors to open with new password or flags. Note: that any open method will call implictely the close() method.
+After `close()` you can reopen the zip archive with `open()` without arguments. You can pass the same arguments than seen previously with constructors to open with new password or flags. Note: that any open method will call implicitly the close() method.
 
 ```c++
 Zipper zipper("ziptest.zip", ...);
@@ -373,7 +375,7 @@ Zipper zipper(zip_in_memory); // You can pass password
 zipper.add(input1, "Test1");
 zipper.close();
 
-zipper::Unzipper unzipper(zip_in_memory);
+Unzipper unzipper(zip_in_memory);
 unzipper.extract(...
 ```
 
@@ -382,15 +384,13 @@ Or:
 ```c++
 #include <vector>
 
-std::vector<unsigned char> zip_vect;
+std::vector<unsigned char> zip_vector;
 std::ifstream input1("some file");
 
-Zipper zipper(zip_vect); // You can pass password
+Zipper zipper(zip_vector); // You can pass password
 zipper.add(input1, "Test1");
 zipper.close();
-```
-
-- Creating a zip in-memory stream with files:
+```- Creating a zip in-memory stream with files:
 
 ```c++
 // Example of using stringstream
@@ -417,7 +417,7 @@ using namespace zipper;
 
 #### Constructor
 
-- Constructor without password and opening `ziptest.zip` (shall be already present).
+- Constructor without password and opening `ziptest.zip` (should already be present).
 
 ```c++
 Unzipper unzipper("ziptest.zip");
@@ -425,7 +425,7 @@ Unzipper unzipper("ziptest.zip");
 unzipper.close();
 ```
 
-- Constructor with a password and opening `ziptest.zip` (shall be already present).
+- Constructor with a password and opening `ziptest.zip` (should already be present).
 
 ```c++
 Unzipper unzipper("ziptest.zip", "my_password");
@@ -496,7 +496,7 @@ unzipper.close();
 
 #### Extracting all entries from the zip file
 
-Two methods are available: `extract()` for the whole archive and `extractEntry()` for
+Two methods are available: `extractAll()` for the whole archive and `extract()` for
 a single element in the archive. They return `true` in case of success
 or `false` in case of failure. In case of failure, use `unzipper.error();`
 to get the `std::error_code`.
@@ -506,8 +506,8 @@ check the total uncompressed size of all entries in the zip archive by calling
 `unzipper.sizeOnDisk()` before `unzipper.extractAll(...)`.
 
 ```c++
-// 1 giga bytes
-const size_t MAX_TOTAL_UNCOMPRESSED_BYTES (1 * 1024 * 1024 *1024)
+// 1 gigabyte
+const size_t MAX_TOTAL_UNCOMPRESSED_BYTES (1 * 1024 * 1024 * 1024)
 
 Unzipper unzipper("zipfile.zip");
 if (unzipper.sizeOnDisk() <= MAX_TOTAL_UNCOMPRESSED_BYTES)
@@ -516,7 +516,7 @@ if (unzipper.sizeOnDisk() <= MAX_TOTAL_UNCOMPRESSED_BYTES)
 }
 else
 {
-    std::cerr << "Zip bomb attack prevent" << std::endl;
+    std::cerr << "Zip bomb attack prevented" << std::endl;
 }
 ```
 
@@ -602,9 +602,9 @@ In case of failure, use `unzipper.error();` to get the `std::error_code`.
 - Extracting from a vector:
 
 ```c++
-std::vector<unsigned char> zip_vect; // Populated with Zipper zipper(zip_vect);
+std::vector<unsigned char> zip_vector; // Populated with Zipper zipper(zip_vect);
 
-Unzipper unzipper(zip_vect);
+Unzipper unzipper(zip_vector);
 unzipper.extract("Test1");
 ```
 
