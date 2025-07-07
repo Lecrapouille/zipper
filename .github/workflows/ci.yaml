@@ -128,6 +128,12 @@ jobs:
           ./build/Zipper
           ls ziptest.zip /tmp/somefile.txt
           cat /tmp/somefile.txt
+      - name: Check if the library can be linked against a project using CMake
+        run: |
+          cd doc/demos/CMakeHelloWorld
+          cmake .
+          cmake --build .
+          ./test_zipper
 
   #############################################################################
   ### MacOS X Makefile
@@ -227,3 +233,11 @@ jobs:
         run: |
           cd build\Release
           .\zipper-tests.exe
+      - name: Check if the library can be linked against a project using CMake
+        shell: powershell
+        run: |
+          cd doc/demos/CMakeHelloWorld
+          cmake .
+          cmake --build . --config Release
+# FIXME
+#          .\Release\test_zipper.exe
