@@ -13,7 +13,7 @@ jobs:
   #############################################################################
   ### Linux Makefile
   #############################################################################
-  non_regression_linux:
+  non_regression_linux_makefile:
     name: Non regression on Linux Makefile
     runs-on: ubuntu-latest
     steps:
@@ -77,9 +77,62 @@ jobs:
           cat /tmp/somefile.txt
 
   #############################################################################
+  ### Linux CMake
+  #############################################################################
+  non_regression_linux_cmake:
+    name: Non regression on Linux CMake
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Zipper
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install pkg-config lcov libdw-dev ninja-build
+      - name: Build Zipper
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DZIPPER_SHARED_LIB=ON -DZIPPER_BUILD_DEMOS=ON -DZIPPER_BUILD_TESTS=ON
+          V=1 make -j`nproc --all`
+          test -f libzipper.so
+          test -f zipper-demo
+          test -f unzipper-demo
+          test -f zipper-tests
+          test -f zipper.pc
+      - name: Verify installed files
+        run: |
+          cd build
+          sudo V=1 make install
+          test -f /usr/local/lib/libzipper.so
+          test -f /usr/local/lib/pkgconfig/zipper.pc
+          test -f /usr/local/include/Zipper/Zipper.hpp
+          test -f /usr/local/include/Zipper/Unzipper.hpp
+      - name: Non regression
+        run: |
+          cd build
+          ./zipper-tests
+      - name: Check the unzipper demo
+        run: |
+          cd build
+          echo "1234" | ./unzipper-demo -p -f -o /tmp ../tests/issues/issue_05_password.zip
+          ls /tmp/issue_05/foo/bar /tmp/issue_05/Nouveau\ dossier/ /tmp/issue_05/Nouveau\ fichier\ vide
+      - name: Check if the library can be linked against a project
+        run: |
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
+          git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recurse-submodules --depth=1
+          cd LinkAgainstMyLibs/Zipper
+          V=1 make -j`nproc --all`
+          ./build/Zipper
+          ls ziptest.zip /tmp/somefile.txt
+          cat /tmp/somefile.txt
+
+  #############################################################################
   ### MacOS X Makefile
   #############################################################################
-  non_regression_macos:
+  non_regression_macos_makefile:
     name: Non regression on MacOS X Makefile
     runs-on: macos-latest
     steps:
@@ -137,7 +190,7 @@ jobs:
   #############################################################################
   ### Windows CMake
   #############################################################################
-  non_regression_windows:
+  non_regression_windows_cmake:
     name: Non regression on Windows CMake
     runs-on: windows-2022
     steps:
