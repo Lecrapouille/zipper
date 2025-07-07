@@ -9,5 +9,7 @@ int main()
     zipper.add(content, "hello.txt");
 
     zipper.close();
+
+    std::cout << "Hello World zipper done !" << std::endl;
     return EXIT_SUCCESS;
 }
