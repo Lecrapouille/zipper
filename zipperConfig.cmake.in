@@ -1,0 +1,19 @@
+@PACKAGE_INIT@
+
+# Zipper CMake Configuration File
+# This file is configured during the build process to help find_package(zipper) work
+
+# Set the version
+set(ZIPPER_VERSION @PROJECT_VERSION@)
+
+# Include the target definitions
+include("${CMAKE_CURRENT_LIST_DIR}/zipperTargets.cmake")
+
+# Set the include directories
+set_and_check(ZIPPER_INCLUDE_DIRS "@PACKAGE_INCLUDE_INSTALL_DIR@")
+
+# Set the libraries
+set(ZIPPER_LIBRARIES zipper::zipper)
+
+# Check that all required components are available
+check_required_components(zipper)
