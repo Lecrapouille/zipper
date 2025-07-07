@@ -123,9 +123,11 @@ g++ -W -Wall --std=c++14 main.cpp -o prog `pkg-config zipper --cflags --libs`
 - For CMake:
 
 ```cmake
-include(FindPkgConfig)
-find_package(zipper)
+find_package(zipper REQUIRED)
+target_link_libraries(your_application zipper::zipper)
 ```
+
+You have an example [doc/demos/CMakeHelloWorld](here).
 
 ## API
 

@@ -104,7 +104,8 @@ target_include_directories(zipper PRIVATE
 
 # Public include directories
 target_include_directories(zipper PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
 
@@ -150,6 +151,7 @@ configure_file(
 # Installation rules
 ##############################################################################
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 # Configure version information for shared libraries
 if(ZIPPER_SHARED_LIB)
@@ -183,4 +185,38 @@ if(WIN32 AND ZIPPER_SHARED_LIB)
 endif()
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zipper.pc
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+)
+
+##############################################################################
+# CMake Package Configuration (for find_package support)
+##############################################################################
+
+# Install the export targets
+install(EXPORT zipperTargets
+    FILE zipperTargets.cmake
+    NAMESPACE zipper::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/zipper
+)
+
+# Generate the config file
+set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR})
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/zipperConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/zipperConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/zipper
+    PATH_VARS INCLUDE_INSTALL_DIR
+)
+
+# Generate the version file
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/zipperConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY AnyNewerVersion
+)
+
+# Install the configuration files
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/zipperConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/zipperConfigVersion.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/zipper
 )

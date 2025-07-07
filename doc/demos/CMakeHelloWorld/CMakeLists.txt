@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.12)
+project(zipper-cmake-example)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+find_package(zipper REQUIRED)
+add_executable(test_zipper main.cpp)
+target_link_libraries(test_zipper zipper::zipper)
