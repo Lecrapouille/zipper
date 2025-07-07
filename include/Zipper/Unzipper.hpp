@@ -166,7 +166,7 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Returns all entries contained in the zip archive.
-    //! \note If no entries are found, the vector is empty but this may comes
+    //! \note If no entries are found, the vector is empty but this may come
     //! from an internal error. Call error() to get to distinguish between
     //! an empty vector and an internal error.
     //! \return Vector of ZipEntry objects.
@@ -176,7 +176,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Returns all entries contained in the zip archive matching the
     //! glob pattern.
-    //! \note If no entries are found, the vector is empty but this may comes
+    //! \note If no entries are found, the vector is empty but this may come
     //! from an internal error. Call error() to get to distinguish between
     //! an empty vector and an internal error.
     //! \return Vector of ZipEntry objects.
@@ -236,7 +236,7 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Extract entries matching a glob pattern.
-    //! \note Glob pattern is a the regular expression syntax used by the Unix
+    //! \note Glob pattern is the regular expression syntax used by the Unix
     //! shell.
     //!
     //! \param[in] p_glob Glob pattern to select entries.
@@ -255,7 +255,7 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Extract entries matching a glob pattern.
-    //! \note Glob pattern is a the regular expression syntax used by the Unix
+    //! \note Glob pattern is the regular expression syntax used by the Unix
     //! shell.
     //!
     //! \param[in] p_glob Glob pattern to select entries.
@@ -270,7 +270,7 @@ public:
 
     // -------------------------------------------------------------------------
     //! \brief Extract entries matching a glob pattern.
-    //! \note Glob pattern is a the regular expression syntax used by the Unix
+    //! \note Glob pattern is the regular expression syntax used by the Unix
     //! shell.
     //!
     //! \param[in] p_glob Glob pattern to select entries.
