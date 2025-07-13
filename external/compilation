@@ -1,0 +1,19 @@
+###############################################################################
+### Library zlib-ng
+###############################################################################
+print-compile zlib-ng
+mkdir -p zlib-ng/build
+(cd zlib-ng/build
+    call-cmake -DZLIB_COMPAT=ON -DZLIB_ENABLE_TESTS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON ..
+    call-make
+)
+
+###############################################################################
+### Library minizip
+###############################################################################
+print-compile minizip
+mkdir -p minizip/build
+(cd minizip/build
+    call-cmake -DUSE_AES=ON ..
+    call-make
+)
