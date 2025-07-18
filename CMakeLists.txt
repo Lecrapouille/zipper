@@ -21,90 +21,12 @@ option(ZIPPER_BUILD_TESTS "Build the test applications" OFF)
 option(ZIPPER_SHARED_LIB "Build zipper as a shared library" OFF)
 option(USE_LOCAL_SUBMODULES "Use local submodules instead of FetchContent" OFF)
 
-# Force static libraries for dependencies on Windows to avoid DLL issues
-if(WIN32)
-    set(BUILD_SHARED_LIBS OFF)
-endif()
-
 ##############################################################################
-# Include FetchContent if not using local submodules or if they don't exist
+# Third-party dependencies
 ##############################################################################
 
-set(NEED_FETCH_CONTENT_ZLIB_NG FALSE)
-set(NEED_FETCH_CONTENT_MINIZIP FALSE)
-
-if(NOT (USE_LOCAL_SUBMODULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/external/zlib-ng/CMakeLists.txt"))
-    set(NEED_FETCH_CONTENT_ZLIB_NG TRUE)
-    message(STATUS "Using FetchContent for zlib-ng")
-else()
-    message(STATUS "Using local zlib-ng submodule")
-endif()
-
-if(NOT (USE_LOCAL_SUBMODULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/external/minizip/CMakeLists.txt"))
-    set(NEED_FETCH_CONTENT_MINIZIP TRUE)
-    message(STATUS "Using FetchContent for minizip")
-else()
-    message(STATUS "Using local minizip submodule")
-endif()
-
-if(NEED_FETCH_CONTENT_ZLIB_NG OR NEED_FETCH_CONTENT_MINIZIP)
-    include(FetchContent)
-endif()
-
-##############################################################################
-# Configure zlib-ng third party dependency
-##############################################################################
-set(ZLIB_COMPAT ON CACHE BOOL "Enable zlib-ng compatibility")
-set(ZLIB_ENABLE_TESTS OFF CACHE BOOL "Disable zlib-ng tests")
-set(SKIP_INSTALL_ALL ON CACHE BOOL "Skip installation of zlib-ng")
-
-# Use zlib-ng from local submodule if available, otherwise use FetchContent
-if(NOT NEED_FETCH_CONTENT_ZLIB_NG)
-    add_subdirectory(external/zlib-ng)
-else()
-    FetchContent_Declare(zlib-ng
-        GIT_REPOSITORY https://github.com/zlib-ng/zlib-ng.git
-        GIT_TAG        2.2.4
-        GIT_SHALLOW    TRUE
-    )
-
-    FetchContent_MakeAvailable(zlib-ng)
-endif()
-
-##############################################################################
-# Configure minizip third party dependency
-##############################################################################
-
-# Enable AES encryption instead of default option
-option(USE_AES "Enable AES encryption" ON)
-
-# Define the CMP0077 policy to avoid warning with option() in external/minizip
-if(POLICY CMP0077)
-  cmake_policy(SET CMP0077 NEW)
-endif()
-
-# Use minizip from local submodule if available, otherwise use FetchContent
-if(NOT NEED_FETCH_CONTENT_MINIZIP)
-    add_subdirectory(external/minizip)
-    target_include_directories(minizip PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/external/zlib-ng>
-    )
-else()
-    FetchContent_Declare(minizip
-        GIT_REPOSITORY https://github.com/Lecrapouille/minizip.git
-        GIT_TAG        v1.2
-        GIT_SHALLOW    TRUE
-    )
-
-    FetchContent_MakeAvailable(minizip)
-
-    # Ensure minizip has access to zlib-ng headers
-    if(TARGET minizip)
-        target_include_directories(minizip PUBLIC
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/_deps/zlib-ng-build>
-        )
-    endif()
-endif()
+include(FetchContent)
+add_subdirectory(external)
 
 ##############################################################################
 # Main library targets (static and shared)
