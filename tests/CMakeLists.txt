@@ -9,13 +9,21 @@ set(CMAKE_CXX_STANDARD 14)
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
 # Download and configure GoogleTest
+set(fetch_content_extra_args)
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
+    list(APPEND fetch_content_extra_args
+        FIND_PACKAGE_ARGS CONFIG
+    )
+endif()
+
 include(FetchContent)
 FetchContent_Declare(
-    googletest
+    GTest
     GIT_REPOSITORY https://github.com/google/googletest.git
     GIT_TAG v1.14.0
+    ${fetch_content_extra_args}
 )
-FetchContent_MakeAvailable(googletest)
+FetchContent_MakeAvailable(GTest)
 
 # Define the test sources
 file(GLOB TESTS_SOURCES "*.cpp")
@@ -39,9 +47,9 @@ target_compile_definitions(zipper-tests PRIVATE
 # Link with the main library and Google Test
 target_link_libraries(zipper-tests PRIVATE
     zipper
-    gtest
-    gtest_main
-    gmock
+    GTest::gtest
+    GTest::gtest_main
+    GTest::gmock
 )
 
 # Add the test to the CTest list
