@@ -135,8 +135,8 @@ endif()
 ##############################################################################
 if(ZIPPER_BUILD_TESTS)
     message(STATUS "Building test applications")
-    add_subdirectory(tests)
     enable_testing()
+    add_subdirectory(tests)
 endif()
 
 ##############################################################################
