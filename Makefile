@@ -17,14 +17,16 @@ include $(M)/project/Makefile
 # Compile shared and static libraries
 #
 LIB_FILES := $(call rwildcard,src,*.cpp)
-INCLUDES := $(P)/include $(P)/src $(P)
-VPATH := $(P)/src $(P)/src/utils $(THIRD_PARTIES_DIR)
 ifeq ($(OS),Windows)
     LIB_FILES += src/utils/dirent.c
-    DEFINES += -DHAVE_AES
-else
-    DEFINES += -DHAVE_AES
 endif
+INCLUDES := $(P)/include $(P)/src $(P)
+VPATH := $(P)/src $(P)/src/utils $(THIRD_PARTIES_DIR)
+DEFINES += -DHAVE_AES
+
+###################################################
+# Third party libraries (compiled with make compile-external-libs)
+#
 THIRD_PARTIES_LIBS := $(abspath $(THIRD_PARTIES_DIR)/minizip/build/libminizip.a)
 THIRD_PARTIES_LIBS += $(abspath $(THIRD_PARTIES_DIR)/minizip/build/libaes.a)
 THIRD_PARTIES_LIBS += $(abspath $(THIRD_PARTIES_DIR)/zlib-ng/build/libz.a)
