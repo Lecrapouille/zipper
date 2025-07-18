@@ -19,7 +19,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 option(ZIPPER_BUILD_DEMOS "Build the demo applications" OFF)
 option(ZIPPER_BUILD_TESTS "Build the test applications" OFF)
 option(ZIPPER_SHARED_LIB "Build zipper as a shared library" OFF)
-option(USE_LOCAL_SUBMODULES "Use local submodules instead of FetchContent" OFF)
+option(ZIPPER_USE_LOCAL_SUBMODULES "Use local submodules instead of FetchContent" OFF)
 
 ##############################################################################
 # Third-party dependencies

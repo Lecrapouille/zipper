@@ -29,7 +29,7 @@ FetchContent_Declare(minizip
 
 # If we are asked to use submodules, override the paths to point to
 # the submodule destination
-if(USE_LOCAL_SUBMODULES)
+if(ZIPPER_USE_LOCAL_SUBMODULES)
     set(FETCHCONTENT_SOURCE_DIR_MINIZIP ${CMAKE_CURRENT_SOURCE_DIR}/minizip CACHE PATH
         "zipper: Override (USE_LOCAL_SUBMODULES)"
     )
