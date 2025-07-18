@@ -11,6 +11,7 @@ endif()
 option(WITH_GTEST         "zipper: Override" OFF)
 option(WITH_FUZZERS       "zipper: Override" OFF)
 option(WITH_BENCHMARKS    "zipper: Override" OFF)
+# TODO: Do without the ZLIB_COMPAT
 option(ZLIB_COMPAT        "zipper: Override" ON)
 option(ZLIB_ENABLE_TESTS  "zipper: Override" OFF)
 option(SKIP_INSTALL_ALL   "zipper: Override" ON)
@@ -53,4 +54,10 @@ if(minizip_SOURCE_DIR)
     target_include_directories(minizip PUBLIC
         $<BUILD_INTERFACE:${minizip_SOURCE_DIR}>
     )
+    add_library(MINIZIP::minizip ALIAS minizip)
+endif()
+
+if(zlib-ng_SOURCE_DIR)
+    # TODO: after ZLIB_COMPAT is off, switch to zlib-ng
+    add_library(ZLIB::zlib ALIAS zlib)
 endif()

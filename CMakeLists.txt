@@ -13,6 +13,10 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+include(GNUInstallDirs)
+include(FetchContent)
+include(CMakePackageConfigHelpers)
+
 ##############################################################################
 # Build options
 ##############################################################################
@@ -25,80 +29,30 @@ option(ZIPPER_USE_LOCAL_SUBMODULES "Use local submodules instead of FetchContent
 # Third-party dependencies
 ##############################################################################
 
-include(FetchContent)
 add_subdirectory(external)
 
 ##############################################################################
-# Main library targets (static and shared)
+# Main library targets
 ##############################################################################
-# Common source files definition
-set(ZIPPER_SOURCES
-    src/utils/Path.cpp
-    src/utils/Timestamp.cpp
-    src/utils/glob.cpp
-    src/Zipper.cpp
-    src/Unzipper.cpp
-)
 
 # Compile as static or as shared library
 if(ZIPPER_SHARED_LIB)
-    add_library(zipper SHARED ${ZIPPER_SOURCES})
+    set(BUILD_SHARED_LIBS ON)
 else()
-    add_library(zipper STATIC ${ZIPPER_SOURCES})
+    set(BUILD_SHARED_LIBS OFF)
 endif()
 
-# Add platform-specific dependencies
-if(WIN32)
-    target_sources(zipper PRIVATE
-        src/utils/dirent.c
-    )
+add_library(zipper)
+add_library(zipper::zipper ALIAS zipper)
 
-    target_compile_definitions(zipper PRIVATE
-        # Prevent Windows' min/max macros from conflicting with std::min/max
-        NOMINMAX=ON
-    )
-endif()
-
-# Export symbols for Windows and DLLs.
-if(WIN32 AND ZIPPER_SHARED_LIB)
-    set(CMAKE_CXX_VISIBILITY_PRESET hidden)
-    set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
-
-    # Include and setup for exporting symbols
-    include(GenerateExportHeader)
-
-    # Generate export header for shared library symbols
-    generate_export_header(zipper
-        BASE_NAME zipper
-        EXPORT_MACRO_NAME ZIPPER_EXPORT
-        EXPORT_FILE_NAME zipper_export.h
-    )
-    target_compile_definitions(zipper PRIVATE zipper_EXPORTS)
-    target_compile_definitions(zipper PUBLIC ZIPPER_EXPORT_DEFINED)
-else()
-    # For all other cases, undefine the macro
-    target_compile_options(zipper PRIVATE -UZIPPER_EXPORT_DEFINED)
-endif()
-
-# Include directories configuration
-target_include_directories(zipper PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    src
-    external/minizip
+set_target_properties(zipper PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 
-# Public include directories
-target_include_directories(zipper PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-)
-
-# Library dependencies
-target_link_libraries(zipper PRIVATE
-    minizip
-    zlibstatic
-)
+# Main implementation in here
+add_subdirectory(src)
+add_subdirectory(include)
 
 ##############################################################################
 # Build demos if CMake option is enabled
@@ -131,43 +85,6 @@ configure_file(
     ${CMAKE_CURRENT_BINARY_DIR}/zipper.pc
     @ONLY
 )
-
-##############################################################################
-# Installation rules
-##############################################################################
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
-
-# Configure version information for shared libraries
-if(ZIPPER_SHARED_LIB)
-    set_target_properties(zipper PROPERTIES
-        VERSION ${PROJECT_VERSION}
-        SOVERSION ${PROJECT_VERSION_MAJOR}
-    )
-endif()
-
-install(TARGETS zipper
-    EXPORT zipperTargets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        NAMELINK_SKIP
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-
-# For shared libraries, add NAMELINK installation
-if(ZIPPER_SHARED_LIB)
-    install(TARGETS zipper
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            NAMELINK_ONLY
-    )
-endif()
-
-install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-if(WIN32 AND ZIPPER_SHARED_LIB)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zipper_export.h
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    )
-endif()
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zipper.pc
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
 )
