@@ -50,9 +50,13 @@ FetchContent_MakeAvailable(minizip zlib-ng)
 # Additional compatibility support because the dependencies do not properly support
 # FetchContent (gated by <PROJECT_NAME>_SOURCE_DIR) or find_package is not compatible
 if(minizip_SOURCE_DIR)
-    # Need to add include directories
+    # Ugly hack to make sure #include <minizip/*> works
+    execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/include)
+    execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink
+        ${minizip_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/include/minizip
+    )
     target_include_directories(minizip PUBLIC
-        $<BUILD_INTERFACE:${minizip_SOURCE_DIR}>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
     )
     add_library(MINIZIP::minizip ALIAS minizip)
 endif()

@@ -10,8 +10,8 @@
 #include "utils/Path.hpp"
 #include "utils/Timestamp.hpp"
 
-#include "external/minizip/ioapi_mem.h"
-#include "external/minizip/zip.h"
+#include <minizip/ioapi_mem.h>
+#include <minizip/zip.h>
 
 #include <fstream>
 #include <stdexcept>
