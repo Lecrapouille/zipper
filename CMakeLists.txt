@@ -260,6 +260,11 @@ install(EXPORT zipperTargets
     NAMESPACE zipper::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/zipper
 )
+# Export for build-tree targets also
+export(EXPORT zipperTargets
+    FILE zipperTargets.cmake
+    NAMESPACE zipper::
+)
 
 # Generate the config file
 set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR})
