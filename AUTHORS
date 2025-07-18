@@ -1,16 +1,19 @@
-Forked project https://github.com/Lecrapouille/zipper
-=====================================================
+# Original project
 
-Quentin Quadrat <lecrapouille@gmail.com>
+https://github.com/sebastiandev/zipper
 
-Original project https://github.com/sebastiandev/zipper
-=======================================================
+Main developers:
+- SBML Team <sbml-team@caltech.edu>
+- Sebastian (https://github.com/sebastiandev) <devsebas@gmail.com>
 
-SBML Team <sbml-team@caltech.edu>
-Sebastian <devsebas@gmail.com>
+# Forked project
 
-Contributors
-============
+https://github.com/Lecrapouille/zipper
 
-Michael Wutzig: CMake for Windows
-mq白: Minor fixes
+Main developer:
+- Quentin Quadrat <lecrapouille@gmail.com>
+
+Contributors:
+- LecrisUT (https://github.com/LecrisUT): Fix CMake
+- Michael Wutzig (https://github.com/wutzig): CMake for Windows
+- mq白 (https://github.com/Mq-b): Minor fixes
