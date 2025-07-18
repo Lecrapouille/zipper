@@ -254,7 +254,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zipper.pc
 # CMake Package Configuration (for find_package support)
 ##############################################################################
 
-# Install the export targets
+# Export the installed targets
 install(EXPORT zipperTargets
     FILE zipperTargets.cmake
     NAMESPACE zipper::
@@ -266,19 +266,13 @@ export(EXPORT zipperTargets
     NAMESPACE zipper::
 )
 
-# Generate the config file
-set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR})
 configure_package_config_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/zipperConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/zipperConfig.cmake
     INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/zipper
-    PATH_VARS INCLUDE_INSTALL_DIR
 )
-
-# Generate the version file
 write_basic_package_version_file(
     ${CMAKE_CURRENT_BINARY_DIR}/zipperConfigVersion.cmake
-    VERSION ${PROJECT_VERSION}
     COMPATIBILITY AnyNewerVersion
 )
 
