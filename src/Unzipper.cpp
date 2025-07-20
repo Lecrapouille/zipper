@@ -6,18 +6,16 @@
 //-----------------------------------------------------------------------------
 
 #include "Zipper/Unzipper.hpp"
+
 #include "utils/OS.hpp"
 #include "utils/Path.hpp"
 #include "utils/glob.hpp"
 
-#include "external/minizip/ioapi_mem.h"
-#include "external/minizip/minishared.h"
-#include "external/minizip/unzip.h"
-#include "external/minizip/zip.h"
+#include "minizip/ioapi_mem.h"
+#include "minizip/unzip.h"
+#include "minizip/zip.h"
 
-#include <array>
 #include <cstring>
-#include <exception>
 #include <fstream>
 #include <functional>
 #include <iostream>

@@ -20,7 +20,7 @@ LIB_FILES := $(call rwildcard,src,*.cpp)
 ifeq ($(OS),Windows)
     LIB_FILES += src/utils/dirent.c
 endif
-INCLUDES := $(P)/include $(P)/src $(P)
+INCLUDES := $(P) $(P)/include $(P)/src $(THIRD_PARTIES_DIR)
 VPATH := $(P)/src $(P)/src/utils $(THIRD_PARTIES_DIR)
 DEFINES += -DHAVE_AES
 

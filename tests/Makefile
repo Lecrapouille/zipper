@@ -19,7 +19,7 @@ include $(M)/project/Makefile
 #
 SRC_FILES := $(call rwildcard,$(P)/src,*.cpp)
 SRC_FILES += $(call rwildcard,$(P)/tests,*.cpp)
-INCLUDES := $(P) $(P)/include $(P)/src
+INCLUDES := $(P) $(P)/include $(P)/src $(THIRD_PARTIES_DIR)
 VPATH := $(P) $(P)/src $(P)/src/utils
 DEFINES += -DPWD=\"$(shell pwd)\"
 DEFINES += -DHAVE_AES
