@@ -1,3 +1,7 @@
+Version 3.0.1:
+    * Fix CMake find_package
+    * Fix CMake using C+11 instead of C++14
+
 Version 3.0.0:
     * Add CMake to compile for Windows.
     * Fix memory corruptions found in minizip.
