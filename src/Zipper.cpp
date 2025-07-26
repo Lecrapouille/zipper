@@ -11,8 +11,8 @@
 #include "utils/Path.hpp"
 #include "utils/Timestamp.hpp"
 
-#include "minizip/ioapi_mem.h"
-#include "minizip/zip.h"
+#include <minizip/ioapi_mem.h>
+#include <minizip/zip.h>
 
 #include <fstream>
 #include <stdexcept>

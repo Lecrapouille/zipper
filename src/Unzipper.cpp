@@ -11,9 +11,10 @@
 #include "utils/Path.hpp"
 #include "utils/glob.hpp"
 
-#include "minizip/ioapi_mem.h"
-#include "minizip/unzip.h"
-#include "minizip/zip.h"
+#include <minizip/ioapi_mem.h>
+#include <minizip/minishared.h>
+#include <minizip/unzip.h>
+#include <minizip/zip.h>
 
 #include <cstring>
 #include <fstream>
