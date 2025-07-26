@@ -1,3 +1,7 @@
+Version 3.0.2:
+    * Use tags on third parties
+    * Update MyMakefile, fixing issues when installing on OS
+
 Version 3.0.1:
     * Fix CMake find_package
     * Fix CMake using C+11 instead of C++14
