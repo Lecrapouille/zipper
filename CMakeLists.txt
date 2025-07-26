@@ -3,8 +3,8 @@
 # Main configuration file for building the Zipper library with CMake
 ##############################################################################
 
-cmake_minimum_required(VERSION 3.13)
-project(zipper VERSION 3.0.1)
+cmake_minimum_required(VERSION 3.12)
+project(zipper VERSION 3.0.2)
 
 ##############################################################################
 # Global compiler settings
@@ -92,6 +92,8 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/zipper.pc
 ##############################################################################
 # CMake Package Configuration (for find_package support)
 ##############################################################################
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 # Export the installed targets
 install(EXPORT zipperTargets
@@ -112,6 +114,40 @@ configure_package_config_file(
 )
 write_basic_package_version_file(
     ${CMAKE_CURRENT_BINARY_DIR}/zipperConfigVersion.cmake
+    COMPATIBILITY AnyNewerVersion
+)
+
+# Install the configuration files
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/zipperConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/zipperConfigVersion.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/zipper
+)
+
+##############################################################################
+# CMake Package Configuration (for find_package support)
+##############################################################################
+
+# Install the export targets
+install(EXPORT zipperTargets
+    FILE zipperTargets.cmake
+    NAMESPACE zipper::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/zipper
+)
+
+# Generate the config file
+set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR})
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/zipperConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/zipperConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/zipper
+    PATH_VARS INCLUDE_INSTALL_DIR
+)
+
+# Generate the version file
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/zipperConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
     COMPATIBILITY AnyNewerVersion
 )
 
