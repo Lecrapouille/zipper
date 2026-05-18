@@ -76,6 +76,34 @@ static std::error_code make_error_code(UnzipperError p_error,
     return { static_cast<int>(p_error), theUnzipperErrorCategory };
 }
 
+#if !defined(_WIN32)
+
+// Typical Unix ZIP layouts store \c (st_mode & 07777) in bits 31..16 of external_fa.
+static void apply_zip_unix_permissions(std::string const& p_native_path,
+                                       uint32_t p_external_fa)
+{
+    const uint32_t from_zip = static_cast<uint32_t>(p_external_fa >> 16U);
+    if (from_zip == 0U)
+    {
+        return; // Missing host flags (often Windows-produced) — respect umask.
+    }
+
+    mode_t mode =
+        static_cast<mode_t>(from_zip & 07777); // permission + sticky + suid slice
+    mode &= static_cast<mode_t>(
+        ~(06000)); // never restore setuid/setgid from an archive
+
+    const mode_t chmod_bits = mode & 07777;
+    if (chmod_bits == 0U)
+    {
+        return; // chmod(0): avoid unreadable artefacts
+    }
+
+    (void)::chmod(p_native_path.c_str(), chmod_bits); // extraction already OK
+}
+
+#endif // !_WIN32
+
 // *************************************************************************
 //! \brief PIMPL implementation
 // *************************************************************************
@@ -170,7 +198,8 @@ private:
                                file_info.tmu_date.tm_hour,
                                file_info.tmu_date.tm_min,
                                file_info.tmu_date.tm_sec,
-                               file_info.dos_date);
+                               file_info.dos_date,
+                               static_cast<uint32_t>(file_info.external_fa));
 
         // Note: return isEntryValid(entry) is not needed here because invalid
         // entries will be detected later during the extraction.
@@ -368,6 +397,10 @@ public:
                     make_error_code(UnzipperError::EXTRACT_ERROR, str.str());
                 return UNZ_ERRNO;
             }
+#if !defined(_WIN32)
+            apply_zip_unix_permissions(p_canon_output_file,
+                                        p_zip_entry.external_fa);
+#endif
             return UNZ_OK;
         }
 
@@ -417,6 +450,10 @@ public:
                 memcpy(&timeaux, &p_zip_entry.unix_date, sizeof(timeaux));
                 changeFileDate(
                     p_canon_output_file.c_str(), p_zip_entry.dos_date, timeaux);
+#if !defined(_WIN32)
+                apply_zip_unix_permissions(p_canon_output_file,
+                                            p_zip_entry.external_fa);
+#endif
             }
 
             return err;

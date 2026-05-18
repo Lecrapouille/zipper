@@ -98,6 +98,20 @@ static void getFileCrc(std::istream& p_input_stream,
     p_input_stream.seekg(0, std::ios_base::beg);
 }
 
+// Unix ZIP convention: POSIX mode bits (\c chmod) are stored in the upper 16
+// bits of the ZIP central directory \c external_fa word.
+#if !defined(_WIN32)
+static uint32_t zip_unix_external_attributes(char const* p_disk_path)
+{
+    STAT st{};
+    if (::stat(p_disk_path, &st) != 0)
+    {
+        return 0;
+    }
+    return (static_cast<uint32_t>(st.st_mode) & 07777U) << 16U;
+}
+#endif
+
 // *************************************************************************
 //! \brief PIMPL implementation
 // *************************************************************************
@@ -324,7 +338,8 @@ struct Zipper::Impl
              const std::tm& p_timestamp,
              const std::string& p_name_in_zip,
              const std::string& p_password,
-             int p_flags)
+             int p_flags,
+             uint32_t p_unix_external_attrs = 0)
     {
         if (!m_zip_handler)
         {
@@ -348,7 +363,7 @@ struct Zipper::Impl
         memset(&zi, 0, sizeof(zi)); // Zero out the structure first
         zi.dos_date = 0;            // if dos_date == 0, tmz_date is used
         zi.internal_fa = 0;         // internal file attributes
-        zi.external_fa = 0;         // external file attributes
+        zi.external_fa = static_cast<uLong>(p_unix_external_attrs);
         zi.tmz_date.tm_sec = static_cast<uInt>(p_timestamp.tm_sec);
         zi.tmz_date.tm_min = static_cast<uInt>(p_timestamp.tm_min);
         zi.tmz_date.tm_hour = static_cast<uInt>(p_timestamp.tm_hour);
@@ -821,10 +836,22 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
                 name_in_zip = Path::fileName(file_path);
             }
 
+#if !defined(_WIN32)
+            uint32_t const unix_zip_attrs =
+                zip_unix_external_attributes(file_path.c_str());
+#else
+            uint32_t const unix_zip_attrs = 0;
+#endif
+
             // Call the stream-based add function.
             Timestamp time(file_path);
             if (!m_impl->add(
-                    input, time.timestamp, name_in_zip, m_password, p_flags))
+                    input,
+                    time.timestamp,
+                    name_in_zip,
+                    m_password,
+                    p_flags,
+                    unix_zip_attrs))
             {
                 overall_success = false;
             }
@@ -872,10 +899,22 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
             name_in_zip = Path::fileName(p_file_or_folder_path);
         }
 
+#if !defined(_WIN32)
+        uint32_t const unix_zip_attrs =
+            zip_unix_external_attributes(p_file_or_folder_path.c_str());
+#else
+        uint32_t const unix_zip_attrs = 0;
+#endif
+
         // Call the stream-based add function
         Timestamp time(p_file_or_folder_path);
         overall_success = m_impl->add(
-            input, time.timestamp, name_in_zip, m_password, p_flags);
+            input,
+            time.timestamp,
+            name_in_zip,
+            m_password,
+            p_flags,
+            unix_zip_attrs);
     }
 
     m_impl->m_progress.status =

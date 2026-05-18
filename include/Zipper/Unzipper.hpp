@@ -392,6 +392,9 @@ public:
     //! \param[in] p_minute Minute component of the timestamp (0-59).
     //! \param[in] p_second Second component of the timestamp (0-59).
     //! \param[in] p_dos_date DOS-format date.
+    //! \param[in] p_external_fa ZIP external file attributes (on Unix archives,
+    //! POSIX permission bits from \c stat are commonly stored as
+    //! \verbatim (mode & 07777) << 16 \endverbatim).
     ZipEntry(std::string const& p_name,
              uint64_t p_compressed_size,
              uint64_t p_uncompressed_size,
@@ -401,11 +404,13 @@ public:
              uint32_t p_hour,
              uint32_t p_minute,
              uint32_t p_second,
-             uint32_t p_dos_date)
+             uint32_t p_dos_date,
+             uint32_t p_external_fa = 0U)
         : name(p_name),
           compressed_size(p_compressed_size),
           uncompressed_size(p_uncompressed_size),
-          dos_date(p_dos_date)
+          dos_date(p_dos_date),
+          external_fa(p_external_fa)
     {
         // timestamp YYYY-MM-DD HH:MM:SS
         std::stringstream str;
@@ -445,10 +450,12 @@ public:
 
     std::string name;      //!< Name of the entry in the zip archive
     std::string timestamp; //!< Formatted timestamp string (YYYY-MM-DD HH:MM:SS)
-    uint64_t compressed_size;   //!< Size of the compressed data in bytes
-    uint64_t uncompressed_size; //!< Original size of the data in bytes
-    uint32_t dos_date;          //!< DOS-format date
-    tm_s unix_date;             //!< UNIX-format date and time
+    uint64_t compressed_size = {}; //!< Size of the compressed data in bytes
+    uint64_t uncompressed_size = {}; //!< Original size of the data in bytes
+    uint32_t dos_date = {}; //!< DOS-format date
+    //!< External attributes from the ZIP directory (POSIX mode often in bits 31..16.)
+    uint32_t external_fa = {};
+    tm_s unix_date = {}; //!< UNIX-format date and time
 };
 
 } // namespace zipper
