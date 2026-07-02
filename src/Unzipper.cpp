@@ -83,24 +83,27 @@ static std::error_code make_error_code(UnzipperError p_error,
 static void apply_zip_unix_permissions(std::string const& p_native_path,
                                        uint32_t p_external_fa)
 {
-    const uint32_t from_zip = static_cast<uint32_t>(p_external_fa >> 16U);
+    const uint32_t from_zip = p_external_fa >> 16U;
     if (from_zip == 0U)
     {
-        return; // Missing host flags (often Windows-produced) — respect umask.
+        // Missing host flags (often Windows-produced): respect umask.
+        return;
     }
 
-    mode_t mode = static_cast<mode_t>(
-        from_zip & 07777); // permission + sticky + suid slice
-    mode &= static_cast<mode_t>(
-        ~(06000)); // never restore setuid/setgid from an archive
+    // permission + sticky + suid slice
+    mode_t mode = from_zip & 07777;
+    // never restore setuid/setgid from an archive
+    mode &= static_cast<mode_t>(~(06000));
 
     const mode_t chmod_bits = mode & 07777;
     if (chmod_bits == 0U)
     {
-        return; // chmod(0): avoid unreadable artefacts
+        // chmod(0): avoid unreadable artifacts
+        return;
     }
 
-    (void)::chmod(p_native_path.c_str(), chmod_bits); // extraction already OK
+    // extraction already OK
+    (void)::chmod(p_native_path.c_str(), chmod_bits);
 }
 
 #endif // !_WIN32

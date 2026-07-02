@@ -21,8 +21,8 @@
 #undef protected
 #undef private
 
-#include "utils/Path.hpp"
 #include "TestHelper.hpp"
+#include "utils/Path.hpp"
 
 #include <map>
 #include <sstream>
@@ -67,8 +67,7 @@ TEST(SecurityHardening, IsValidEntryFlagsLeadingTraversal)
 {
     EXPECT_EQ(Path::isValidEntry("../evil.txt"),
               Path::InvalidEntryReason::ZIP_SLIP);
-    EXPECT_EQ(Path::isValidEntry(".."),
-              Path::InvalidEntryReason::ZIP_SLIP);
+    EXPECT_EQ(Path::isValidEntry(".."), Path::InvalidEntryReason::ZIP_SLIP);
     EXPECT_EQ(Path::isValidEntry("../../evil"),
               Path::InvalidEntryReason::ZIP_SLIP);
 
@@ -77,9 +76,9 @@ TEST(SecurityHardening, IsValidEntryFlagsLeadingTraversal)
               Path::InvalidEntryReason::ABSOLUTE_PATH);
 
     // Empty and control chars.
-    EXPECT_EQ(Path::isValidEntry(""),
-              Path::InvalidEntryReason::EMPTY_ENTRY);
-    EXPECT_EQ(Path::isValidEntry(std::string("a\x01""b.txt")),
+    EXPECT_EQ(Path::isValidEntry(""), Path::InvalidEntryReason::EMPTY_ENTRY);
+    EXPECT_EQ(Path::isValidEntry(std::string("a\x01"
+                                             "b.txt")),
               Path::InvalidEntryReason::CONTROL_CHARACTERS);
 }
 
@@ -173,8 +172,7 @@ TEST(SecurityHardening, AlternativeNamesCannotEscapeDestination)
 
     {
         Zipper zipper(zip_name, Zipper::OpenFlags::Overwrite);
-        ASSERT_TRUE(
-            helper::zipAddFile(zipper, "good.txt", "good", "good.txt"));
+        ASSERT_TRUE(helper::zipAddFile(zipper, "good.txt", "good", "good.txt"));
         zipper.close();
     }
 
@@ -213,8 +211,7 @@ TEST(SecurityHardening, AlternativeNamesRejectsAbsolutePath)
 
     {
         Zipper zipper(zip_name, Zipper::OpenFlags::Overwrite);
-        ASSERT_TRUE(
-            helper::zipAddFile(zipper, "good.txt", "good", "good.txt"));
+        ASSERT_TRUE(helper::zipAddFile(zipper, "good.txt", "good", "good.txt"));
         zipper.close();
     }
 
@@ -323,9 +320,9 @@ TEST(SecurityHardening, SetuidSetgidStrippedOnExtraction)
     const std::string extracted = out_dir + "/" + Path::fileName(src_file);
     struct stat st{};
     ASSERT_EQ(::stat(extracted.c_str(), &st), 0);
-    EXPECT_EQ(static_cast<unsigned>(st.st_mode & 06000), 0u)
+    EXPECT_EQ(st.st_mode & 06000, 0u)
         << "setuid/setgid bits must be stripped on extraction";
-    EXPECT_EQ(static_cast<unsigned>(st.st_mode & 0777), 0755u);
+    EXPECT_EQ(st.st_mode & 0777, 0755u);
 
     helper::removeFileOrDir(zip_name);
     helper::removeFileOrDir(out_dir);
@@ -349,14 +346,15 @@ TEST(SecurityHardening, DirectoryPermissionsRoundTrip)
     ASSERT_TRUE(helper::createDir(src_dir));
     ASSERT_TRUE(helper::createDir(sub_dir));
     ASSERT_TRUE(helper::createFile(sub_dir + "/secret.txt", "top secret"));
-    ASSERT_EQ(::chmod((sub_dir + "/secret.txt").c_str(),
-                      static_cast<mode_t>(0600)),
-              0);
+    ASSERT_EQ(
+        ::chmod((sub_dir + "/secret.txt").c_str(), static_cast<mode_t>(0600)),
+        0);
 
     {
         Zipper z(zip_name, Zipper::OpenFlags::Overwrite);
-        ASSERT_TRUE(z.add(src_dir, Zipper::ZipFlags::Better |
-                                       Zipper::ZipFlags::SaveHierarchy));
+        ASSERT_TRUE(
+            z.add(src_dir,
+                  Zipper::ZipFlags::Better | Zipper::ZipFlags::SaveHierarchy));
         z.close();
     }
 
@@ -372,7 +370,7 @@ TEST(SecurityHardening, DirectoryPermissionsRoundTrip)
         out_dir + "/" + src_dir + "/private/secret.txt";
     struct stat st{};
     ASSERT_EQ(::stat(extracted.c_str(), &st), 0);
-    EXPECT_EQ(static_cast<unsigned>(st.st_mode & 0777), 0600u);
+    EXPECT_EQ(st.st_mode & 0777, 0600u);
 
     helper::removeFileOrDir(zip_name);
     helper::removeFileOrDir(out_dir);
@@ -389,7 +387,8 @@ TEST(SecurityHardening, ControlCharactersAbortExtraction)
     // detector is consistent with the extraction guard.
     EXPECT_EQ(Path::checkControlCharacters(std::string("ok.txt")),
               Path::InvalidEntryReason::VALID_ENTRY);
-    EXPECT_EQ(Path::checkControlCharacters(std::string("bad\x1f""name")),
+    EXPECT_EQ(Path::checkControlCharacters(std::string("bad\x1f"
+                                                       "name")),
               Path::InvalidEntryReason::CONTROL_CHARACTERS);
     EXPECT_EQ(Path::checkControlCharacters(std::string("tab\tname")),
               Path::InvalidEntryReason::CONTROL_CHARACTERS);

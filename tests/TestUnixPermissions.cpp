@@ -45,17 +45,16 @@ TEST(UnixExternalAttributes, ExecutablePreservedWhenZippingFromDiskPath)
 
     {
         Unzipper u(zip_name);
-        ASSERT_TRUE(u.extractAll(out_dir,
-                                  Unzipper::OverwriteMode::Overwrite));
+        ASSERT_TRUE(u.extractAll(out_dir, Unzipper::OverwriteMode::Overwrite));
         u.close();
     }
 
     const std::string extracted = out_dir + "/" + Path::fileName(src_file);
 
-    struct stat st {};
+    struct stat st{};
     ASSERT_EQ(::stat(extracted.c_str(), &st), 0);
     ASSERT_TRUE(S_ISREG(st.st_mode));
-    EXPECT_EQ(static_cast<unsigned>(st.st_mode & 07777), 0755u);
+    EXPECT_EQ(st.st_mode & 07777, 0755u);
 
     helper::removeFileOrDir(zip_name);
     helper::removeFileOrDir(out_dir);
@@ -109,8 +108,8 @@ TEST(UnixExternalAttributes, EntriesExposeNonZeroExternalFaForUnixPackedFile)
 #endif // !_WIN32
 
 //=============================================================================
-// Stream-based adds leave external_fa at 0 (no host stat); extraction must still
-// succeed. On POSIX, apply_zip_unix_permissions is a no-op for that case.
+// Stream-based adds leave external_fa at 0 (no host stat); extraction must
+// still succeed. On POSIX, apply_zip_unix_permissions is a no-op for that case.
 //=============================================================================
 TEST(UnixExternalAttributes, SkippedOutsidePosixHosts)
 {
@@ -153,8 +152,7 @@ TEST(UnixExternalAttributes, SkippedOutsidePosixHosts)
 
     {
         Unzipper u(zip_name);
-        ASSERT_TRUE(u.extractAll(out_dir,
-                                  Unzipper::OverwriteMode::Overwrite));
+        ASSERT_TRUE(u.extractAll(out_dir, Unzipper::OverwriteMode::Overwrite));
         u.close();
     }
 

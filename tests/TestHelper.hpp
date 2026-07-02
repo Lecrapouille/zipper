@@ -1,6 +1,7 @@
 #ifndef UNIT_TESTS_HELPER_HPP
 #define UNIT_TESTS_HELPER_HPP
 
+#include "Zipper/Zipper.hpp"
 #include "utils/Path.hpp"
 
 #include <filesystem>
