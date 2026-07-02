@@ -1,3 +1,11 @@
+Version 4.0.0:
+    * Allow to pass "auto flush" flag and add flush() for finalizing + reopening-append the archive: this will update the vector/stream passed as reference to constructor.
+    * Preserve Unix file permissions
+    * Fix isValidEntry() starting with ".." invalidating hidden files (i.e. ".foo")
+    * Fix zip-slip attack using alternative_names {i.e. "good.txt" → "../../etc/evil"}
+    * Fix missing return after incorrect control characters
+    * Remove useless debug std::cout
+
 Version 3.0.2:
     * Use tags on third parties
     * Update MyMakefile, fixing issues when installing on OS
