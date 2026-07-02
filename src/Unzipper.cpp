@@ -78,7 +78,8 @@ static std::error_code make_error_code(UnzipperError p_error,
 
 #if !defined(_WIN32)
 
-// Typical Unix ZIP layouts store \c (st_mode & 07777) in bits 31..16 of external_fa.
+// Typical Unix ZIP layouts store \c (st_mode & 07777) in bits 31..16 of
+// external_fa.
 static void apply_zip_unix_permissions(std::string const& p_native_path,
                                        uint32_t p_external_fa)
 {
@@ -88,8 +89,8 @@ static void apply_zip_unix_permissions(std::string const& p_native_path,
         return; // Missing host flags (often Windows-produced) — respect umask.
     }
 
-    mode_t mode =
-        static_cast<mode_t>(from_zip & 07777); // permission + sticky + suid slice
+    mode_t mode = static_cast<mode_t>(
+        from_zip & 07777); // permission + sticky + suid slice
     mode &= static_cast<mode_t>(
         ~(06000)); // never restore setuid/setgid from an archive
 
@@ -399,7 +400,7 @@ public:
             }
 #if !defined(_WIN32)
             apply_zip_unix_permissions(p_canon_output_file,
-                                        p_zip_entry.external_fa);
+                                       p_zip_entry.external_fa);
 #endif
             return UNZ_OK;
         }
@@ -452,7 +453,7 @@ public:
                     p_canon_output_file.c_str(), p_zip_entry.dos_date, timeaux);
 #if !defined(_WIN32)
                 apply_zip_unix_permissions(p_canon_output_file,
-                                            p_zip_entry.external_fa);
+                                           p_zip_entry.external_fa);
 #endif
             }
 
