@@ -850,8 +850,17 @@ Path::InvalidEntryReason Path::isValidEntry(std::string const& p_entry_name)
         return result;
     }
 
-    // Check for Zip Slip attack
-    if (p_entry_name.find_first_of("..") == 0u)
+    // Check for Zip Slip attack: reject an entry whose first path segment is a
+    // parent-directory reference ("..", "../x", "..\\x"). A relative entry that
+    // starts with ".." can only ever resolve outside the destination, so it is
+    // rejected up-front. Interior references such as "foo/../Test1" are left to
+    // Path::isZipSlip(), which resolves the final path and verifies it stays
+    // inside the destination (this keeps legitimate cases working).
+    //
+    // We must NOT reject legitimate dot-files such as ".hidden", ".gitignore"
+    // or "..foo" whose name merely begins with a dot: the previous
+    // find_first_of("..") test wrongly flagged all of them.
+    if (Path::startsWithParentDirectoryReference(p_entry_name))
     {
         return InvalidEntryReason::ZIP_SLIP;
     }
@@ -863,6 +872,28 @@ Path::InvalidEntryReason Path::isValidEntry(std::string const& p_entry_name)
     }
 
     return InvalidEntryReason::VALID_ENTRY;
+}
+
+// -----------------------------------------------------------------------------
+bool Path::startsWithParentDirectoryReference(const std::string& p_entry_name)
+{
+    // The leading segment is a parent reference when the name is exactly ".."
+    // or starts with ".." immediately followed by a directory separator.
+    if ((p_entry_name.size() >= 2u) && (p_entry_name[0] == '.') &&
+        (p_entry_name[1] == '.'))
+    {
+        if (p_entry_name.size() == 2u)
+        {
+            return true;
+        }
+        const char next = p_entry_name[2];
+        if ((next == UNIX_DIRECTORY_SEPARATOR) ||
+            (next == WINDOWS_DIRECTORY_SEPARATOR))
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 std::string Path::getInvalidEntryReason(InvalidEntryReason p_reason)

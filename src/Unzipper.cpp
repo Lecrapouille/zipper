@@ -211,8 +211,6 @@ private:
     inline bool isEntryValid(ZipEntry const& p_zip_entry) const
     {
         auto result = Path::isValidEntry(Path::normalize(p_zip_entry.name));
-        std::cout << "isEntryValid: " << p_zip_entry.name << " "
-                  << Path::getInvalidEntryReason(result) << std::endl;
         return result == Path::InvalidEntryReason::VALID_ENTRY;
     }
 
@@ -379,6 +377,9 @@ public:
             str << "Security error: entry '"
                 << Path::toNativeSeparators(p_zip_entry.name)
                 << "' contains control characters";
+            m_error_code =
+                make_error_code(UnzipperError::EXTRACT_ERROR, str.str());
+            return UNZ_ERRNO;
         }
 
         // Create the folder if the entry is a folder.
@@ -788,9 +789,34 @@ public:
             std::string file_path = destination;
             auto const& alt = p_alternative_names.find(entry.name);
             if (alt != p_alternative_names.end())
+            {
+                // A caller-supplied alternative name must be validated too,
+                // otherwise it becomes a zip slip bypass: extractToFile() only
+                // vets the original entry name, not the remapped destination.
+                if (Path::isZipSlip(alt->second, destination) ||
+                    (Path::isValidEntry(alt->second) !=
+                     Path::InvalidEntryReason::VALID_ENTRY))
+                {
+                    std::stringstream str;
+                    str << "Security error: alternative name '"
+                        << Path::toNativeSeparators(alt->second)
+                        << "' would be outside your target directory";
+                    m_error_code = make_error_code(
+                        UnzipperError::SECURITY_ERROR, str.str());
+                    failures++;
+                    if (m_progress_callback)
+                    {
+                        m_progress.status = Progress::Status::KO;
+                        m_progress_callback(m_progress);
+                    }
+                    continue;
+                }
                 file_path += alt->second;
+            }
             else
+            {
                 file_path += entry.name;
+            }
             std::string canon_output_file = Path::normalize(file_path);
 
             // Update progress
@@ -802,11 +828,10 @@ public:
             }
 
             // Locate and extract the entry
-            if (locateEntry(entry.name) &&
-                extractToFile(entry,
-                              destination,
-                              canon_output_file,
-                              p_overwrite) != UNZ_OK)
+            if (locateEntry(entry.name) && extractToFile(entry,
+                                                         destination,
+                                                         canon_output_file,
+                                                         p_overwrite) != UNZ_OK)
             {
                 failures++;
                 if (m_progress_callback)

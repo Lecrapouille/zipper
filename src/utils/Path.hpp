@@ -227,6 +227,16 @@ public:
     static InvalidEntryReason
     checkControlCharacters(const std::string& p_entry_name);
 
+    //! \brief Checks whether a ZIP entry name begins with a parent directory
+    //! reference (leading ".." segment: "..", "../x", "..\\x"), while ignoring
+    //! legitimate dot-files whose name only starts with a dot (e.g. ".hidden",
+    //! ".gitignore", "..foo"). Interior references such as "foo/../bar" are
+    //! intentionally left to isZipSlip(), which resolves the final path.
+    //! \param[in] p_entry_name The entry name to check
+    //! \return true if the leading path segment is exactly ".."
+    static bool
+    startsWithParentDirectoryReference(const std::string& p_entry_name);
+
     //! \brief Checks if a ZIP entry name is valid
     //! \param[in] p_entry_name The entry name to check
     //! \return true if the entry name is valid
