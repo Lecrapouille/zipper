@@ -31,7 +31,9 @@ TEST(ZipperMemoryOps, ZipToVector)
         std::stringstream contentStream(content);
         ASSERT_TRUE(zipper.add(contentStream, entryName));
         ASSERT_FALSE(zipper.error()) << zipper.error().message();
-        ASSERT_TRUE(zipData.empty());
+        // The vector is now written live as entries are added (it holds the
+        // raw entry bytes, but is not yet a valid archive until close/flush).
+        ASSERT_FALSE(zipData.empty());
 
         zipper.close();
         ASSERT_FALSE(zipData.empty());
@@ -91,7 +93,8 @@ TEST(ZipperMemoryOps, ZipMultipleToVector)
         ASSERT_TRUE(zipper.add(stream1, entryName1));
         ASSERT_TRUE(zipper.add(stream2, entryName2));
         ASSERT_FALSE(zipper.error()) << zipper.error().message();
-        ASSERT_TRUE(zipData.empty());
+        // The vector is now written live as entries are added.
+        ASSERT_FALSE(zipData.empty());
 
         zipper.close();
         ASSERT_FALSE(zipData.empty());

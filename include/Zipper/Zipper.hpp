@@ -272,12 +272,53 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Closes the zip archive.
     //!
-    //! Depending on the constructor used, this method will close the access to
-    //! the zip file, flush the stream, or update the memory vector.
+    //! Writes the ZIP central directory and End Of Central Directory record,
+    //! turning the output (file, stream or vector) into a valid, parsable
+    //! archive. When compressing to a std::vector or std::iostream, the bytes
+    //! are written directly into that reference as entries are added, so no
+    //! extra copy happens here; close() only appends the final directory.
     //! \note This method is automatically called by the destructor. It's safe
     //! to call multiple times.
     // -------------------------------------------------------------------------
     void close();
+
+    // -------------------------------------------------------------------------
+    //! \brief Finalize the archive on the referenced vector/stream (or file)
+    //! and immediately reopen it for appending.
+    //!
+    //! A ZIP archive is only a valid, parsable file once its central directory
+    //! and End Of Central Directory record have been written. Those are emitted
+    //! when the archive is closed. Call flush() to obtain a valid archive in
+    //! the referenced vector/stream at any point while keeping the zipper open
+    //! for further add() calls.
+    //!
+    //! \note Each flush() rewrites the central directory, so flushing after
+    //! every entry turns bulk insertion into an O(n^2) operation. Prefer
+    //! flushing when you actually need to read the in-progress archive.
+    //! \return true on success, false on failure. Sets internal error code on
+    //! failure.
+    // -------------------------------------------------------------------------
+    bool flush();
+
+    // -------------------------------------------------------------------------
+    //! \brief Enable or disable automatic flushing after each add().
+    //!
+    //! When enabled, the referenced vector/stream is always a valid, parsable
+    //! ZIP archive right after every successful add() (the central directory is
+    //! rewritten each time). Disabled by default.
+    //!
+    //! \warning Enabling this makes adding N files an O(n^2) operation because
+    //! the central directory is rewritten on each add(). Use it only when a
+    //! consumer must observe every intermediate state of the archive.
+    //! \param[in] p_enable true to enable auto-flush, false to disable.
+    // -------------------------------------------------------------------------
+    void setAutoFlush(bool p_enable);
+
+    // -------------------------------------------------------------------------
+    //! \brief Whether automatic flushing after each add() is enabled.
+    //! \return true if auto-flush is enabled.
+    // -------------------------------------------------------------------------
+    bool autoFlush() const;
 
     // -------------------------------------------------------------------------
     //! \brief Opens or reopens the zip archive.
@@ -407,6 +448,9 @@ private:
     OpenFlags m_open_flags = OpenFlags::Overwrite;
     //! \brief Whether the zip archive is currently open.
     bool m_open = false;
+    //! \brief When true, finalize + reopen after each add() so the referenced
+    //! vector/stream is always a valid ZIP archive.
+    bool m_auto_flush = false;
     //! \brief Stores the last error.
     std::error_code m_error_code;
     //! \brief PIMPL implementation detail.

@@ -10,18 +10,23 @@ This current fork repository was created because the original project was no lon
 
 - [x] Create zip files in memory.
 - [x] Support for files, vectors, and generic streams as input for zipping.
+- [x] In-memory zipping writes directly into the referenced `std::vector` /
+      `std::iostream` as entries are added (no internal buffer copied only at
+      `close()`). See `flush()` and `setAutoFlush()`.
 - [x] File mappings for replacement strategies (overwrite if exists or use alternative names from mapping).
 - [x] Password-protected zip (AES).
+- [x] Preserve Unix file permissions (stored in the ZIP `external_fa` field) and
+      strip `setuid`/`setgid` bits on extraction for safety.
 - [x] Multi-platform support.
 - [x] Project compiles as both static and dynamic libraries.
 - [x] Protection flags against overwriting existing files during extraction.
-- [x] Protection against the [Zip Slip attack](https://security.snyk.io/research/zip-slip-vulnerability).
+- [x] Protection against the [Zip Slip attack](https://security.snyk.io/research/zip-slip-vulnerability), including through `alternative_names` remapping.
 - [x] API to detect [Zip Bomb attacks](https://www.bamsoftware.com/hacks/zipbomb/). Extraction is not recursive.
 - [x] Non-regression tests.
 
 **:warning: Security Notice**
 
-- Zipper currently uses an outdated (and potentially vulnerable) version of [minizip](https://github.com/zlib-ng/minizip-ng) from 2017 (SHA1 0bb5afeb0d3f23149b086ccda7e4fee7d48f4fdf) with some custom modifications.
+- Zipper currently vendors an old version of [minizip](https://github.com/Lecrapouille/minizip) (the classic nmoinvaz/minizip API, version 1.2.0 from 2017, pinned as `Lecrapouille/minizip@v1.2`) with some custom modifications. It is not minizip-ng. Keep this in mind for your own threat model.
 
 ## Getting Started
 
@@ -66,11 +71,11 @@ sudo make install
 You will see a message like:
 
 ```shell
-*** Installing: doc => /usr/share/Zipper/2.0.0/doc
+*** Installing: doc => /usr/share/Zipper/4.0.0/doc
 *** Installing: libs => /usr/lib
 *** Installing: pkg-config => /usr/lib/pkgconfig
-*** Installing: headers => /usr/include/Zipper-2.0.0
-*** Installing: Zipper => /usr/include/Zipper-2.0.0
+*** Installing: headers => /usr/include/Zipper-4.0.0
+*** Installing: Zipper => /usr/include/Zipper-4.0.0
 ```
 
 For developers, you can run non regression tests. They depend on:
@@ -245,6 +250,57 @@ zipper.open();
 zipper.close();
 ```
 
+#### Live in-memory output, `flush()` and auto-flush
+
+When zipping into a `std::vector` or a `std::iostream`, Zipper writes directly
+into that reference as you call `add()`: there is no internal buffer that is
+only copied back at `close()`. The referenced container therefore grows on each
+`add()`.
+
+However, a ZIP archive is only a **valid, parsable** file once its *central
+directory* and *End Of Central Directory* record have been written, and those
+are emitted only when the archive is finalized. So until you finalize, the
+reference holds valid raw bytes but no directory index (an `Unzipper` cannot
+open it yet).
+
+- Call `close()` to finalize (the archive can no longer be appended to
+  afterwards, unless you `open()`/`reopen()` again).
+- Call `flush()` to finalize **and** immediately reopen for appending: the
+  reference becomes a valid archive right now, and you can keep adding entries.
+
+```c++
+std::vector<unsigned char> zip_vector;
+Zipper zipper(zip_vector);
+
+std::ifstream input1("some file");
+zipper.add(input1, "Test1");
+
+zipper.flush(); // zip_vector is now a valid ZIP and the zipper stays open
+
+Unzipper unzipper(zip_vector); // works, sees "Test1"
+// ...
+
+std::ifstream input2("another file");
+zipper.add(input2, "Test2"); // keep appending
+zipper.close();
+```
+
+- `setAutoFlush(true)` finalizes + reopens after **every** successful `add()`,
+  so the reference is always a valid archive. This is opt-in because it rewrites
+  the central directory on each `add()`, turning the insertion of N files into
+  an O(n²) operation. Use it only when a consumer must observe every
+  intermediate state.
+
+```c++
+std::vector<unsigned char> zip_vector;
+Zipper zipper(zip_vector);
+zipper.setAutoFlush(true);
+
+zipper.add(input1, "Test1"); // zip_vector already a valid ZIP here
+zipper.add(input2, "Test2"); // still valid after each add()
+zipper.close();
+```
+
 #### Appending files or folders inside the archive
 
 The `add()` method allows appending files or folders. The `Zipper::ZipFlags::Better` is set implicitly. Other options are (as the last argument):
@@ -295,9 +351,14 @@ zipper.close();
 
 Note that:
 
-- the `zipper::close()` updates `std::ifstream` and makes the in-memory zip well formed.
-- do not use std::ifstream before closed() was called.
-- be sure the std::ifstream is not deleted before closed() was called.
+- `zipper::close()` (or `flush()`) writes the ZIP central directory and makes
+  the in-memory archive well formed. When zipping to a `std::vector` /
+  `std::iostream`, the entry bytes are already written into that reference as
+  you `add()`, but the archive is only parsable after `close()`/`flush()`.
+- do not read the output vector/stream as an archive before `close()`/`flush()`
+  was called.
+- be sure the input `std::ifstream` and the output vector/stream are not
+  deleted before `close()` was called.
 
 - Add a file with a specific timestamp:
 
@@ -348,7 +409,12 @@ zip archive).
 
 #### In-memory: Vector and stream
 
-- Do not forget that the close() finalized the in-memory zip file: you cannot use Unzipper on the same memory until the Zipper::close() has been closed (meaning: even if you have called Zipper::add, the zip is not well formed).
+- Do not forget that `close()` (or `flush()`) finalizes the in-memory zip file:
+  you cannot use `Unzipper` on the same memory until `Zipper::close()` (or
+  `Zipper::flush()`) has been called (meaning: even if you have called
+  `Zipper::add`, the archive is not well formed until then). See the
+  [Live in-memory output, flush() and auto-flush](#live-in-memory-output-flush-and-auto-flush)
+  section.
 - Creating a zip file using the awesome streams from the [boost](https://www.boost.org/) library that lets us use a vector as a stream:
 
 ```c++
@@ -390,7 +456,9 @@ std::ifstream input1("some file");
 Zipper zipper(zip_vector); // You can pass password
 zipper.add(input1, "Test1");
 zipper.close();
-```- Creating a zip in-memory stream with files:
+```
+
+- Creating a zip in-memory stream with files:
 
 ```c++
 // Example of using stringstream
@@ -402,7 +470,7 @@ zipper.add(inputStream, "Test1");
 zipper.close();
 
 // Example of extracting
-zipper::Unzipper unzipper(zipData); // or unzipper(zipStream) for stringstream
+zipper::Unzipper unzipper(zipStream);
 unzipper.extract(...
 ```
 

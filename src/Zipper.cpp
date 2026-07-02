@@ -13,6 +13,8 @@
 #include "external/minizip/ioapi_mem.h"
 #include "external/minizip/zip.h"
 
+#include <algorithm>
+#include <cstring>
 #include <fstream>
 #include <stdexcept>
 
@@ -113,28 +115,297 @@ static uint32_t zip_unix_external_attributes(char const* p_disk_path)
 #endif
 
 // *************************************************************************
+//! \brief minizip I/O backend writing straight into the caller-owned
+//! std::vector or std::iostream.
+//!
+//! The historical implementation compressed into a private malloc'd buffer
+//! (ourmemory_t) and only copied it into the user reference inside close().
+//! This sink removes that intermediate copy: every byte minizip writes
+//! (including the central directory produced by zipClose()) lands directly in
+//! the user's container, so the reference mirrors the archive as it grows.
+//!
+//! \note The archive only becomes a *parsable* ZIP once the End Of Central
+//! Directory record has been written, i.e. after close() or flush(). Before
+//! that the reference holds valid raw bytes but no directory index.
+// *************************************************************************
+struct OutputSink
+{
+    enum class Kind
+    {
+        None,
+        Vector,
+        Stream
+    };
+
+    Kind kind = Kind::None;
+    std::vector<unsigned char>* vec = nullptr;
+    std::iostream* stream = nullptr;
+    uint64_t cursor = 0; //!< Current read/write offset.
+
+    void setVector(std::vector<unsigned char>* p_vec)
+    {
+        kind = Kind::Vector;
+        vec = p_vec;
+        stream = nullptr;
+        cursor = 0;
+    }
+
+    void setStream(std::iostream* p_stream)
+    {
+        kind = Kind::Stream;
+        stream = p_stream;
+        vec = nullptr;
+        cursor = 0;
+    }
+
+    //! \brief Logical amount of data currently stored (the "end" position).
+    uint64_t size()
+    {
+        if (kind == Kind::Vector)
+        {
+            return vec->size();
+        }
+        if (kind == Kind::Stream)
+        {
+            stream->clear();
+            stream->seekg(0, std::ios::end);
+            const std::streampos end = stream->tellg();
+            return (end > 0) ? static_cast<uint64_t>(end) : 0u;
+        }
+        return 0u;
+    }
+
+    //! \brief Drop any existing content (used for Overwrite / CREATE).
+    void truncate()
+    {
+        cursor = 0;
+        if (kind == Kind::Vector)
+        {
+            vec->clear();
+        }
+        else if (kind == Kind::Stream)
+        {
+            stream->clear();
+            // Best effort: reset a std::stringstream, otherwise rewind.
+            auto* ss = dynamic_cast<std::stringstream*>(stream);
+            if (ss != nullptr)
+            {
+                ss->str(std::string());
+            }
+            stream->seekp(0, std::ios::beg);
+        }
+    }
+
+    //! \brief Trim any trailing bytes beyond the current cursor. Called right
+    //! after the End Of Central Directory has been written so a re-finalized
+    //! (appended) archive never keeps stale bytes from a previous, longer
+    //! central directory.
+    void truncateToCursor()
+    {
+        if (kind == Kind::Vector)
+        {
+            if (cursor < vec->size())
+            {
+                vec->resize(static_cast<size_t>(cursor));
+            }
+        }
+        else if (kind == Kind::Stream)
+        {
+            auto* ss = dynamic_cast<std::stringstream*>(stream);
+            if (ss != nullptr)
+            {
+                const std::string all = ss->str();
+                if (cursor < all.size())
+                {
+                    ss->str(all.substr(0, static_cast<size_t>(cursor)));
+                }
+            }
+        }
+    }
+
+    void flush()
+    {
+        if (kind == Kind::Stream)
+        {
+            stream->flush();
+        }
+    }
+};
+
+// -----------------------------------------------------------------------------
+static voidpf ZCALLBACK sink_open(voidpf opaque,
+                                  const char* /*filename*/,
+                                  int mode)
+{
+    OutputSink* sink = static_cast<OutputSink*>(opaque);
+    if (sink == nullptr)
+    {
+        return nullptr;
+    }
+    if ((mode & ZLIB_FILEFUNC_MODE_CREATE) != 0)
+    {
+        sink->truncate();
+    }
+    sink->cursor = 0;
+    return sink;
+}
+
+// -----------------------------------------------------------------------------
+static uint32_t ZCALLBACK sink_read(voidpf /*opaque*/,
+                                    voidpf stream,
+                                    void* buf,
+                                    uint32_t size)
+{
+    OutputSink* sink = static_cast<OutputSink*>(stream);
+    const uint64_t available = sink->size();
+    if (sink->cursor >= available)
+    {
+        return 0;
+    }
+    uint32_t to_read = size;
+    if (sink->cursor + to_read > available)
+    {
+        to_read = static_cast<uint32_t>(available - sink->cursor);
+    }
+
+    if (sink->kind == OutputSink::Kind::Vector)
+    {
+        std::memcpy(
+            buf, sink->vec->data() + sink->cursor, static_cast<size_t>(to_read));
+    }
+    else
+    {
+        sink->stream->clear();
+        sink->stream->seekg(static_cast<std::streamoff>(sink->cursor),
+                            std::ios::beg);
+        sink->stream->read(static_cast<char*>(buf),
+                           static_cast<std::streamsize>(to_read));
+        to_read = static_cast<uint32_t>(sink->stream->gcount());
+    }
+    sink->cursor += to_read;
+    return to_read;
+}
+
+// -----------------------------------------------------------------------------
+static uint32_t ZCALLBACK sink_write(voidpf /*opaque*/,
+                                     voidpf stream,
+                                     const void* buf,
+                                     uint32_t size)
+{
+    OutputSink* sink = static_cast<OutputSink*>(stream);
+
+    if (sink->kind == OutputSink::Kind::Vector)
+    {
+        const uint64_t needed = sink->cursor + size;
+        if (needed > sink->vec->size())
+        {
+            sink->vec->resize(static_cast<size_t>(needed));
+        }
+        std::memcpy(sink->vec->data() + sink->cursor,
+                    buf,
+                    static_cast<size_t>(size));
+    }
+    else
+    {
+        sink->stream->clear();
+        sink->stream->seekp(static_cast<std::streamoff>(sink->cursor),
+                            std::ios::beg);
+        sink->stream->write(static_cast<const char*>(buf),
+                            static_cast<std::streamsize>(size));
+        if (!sink->stream->good())
+        {
+            return 0;
+        }
+    }
+    sink->cursor += size;
+    return size;
+}
+
+// -----------------------------------------------------------------------------
+static long ZCALLBACK sink_tell(voidpf /*opaque*/, voidpf stream)
+{
+    OutputSink* sink = static_cast<OutputSink*>(stream);
+    return static_cast<long>(sink->cursor);
+}
+
+// -----------------------------------------------------------------------------
+static long ZCALLBACK sink_seek(voidpf /*opaque*/,
+                                voidpf stream,
+                                uint32_t offset,
+                                int origin)
+{
+    OutputSink* sink = static_cast<OutputSink*>(stream);
+    uint64_t new_pos = 0;
+    switch (origin)
+    {
+        case ZLIB_FILEFUNC_SEEK_CUR:
+            new_pos = sink->cursor + offset;
+            break;
+        case ZLIB_FILEFUNC_SEEK_END:
+            new_pos = sink->size() + offset;
+            break;
+        case ZLIB_FILEFUNC_SEEK_SET:
+            new_pos = offset;
+            break;
+        default:
+            return -1;
+    }
+    sink->cursor = new_pos;
+    return 0;
+}
+
+// -----------------------------------------------------------------------------
+static int ZCALLBACK sink_close(voidpf /*opaque*/, voidpf /*stream*/)
+{
+    return 0;
+}
+
+// -----------------------------------------------------------------------------
+static int ZCALLBACK sink_error(voidpf /*opaque*/, voidpf /*stream*/)
+{
+    return 0;
+}
+
+// -----------------------------------------------------------------------------
+static void fill_output_sink_filefunc(zlib_filefunc_def* p_filefunc,
+                                      OutputSink* p_sink)
+{
+    p_filefunc->zopen_file = sink_open;
+    p_filefunc->zopendisk_file = nullptr;
+    p_filefunc->zread_file = sink_read;
+    p_filefunc->zwrite_file = sink_write;
+    p_filefunc->ztell_file = sink_tell;
+    p_filefunc->zseek_file = sink_seek;
+    p_filefunc->zclose_file = sink_close;
+    p_filefunc->zerror_file = sink_error;
+    p_filefunc->opaque = p_sink;
+}
+
+// *************************************************************************
 //! \brief PIMPL implementation
 // *************************************************************************
 struct Zipper::Impl
 {
     Zipper& m_outer;
     zipFile m_zip_handler = nullptr;
-    ourmemory_t m_zip_memory;
+    //! \brief I/O backend writing directly into the caller's vector/stream.
+    OutputSink m_sink;
     zlib_filefunc_def m_file_func;
     std::error_code& m_error_code;
     std::vector<char> m_buffer;
     Progress m_progress;
     ProgressCallback m_progress_callback;
+    //! \brief True when compressing into a std::vector/std::iostream (memory),
+    //! false for a disk file.
+    bool m_use_sink = false;
 
     // -------------------------------------------------------------------------
     Impl(Zipper& p_outer, std::error_code& p_error_code)
         : m_outer(p_outer),
-          m_zip_memory(),
           m_file_func(),
           m_error_code(p_error_code),
           m_buffer(ZIPPER_WRITE_BUFFER_SIZE)
     {
-        memset(&m_zip_memory, 0, sizeof(m_zip_memory));
         memset(&m_file_func, 0, sizeof(m_file_func));
     }
 
@@ -198,126 +469,40 @@ struct Zipper::Impl
     // -------------------------------------------------------------------------
     bool initWithStream(std::iostream& p_stream)
     {
-        m_zip_memory.grow = 1;
+        // Wire minizip directly onto the caller's stream: no intermediate
+        // buffer, so every written byte lands in p_stream as the archive grows.
+        m_sink.setStream(&p_stream);
+        m_use_sink = true;
 
-        // Determine the size of the file to preallocate the buffer
-        p_stream.seekg(0, std::ios::end);
-        std::streampos s = p_stream.tellg();
-        if (s < 0)
-        {
-            m_error_code = make_error_code(ZipperError::OPENING_ERROR,
-                                           "Invalid stream provided");
-            return false;
-        }
-        size_t size = static_cast<size_t>(s);
-        p_stream.seekg(0);
+        const uint64_t existing = m_sink.size();
 
-        // Free existing memory if any
-        if (m_zip_memory.base != nullptr)
-        {
-            free(m_zip_memory.base);
-            memset(&m_zip_memory, 0, sizeof(m_zip_memory));
-        }
+        // Overwrite (or empty stream): create from scratch. Append: minizip
+        // reads back the central directory already present in the stream.
+        const int mode =
+            ((existing == 0) ||
+             (m_outer.m_open_flags == Zipper::OpenFlags::Overwrite))
+                ? APPEND_STATUS_CREATE
+                : APPEND_STATUS_ADDINZIP;
 
-        // Allocate memory directly. For empty streams, we don't need to
-        // allocate memory.
-        if (size > 0)
-        {
-            m_zip_memory.base = reinterpret_cast<char*>(malloc(size));
-            if (m_zip_memory.base == nullptr)
-            {
-                m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
-                                               "Failed to allocate memory");
-                return false;
-            }
-
-            char* dest = m_zip_memory.base;
-            size_t remaining = size;
-
-            // Read by chunks to avoid memory issues with large files
-            while ((remaining > 0) && (p_stream.good()))
-            {
-                size_t to_read = std::min(m_buffer.size(), remaining);
-                p_stream.read(m_buffer.data(), std::streamsize(to_read));
-                size_t actually_read = static_cast<size_t>(p_stream.gcount());
-
-                if (actually_read == 0)
-                    break;
-
-                memcpy(dest, m_buffer.data(), actually_read);
-                dest += actually_read;
-                remaining -= actually_read;
-            }
-
-            // If we couldn't read all the content, adjust the size
-            if (remaining > 0)
-            {
-                size_t actual_size = size - remaining;
-                char* reallocated_base = reinterpret_cast<char*>(
-                    realloc(m_zip_memory.base, actual_size));
-
-                // Check if realloc succeeded
-                if ((reallocated_base != nullptr) && (actual_size > 0))
-                {
-                    m_zip_memory.base = reallocated_base;
-                    size = actual_size;
-                }
-            }
-        }
-
-        m_zip_memory.size = static_cast<uint32_t>(size);
-        fill_memory_filefunc(&m_file_func, &m_zip_memory);
-
-        // For empty streams or Overwrite flag, we should use
-        // APPEND_STATUS_CREATE.
-        int mode = ((size == 0) ||
-                    (m_outer.m_open_flags == Zipper::OpenFlags::Overwrite))
-                       ? APPEND_STATUS_CREATE
-                       : APPEND_STATUS_ADDINZIP;
-
+        fill_output_sink_filefunc(&m_file_func, &m_sink);
         return initMemory(mode, m_file_func);
     }
 
     // -------------------------------------------------------------------------
-    bool initWithVector(const std::vector<unsigned char>& p_buffer)
+    bool initWithVector(std::vector<unsigned char>& p_buffer)
     {
-        m_zip_memory.grow = 1;
+        // Wire minizip directly onto the caller's vector.
+        m_sink.setVector(&p_buffer);
+        m_use_sink = true;
 
-        // Free existing memory if any
-        if (m_zip_memory.base != nullptr)
-        {
-            free(m_zip_memory.base);
-            memset(&m_zip_memory, 0, sizeof(m_zip_memory));
-        }
+        // Historical semantics for vectors: an empty vector starts a new
+        // archive, a non-empty vector is appended to (the open flag is not
+        // consulted here, matching the pre-refactor behaviour).
+        const int mode =
+            p_buffer.empty() ? APPEND_STATUS_CREATE : APPEND_STATUS_ADDINZIP;
 
-        if (!p_buffer.empty())
-        {
-            // Allocate memory directly with the correct size
-            m_zip_memory.base =
-                reinterpret_cast<char*>(malloc(p_buffer.size()));
-            if (m_zip_memory.base == nullptr)
-            {
-                // No need to memset here as it wasn't allocated
-                m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
-                                               "Failed to allocate memory");
-                return false;
-            }
-
-            // Read from const p_buffer
-            memcpy(m_zip_memory.base, p_buffer.data(), p_buffer.size());
-            m_zip_memory.size = static_cast<uint32_t>(p_buffer.size());
-        }
-        else // Handle empty vector case
-        {
-            // Base should already be nullptr from freeing above or initial
-            // state
-            m_zip_memory.size = 0;
-        }
-
-        fill_memory_filefunc(&m_file_func, &m_zip_memory);
-        return initMemory(p_buffer.empty() ? APPEND_STATUS_CREATE
-                                           : APPEND_STATUS_ADDINZIP,
-                          m_file_func);
+        fill_output_sink_filefunc(&m_file_func, &m_sink);
+        return initMemory(mode, m_file_func);
     }
 
     // -------------------------------------------------------------------------
@@ -346,6 +531,13 @@ struct Zipper::Impl
             m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
                                            "Zip archive is not opened");
             return false;
+        }
+
+        // The internal work buffer is released by close(); make sure it is
+        // available again if the zipper is reused after a close()/flush().
+        if (m_buffer.empty())
+        {
+            m_buffer.resize(ZIPPER_WRITE_BUFFER_SIZE);
         }
 
         if (m_progress_callback)
@@ -538,67 +730,83 @@ struct Zipper::Impl
     }
 
     // -------------------------------------------------------------------------
-    void updateOutput()
+    //! \brief Write the central directory + End Of Central Directory record,
+    //! turning whatever has been written so far into a valid, parsable ZIP.
+    //! On success the minizip handle is consumed (set to null).
+    bool finalizeArchive()
     {
-        // Check if memory mode was used and data needs to be transferred
-        if (m_zip_memory.base && m_zip_memory.limit > 0)
+        if (m_zip_handler == nullptr)
         {
-            try
-            {
-                if (m_outer.m_output_vector != nullptr)
-                {
-                    // Resize and assign data to the vector
-                    m_outer.m_output_vector->resize(m_zip_memory.limit);
-                    // Use assign or memcpy. Assign is safer with vector's
-                    // allocator.
-                    m_outer.m_output_vector->assign(m_zip_memory.base,
-                                                    m_zip_memory.base +
-                                                        m_zip_memory.limit);
-                }
-                else if (m_outer.m_output_stream != nullptr)
-                {
-                    // Write data to the stream
-                    m_outer.m_output_stream->write(
-                        m_zip_memory.base, std::streamsize(m_zip_memory.limit));
-                }
-            }
-            catch (const std::bad_alloc&)
-            {
-                // Handle potential allocation error during vector resize/assign
-                m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
-                                               "Failed allocating memory");
-            }
-            catch (const std::exception&)
-            {
-                // Handle potential stream write errors
-                m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
-                                               "Failed allocating memory");
-            }
+            return true; // Nothing open: already finalized.
         }
+
+        const int err = zipClose(m_zip_handler, nullptr);
+        m_zip_handler = nullptr;
+        if (m_use_sink)
+        {
+            m_sink.truncateToCursor();
+        }
+        m_sink.flush();
+
+        if (err != ZIP_OK)
+        {
+            m_error_code = make_error_code(ZipperError::INTERNAL_ERROR,
+                                           "Failed finalizing zip archive");
+            return false;
+        }
+        return true;
+    }
+
+    // -------------------------------------------------------------------------
+    //! \brief Reopen the just-finalized archive in append mode so the caller
+    //! can keep adding entries after a flush().
+    bool reopenAppend()
+    {
+        if (m_use_sink)
+        {
+            // The sink already holds a valid archive (EOCD written); minizip
+            // reads its central directory back and appends to it.
+            return initMemory(APPEND_STATUS_ADDINZIP, m_file_func);
+        }
+        return initFile(m_outer.m_zip_name, Zipper::OpenFlags::Append);
+    }
+
+    // -------------------------------------------------------------------------
+    //! \brief Finalize the archive then reopen it for appending. After this
+    //! call the referenced vector/stream is a valid ZIP and the zipper is
+    //! still usable for further add() calls.
+    bool flush()
+    {
+        if (m_zip_handler == nullptr)
+        {
+            return true;
+        }
+        if (!finalizeArchive())
+        {
+            return false;
+        }
+        return reopenAppend();
+    }
+
+    // -------------------------------------------------------------------------
+    //! \brief Called after a successful add() to honour the auto-flush option.
+    bool maybeAutoFlush()
+    {
+        if (!m_outer.m_auto_flush)
+        {
+            return true;
+        }
+        return flush();
     }
 
     // -------------------------------------------------------------------------
     void close()
     {
-        // Close the zip file first
-        if (m_zip_handler != nullptr)
-        {
-            zipClose(m_zip_handler, nullptr);
-            m_zip_handler = nullptr;
-        }
+        // Finalize the archive (writes central directory + EOCD straight into
+        // the sink/file). No copy step is required anymore.
+        finalizeArchive();
 
-        // Update the output vector or stream with the data in the memory buffer
-        updateOutput();
-
-        // Free the memory allocated by minizip for memory mode
-        if (m_zip_memory.base != nullptr)
-        {
-            free(m_zip_memory.base);
-            memset(&m_zip_memory, 0, sizeof(m_zip_memory));
-        }
-
-        // Free the memory of the internal buffer
-        // Check if buffer still holds significant memory before swapping
+        // Free the memory of the internal buffer.
         if (!m_buffer.empty())
         {
             std::vector<char>().swap(m_buffer);
@@ -703,6 +911,32 @@ bool Zipper::setProgressCallback(ProgressCallback callback)
 }
 
 // -------------------------------------------------------------------------
+bool Zipper::flush()
+{
+    if (!checkValid())
+        return false;
+
+    if (!m_impl->flush())
+    {
+        return false;
+    }
+    m_error_code = {};
+    return true;
+}
+
+// -------------------------------------------------------------------------
+void Zipper::setAutoFlush(bool p_enable)
+{
+    m_auto_flush = p_enable;
+}
+
+// -------------------------------------------------------------------------
+bool Zipper::autoFlush() const
+{
+    return m_auto_flush;
+}
+
+// -------------------------------------------------------------------------
 bool Zipper::add(std::istream& p_source,
                  const std::tm& p_timestamp,
                  const std::string& p_name_in_zip,
@@ -715,8 +949,13 @@ bool Zipper::add(std::istream& p_source,
     m_impl->m_progress.bytes_processed = 0;
     m_impl->m_progress.files_compressed = 0;
 
-    return m_impl->add(
-        p_source, p_timestamp, p_name_in_zip, m_password, p_flags);
+    bool result =
+        m_impl->add(p_source, p_timestamp, p_name_in_zip, m_password, p_flags);
+    if (result)
+    {
+        result = m_impl->maybeAutoFlush();
+    }
+    return result;
 }
 
 // -------------------------------------------------------------------------
@@ -732,8 +971,13 @@ bool Zipper::add(std::istream& p_source,
     m_impl->m_progress.files_compressed = 0;
 
     Timestamp time;
-    return m_impl->add(
+    bool result = m_impl->add(
         p_source, time.timestamp, p_name_in_zip, m_password, p_flags);
+    if (result)
+    {
+        result = m_impl->maybeAutoFlush();
+    }
+    return result;
 }
 
 // -------------------------------------------------------------------------
@@ -919,6 +1163,11 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
 
     m_impl->m_progress.status =
         overall_success ? Progress::Status::OK : Progress::Status::KO;
+
+    if (overall_success)
+    {
+        overall_success = m_impl->maybeAutoFlush();
+    }
 
     return overall_success;
 }
