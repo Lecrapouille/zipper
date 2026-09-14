@@ -9,9 +9,16 @@ project(zipper VERSION 4.0.0)
 ##############################################################################
 # Global compiler settings
 ##############################################################################
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# MSVC reads source files as the ANSI code page unless told otherwise. UTF-8
+# literals and path tests need the source and execution charset to match.
+if(MSVC)
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/utf-8>)
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/wd4251>)
+endif()
 
 ##############################################################################
 # Build options for enabling/disabling demos and tests
@@ -68,9 +75,9 @@ if(WIN32)
         src/utils/dirent.c
     )
 
-    target_compile_definitions(zipper PRIVATE
+    target_compile_definitions(zipper PUBLIC
         # Prevent Windows' min/max macros from conflicting with std::min/max
-        NOMINMAX=ON
+        NOMINMAX
     )
 endif()
 
@@ -114,6 +121,7 @@ target_link_libraries(zipper PRIVATE
     minizip
     zlibstatic
 )
+target_compile_features(zipper PUBLIC cxx_std_20)
 
 ##############################################################################
 # Build demos if CMake option is enabled

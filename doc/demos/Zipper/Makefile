@@ -10,7 +10,7 @@ M := $(P)/.makefile
 include $(P)/Makefile.common
 TARGET_NAME := zipper-demo
 TARGET_DESCRIPTION := A demo for zipping using $(PROJECT_NAME)
-CXX_STANDARD := --std=c++17
+CXX_STANDARD := --std=c++20
 include $(M)/project/Makefile
 
 ###################################################

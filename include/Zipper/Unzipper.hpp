@@ -9,6 +9,7 @@
 #define ZIPPER_UNZIPPER_HPP
 
 #include <cstdint>
+#include <filesystem>
 #include <functional>
 #include <iostream>
 #include <map>
@@ -26,6 +27,11 @@
 #    include "zipper_export.h"
 #else
 #    define ZIPPER_EXPORT
+#endif
+
+// See Zipper.hpp: C4251 fires in the client TU for unique_ptr / error_code.
+#if defined(_MSC_VER)
+#    pragma warning(disable : 4251)
 #endif
 
 namespace zipper
@@ -94,12 +100,35 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Regular zip decompressor (from zip archive file).
     //!
-    //! \param[in] p_zip_name Path of the zip file to extract.
+    //! \p p_zip_name is treated as UTF-8. On Windows the archive is opened
+    //! with the wide file API so characters outside the ANSI code page work.
+    //!
+    //! \param[in] p_zip_name Path of the zip file to extract (UTF-8).
     //! \param[in] p_password Optional password used during compression (empty
     //! if no password).
     //! \throw std::runtime_error if an error occurs during initialization.
     // -------------------------------------------------------------------------
     Unzipper(std::string const& p_zip_name,
+             std::string const& p_password = std::string());
+
+    Unzipper(const char* p_zip_name,
+             std::string const& p_password = std::string())
+        : Unzipper(std::string(p_zip_name), p_password)
+    {
+    }
+
+    // -------------------------------------------------------------------------
+    //! \brief Regular zip decompressor from a native filesystem path.
+    //!
+    //! Accepts \c std::filesystem::path, \c std::wstring and \c std::u8string
+    //! (via implicit conversion). On Windows this uses the wide file API.
+    //!
+    //! \param[in] p_zip_name Path of the zip file to extract.
+    //! \param[in] p_password Optional password used during compression (empty
+    //! if no password).
+    //! \throw std::runtime_error if an error occurs during initialization.
+    // -------------------------------------------------------------------------
+    Unzipper(std::filesystem::path const& p_zip_name,
              std::string const& p_password = std::string());
 
     // -------------------------------------------------------------------------
@@ -139,6 +168,15 @@ public:
     //! \throw std::runtime_error if an error occurs during initialization.
     // -------------------------------------------------------------------------
     bool open(std::string const& p_zip_name,
+              std::string const& p_password = std::string());
+
+    bool open(const char* p_zip_name,
+              std::string const& p_password = std::string())
+    {
+        return open(std::string(p_zip_name), p_password);
+    }
+
+    bool open(std::filesystem::path const& p_zip_name,
               std::string const& p_password = std::string());
 
     // -------------------------------------------------------------------------
@@ -215,6 +253,21 @@ public:
                const std::map<std::string, std::string>& p_alternative_names,
                OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
 
+    bool
+    extractAll(const char* p_folder_destination,
+               const std::map<std::string, std::string>& p_alternative_names,
+               OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite)
+    {
+        return extractAll(std::string(p_folder_destination),
+                          p_alternative_names,
+                          p_overwrite);
+    }
+
+    bool
+    extractAll(std::filesystem::path const& p_folder_destination,
+               const std::map<std::string, std::string>& p_alternative_names,
+               OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
+
     // -------------------------------------------------------------------------
     //! \brief Extract the whole archive to the desired disk destination.
     //!
@@ -224,6 +277,15 @@ public:
     //! \return true on success, false on failure. Call error() for more info.
     // -------------------------------------------------------------------------
     bool extractAll(std::string const& p_folder_destination,
+                    OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
+
+    bool extractAll(const char* p_folder_destination,
+                    OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite)
+    {
+        return extractAll(std::string(p_folder_destination), p_overwrite);
+    }
+
+    bool extractAll(std::filesystem::path const& p_folder_destination,
                     OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
 
     // -------------------------------------------------------------------------
@@ -253,6 +315,24 @@ public:
                 const std::map<std::string, std::string>& p_alternative_names,
                 OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
 
+    bool
+    extractGlob(std::string const& p_glob,
+                const char* p_destination,
+                const std::map<std::string, std::string>& p_alternative_names,
+                OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite)
+    {
+        return extractGlob(p_glob,
+                           std::string(p_destination),
+                           p_alternative_names,
+                           p_overwrite);
+    }
+
+    bool
+    extractGlob(std::string const& p_glob,
+                std::filesystem::path const& p_destination,
+                const std::map<std::string, std::string>& p_alternative_names,
+                OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
+
     // -------------------------------------------------------------------------
     //! \brief Extract entries matching a glob pattern.
     //! \note Glob pattern is the regular expression syntax used by the Unix
@@ -266,6 +346,18 @@ public:
     // -------------------------------------------------------------------------
     bool extractGlob(std::string const& p_glob,
                      std::string const& p_folder_destination,
+                     OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
+
+    bool extractGlob(std::string const& p_glob,
+                     const char* p_folder_destination,
+                     OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite)
+    {
+        return extractGlob(
+            p_glob, std::string(p_folder_destination), p_overwrite);
+    }
+
+    bool extractGlob(std::string const& p_glob,
+                     std::filesystem::path const& p_folder_destination,
                      OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
 
     // -------------------------------------------------------------------------
@@ -292,6 +384,18 @@ public:
     // -------------------------------------------------------------------------
     bool extract(std::string const& p_entry_name,
                  std::string const& p_entry_destination,
+                 OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
+
+    bool extract(std::string const& p_entry_name,
+                 const char* p_entry_destination,
+                 OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite)
+    {
+        return extract(
+            p_entry_name, std::string(p_entry_destination), p_overwrite);
+    }
+
+    bool extract(std::string const& p_entry_name,
+                 std::filesystem::path const& p_entry_destination,
                  OverwriteMode p_overwrite = OverwriteMode::DoNotOverwrite);
 
     // -------------------------------------------------------------------------

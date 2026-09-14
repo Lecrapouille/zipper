@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------------
 
 #include "Timestamp.hpp"
+#include "FilePath.hpp"
 #include <chrono>
 #include <ctime>
 #if !defined(_WIN32)
@@ -60,6 +61,12 @@ Timestamp::Timestamp()
 
 // -----------------------------------------------------------------------------
 Timestamp::Timestamp(const std::string& filepath)
+    : Timestamp(utf8ToPath(filepath))
+{
+}
+
+// -----------------------------------------------------------------------------
+Timestamp::Timestamp(const std::filesystem::path& filepath)
 {
     // Set default
     std::time_t now = std::time(nullptr);
@@ -75,13 +82,13 @@ Timestamp::Timestamp(const std::string& filepath)
     // https://stackoverflow.com/questions/20370920/convert-current-time-from-windows-to-unix-timestamp-in-c-or-c
     HANDLE hFile1;
     FILETIME filetime;
-    hFile1 = CreateFile(filepath.c_str(),
-                        GENERIC_READ,
-                        FILE_SHARE_READ,
-                        nullptr,
-                        OPEN_EXISTING,
-                        FILE_ATTRIBUTE_NORMAL,
-                        nullptr);
+    hFile1 = CreateFileW(filepath.c_str(),
+                         GENERIC_READ,
+                         FILE_SHARE_READ,
+                         nullptr,
+                         OPEN_EXISTING,
+                         FILE_ATTRIBUTE_NORMAL,
+                         nullptr);
 
     if (hFile1 == INVALID_HANDLE_VALUE)
     {

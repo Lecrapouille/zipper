@@ -473,7 +473,7 @@ TEST(MemoryZipTests, Issue118)
 TEST(ZipTests, Issue1_01)
 {
     const std::string zipFilename(PWD "/issues/unicode2.zip");
-    const std::string file1 = "😊";
+    const std::string file1 = helper::utf8(u8"😊");
 
     std::cout << "zipFilename: " << zipFilename << std::endl;
 
@@ -495,7 +495,7 @@ TEST(ZipTests, Issue1_01)
 TEST(ZipTests, Issue1_02)
 {
     const std::string zipFilename(PWD "/issues/unicode.zip");
-    const std::string file1 = "😊";
+    const std::string file1 = helper::utf8(u8"😊");
 
     Unzipper unzipper(zipFilename);
     EXPECT_EQ(unzipper.entries().size(), 1u);

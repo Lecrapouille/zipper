@@ -6,7 +6,7 @@ set(ZIPPER_DEMO_SOURCES
     src/demo_zip.cpp
 )
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 # Define the demo executable
 add_executable(zipper-demo ${ZIPPER_DEMO_SOURCES})

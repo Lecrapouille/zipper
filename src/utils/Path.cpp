@@ -6,14 +6,15 @@
 // -----------------------------------------------------------------------------
 
 #include "utils/Path.hpp"
+#include "utils/FilePath.hpp"
 #include "utils/OS.hpp"
 
 #include <chrono>
-#include <fstream>
-#include <iterator>
-#include <numeric>
+#include <filesystem>
+#include <istream>
 #include <random>
 #include <sstream>
+#include <system_error>
 #include <vector>
 
 using namespace zipper;
@@ -38,68 +39,35 @@ char Path::preferredSeparator(const std::string& path)
 // -----------------------------------------------------------------------------
 std::string Path::currentPath()
 {
-    // Start with a reasonable buffer size
-    size_t buffer_size = 1024u;
-    std::string result;
-
-    while (true)
+    std::error_code ec;
+    const auto cwd = std::filesystem::current_path(ec);
+    if (ec)
     {
-        std::vector<char> buffer(buffer_size);
-        if (OS_GETCWD(buffer.data(), buffer_size))
-        {
-            result = buffer.data();
-            // Normalize separators to the preferred format
-            result = toNativeSeparators(result);
-            break;
-        }
-
-        // If buffer is too small, double its size
-        if (errno == ERANGE)
-        {
-            buffer_size *= 2;
-            // Prevent infinite loop with a reasonable maximum size
-            if (buffer_size > 4u * 1024u)
-            {
-                return std::string();
-            }
-            continue;
-        }
-
-        // Other errors
-        return std::string();
+        return {};
     }
-
-    return result;
+    return toNativeSeparators(pathToUtf8(cwd));
 }
 
 // -----------------------------------------------------------------------------
 bool Path::isFile(const std::string& path)
 {
-    STAT st;
-
-    if (stat(path.c_str(), &st) == -1)
+    if (path.empty())
+    {
         return false;
-
-#if defined(_WIN32)
-    return ((st.st_mode & S_IFREG) == S_IFREG);
-#else
-    return S_ISREG(st.st_mode);
-#endif
+    }
+    std::error_code ec;
+    return std::filesystem::is_regular_file(utf8ToPath(path), ec);
 }
 
 // -----------------------------------------------------------------------------
 bool Path::isDir(const std::string& path)
 {
-    STAT st;
-
-    if (stat(path.c_str(), &st) == -1)
+    if (path.empty())
+    {
         return false;
-
-#if defined(_WIN32)
-    return ((st.st_mode & S_IFDIR) == S_IFDIR);
-#else
-    return S_ISDIR(st.st_mode);
-#endif
+    }
+    std::error_code ec;
+    return std::filesystem::is_directory(utf8ToPath(path), ec);
 }
 
 // -----------------------------------------------------------------------------
@@ -124,29 +92,48 @@ std::string Path::folderNameWithSeparator(const std::string& p_folder_path)
 // -----------------------------------------------------------------------------
 bool Path::exist(const std::string& p_path)
 {
-    STAT st;
-
-    if (stat(p_path.c_str(), &st) == -1)
+    if (p_path.empty())
+    {
         return false;
-
-#if defined(_WIN32)
-    return ((st.st_mode & S_IFREG) == S_IFREG ||
-            (st.st_mode & S_IFDIR) == S_IFDIR);
-#else
-    return (S_ISREG(st.st_mode) || S_ISDIR(st.st_mode));
-#endif
+    }
+    std::error_code ec;
+    const auto st = std::filesystem::status(utf8ToPath(p_path), ec);
+    if (ec)
+    {
+        return false;
+    }
+    return std::filesystem::is_regular_file(st) ||
+           std::filesystem::is_directory(st);
 }
 
 // -----------------------------------------------------------------------------
 bool Path::isReadable(const std::string& p_path)
 {
-    return (access(p_path.c_str(), 0x4) == 0);
+    if (p_path.empty())
+    {
+        return false;
+    }
+    const auto native = utf8ToPath(p_path);
+#if defined(_WIN32)
+    return _waccess(native.c_str(), 0x4) == 0;
+#else
+    return ::access(native.c_str(), R_OK) == 0;
+#endif
 }
 
 // -----------------------------------------------------------------------------
 bool Path::isWritable(const std::string& p_path)
 {
-    return (access(p_path.c_str(), 0x2) == 0);
+    if (p_path.empty())
+    {
+        return false;
+    }
+    const auto native = utf8ToPath(p_path);
+#if defined(_WIN32)
+    return _waccess(native.c_str(), 0x2) == 0;
+#else
+    return ::access(native.c_str(), W_OK) == 0;
+#endif
 }
 
 // -----------------------------------------------------------------------------
@@ -265,104 +252,62 @@ std::string Path::extension(const std::string& p_path)
 // -----------------------------------------------------------------------------
 bool Path::createDir(const std::string& p_dir, const std::string& p_parent)
 {
-    std::string dir;
-
-    if (!p_parent.empty())
+    if (p_dir.empty() && p_parent.empty())
     {
-        dir = p_parent + STRING_PREFERRED_DIRECTORY_SEPARATOR;
+        return false;
     }
 
-    dir += p_dir;
-
-    // Check whether the directory already exists and is writable.
-    if (isDir(dir) && isWritable(dir))
-        return true;
-
-    dir = normalize(dir);
-
-    // Ensure we have parent
-    std::string actual_parent = dirName(dir);
-
-    // Check whether the parent directory exists and is writable
-    if (!actual_parent.empty())
+    if (p_dir.empty())
     {
-        if (!exist(actual_parent))
+        return isDir(p_parent) && isWritable(p_parent);
+    }
+
+    const std::filesystem::path dest =
+        p_parent.empty() ? utf8ToPath(p_dir)
+                         : (utf8ToPath(p_parent) / utf8ToPath(p_dir));
+
+    std::error_code ec;
+    if (std::filesystem::is_directory(dest, ec))
+    {
+        return isWritable(pathToUtf8(dest));
+    }
+
+    const auto parent = dest.parent_path();
+    if (!parent.empty() && parent != dest)
+    {
+        if (std::filesystem::exists(parent, ec) &&
+            std::filesystem::is_directory(parent, ec) &&
+            !isWritable(pathToUtf8(parent)))
         {
-            if (!createDir(actual_parent))
-            {
-                // errno is already defined by the recursive call
-                return false;
-            }
-        }
-        else if (!isDir(actual_parent))
-        {
-            errno = ENOTDIR;
-            return false;
-        }
-        else if (!isWritable(actual_parent))
-        {
-            errno = EACCES;
             return false;
         }
     }
 
-    int result = OS_MKDIR(dir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
-    if (result != 0 && errno == 0)
-    {
-        // If OS_MKDIR fails but does not define errno, we define it
-        errno = EACCES;
-    }
-
-    return (result == 0);
-}
-
-// -----------------------------------------------------------------------------
-static bool private_remove(const std::string& p_path)
-{
-    if (Path::isDir(p_path))
-        return OS_RMDIR(p_path.c_str()) == 0;
-
-    if (Path::isFile(p_path))
-        return OS_UNLINK(p_path.c_str()) == 0;
-
-    return false;
+    std::filesystem::create_directories(dest, ec);
+    return !ec && std::filesystem::is_directory(dest, ec);
 }
 
 // -----------------------------------------------------------------------------
 void Path::removeDir(const std::string& p_foldername)
 {
-    if (!private_remove(p_foldername))
-    {
-        std::vector<std::string> files =
-            Path::filesFromDir(p_foldername, false);
-        std::vector<std::string>::iterator it = files.begin();
-        for (; it != files.end(); ++it)
-        {
-            if (Path::isDir(*it) && *it != p_foldername)
-            {
-                Path::removeDir(*it);
-            }
-            else
-            {
-                private_remove(it->c_str());
-            }
-        }
-
-        private_remove(p_foldername);
-    }
+    std::error_code ec;
+    std::filesystem::remove_all(utf8ToPath(p_foldername), ec);
 }
 
 // -----------------------------------------------------------------------------
 bool Path::remove(const std::string& p_path)
 {
-    if (Path::isDir(p_path))
+    if (isDir(p_path))
     {
-        Path::removeDir(p_path.c_str());
+        removeDir(p_path);
         return true;
     }
 
-    if (Path::isFile(p_path))
-        return OS_UNLINK(p_path.c_str()) == 0;
+    if (isFile(p_path))
+    {
+        std::error_code ec;
+        return std::filesystem::remove(utf8ToPath(p_path), ec);
+    }
 
     return false;
 }
@@ -372,116 +317,70 @@ std::vector<std::string> Path::filesFromDir(const std::string& p_path,
                                             const bool p_recurse)
 {
     std::vector<std::string> files;
+    const auto root = utf8ToPath(p_path);
+    std::error_code ec;
 
-#if defined(_WIN32)
-    // For Windows, use the FindFirst/FindNext API
-    std::string file_pattern = p_path + "\\*";
-    struct _finddata_t entry;
-    intptr_t list = _findfirst(file_pattern.c_str(), &entry);
-
-    if (list == -1)
-        return files;
-
-    do
+    if (p_recurse)
     {
-        std::string filename(entry.name);
-
-        if (filename == "." || filename == "..")
-            continue;
-
-        if (p_recurse)
+        auto it = std::filesystem::recursive_directory_iterator(
+            root,
+            std::filesystem::directory_options::skip_permission_denied,
+            ec);
+        if (ec)
         {
-            if (Path::isDir(p_path + STRING_PREFERRED_DIRECTORY_SEPARATOR +
-                            filename))
+            return files;
+        }
+        const auto end = std::filesystem::recursive_directory_iterator();
+        for (; it != end; it.increment(ec))
+        {
+            if (ec)
             {
-                std::vector<std::string> moreFiles = Path::filesFromDir(
-                    p_path + STRING_PREFERRED_DIRECTORY_SEPARATOR + filename,
-                    p_recurse);
-                std::copy(moreFiles.begin(),
-                          moreFiles.end(),
-                          std::back_inserter(files));
+                ec.clear();
                 continue;
             }
-        }
-        files.push_back(p_path + STRING_PREFERRED_DIRECTORY_SEPARATOR +
-                        filename);
-    } while (_findnext(list, &entry) == 0);
-
-    _findclose(list);
-#else
-    DIR* dir;
-    struct dirent* entry;
-
-    dir = opendir(p_path.c_str());
-
-    if (dir == nullptr)
-        return files;
-
-    for (entry = readdir(dir); entry != nullptr; entry = readdir(dir))
-    {
-        std::string filename(entry->d_name);
-
-        if (filename == "." || filename == "..")
-            continue;
-
-        if (p_recurse)
-        {
-            if (Path::isDir(p_path + STRING_PREFERRED_DIRECTORY_SEPARATOR +
-                            filename))
+            if (it->is_regular_file(ec) && !ec)
             {
-                std::vector<std::string> moreFiles = Path::filesFromDir(
-                    p_path + STRING_PREFERRED_DIRECTORY_SEPARATOR + filename,
-                    p_recurse);
-                std::copy(moreFiles.begin(),
-                          moreFiles.end(),
-                          std::back_inserter(files));
-                continue;
+                files.push_back(toNativeSeparators(pathToUtf8(it->path())));
             }
         }
-        files.push_back(p_path + STRING_PREFERRED_DIRECTORY_SEPARATOR +
-                        filename);
+        return files;
     }
 
-    closedir(dir);
-#endif
-
+    auto it = std::filesystem::directory_iterator(root, ec);
+    if (ec)
+    {
+        return files;
+    }
+    const auto end = std::filesystem::directory_iterator();
+    for (; it != end; it.increment(ec))
+    {
+        if (ec)
+        {
+            ec.clear();
+            continue;
+        }
+        files.push_back(toNativeSeparators(pathToUtf8(it->path())));
+    }
     return files;
 }
 
 // -----------------------------------------------------------------------------
 std::string Path::getTempDirectory()
 {
-    std::string tempDir;
-
-    // Windows
-#ifdef _WIN32
-    char tempPath[MAX_PATH];
-    if (GetTempPathA(MAX_PATH, tempPath) != 0)
+    std::error_code ec;
+    auto temp_dir = std::filesystem::temp_directory_path(ec);
+    if (ec)
     {
-        tempDir = tempPath;
+        temp_dir = utf8ToPath("/tmp");
     }
 
-    // Linux / macOS
-#else
-    const char* tmpDir = std::getenv("TMPDIR"); // Try TMPDIR (macOS)
-    if (!tmpDir)
-        tmpDir = std::getenv("TMP"); // Try TMP
-    if (!tmpDir)
-        tmpDir = std::getenv("TEMP"); // Try TEMP
-    if (!tmpDir)
-        tmpDir = "/tmp"; // Fallback default (Linux)
-
-    tempDir = tmpDir;
-#endif
-
-    // Ensure the path ends with a separator
-    if ((!tempDir.empty()) && (tempDir.back() != UNIX_DIRECTORY_SEPARATOR) &&
-        (tempDir.back() != WINDOWS_DIRECTORY_SEPARATOR))
+    std::string result = pathToUtf8(temp_dir);
+    if ((!result.empty()) && (result.back() != UNIX_DIRECTORY_SEPARATOR) &&
+        (result.back() != WINDOWS_DIRECTORY_SEPARATOR))
     {
-        tempDir += DIRECTORY_SEPARATOR;
+        result += DIRECTORY_SEPARATOR;
     }
-
-    return tempDir;
+    return result;
 }
 
 // -----------------------------------------------------------------------------
@@ -763,14 +662,9 @@ std::string Path::toNativeSeparators(const std::string& p_path)
 // -----------------------------------------------------------------------------
 size_t Path::getFileSize(const std::string& p_path)
 {
-    std::ifstream file(p_path, std::ios::binary | std::ios::ate);
-    if (!file.is_open())
-    {
-        return 0; // Return 0 if file doesn't exist or cannot be opened
-    }
-    std::streampos size = file.tellg();
-    file.close();
-    return (size >= 0) ? static_cast<size_t>(size) : 0;
+    std::error_code ec;
+    const auto size = std::filesystem::file_size(utf8ToPath(p_path), ec);
+    return ec ? 0 : static_cast<size_t>(size);
 }
 
 // -----------------------------------------------------------------------------

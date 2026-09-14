@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <ctime>
+#include <filesystem>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -26,6 +27,12 @@
 #    include "zipper_export.h"
 #else
 #    define ZIPPER_EXPORT
+#endif
+
+// C4251 is emitted when MSVC instantiates STL members of a dllimport class
+// in the client TU (e.g. unique_ptr destructor). The members are private.
+#if defined(_MSC_VER)
+#    pragma warning(disable : 4251)
 #endif
 
 namespace zipper
@@ -103,7 +110,10 @@ public:
     //! \brief Regular zip compression (inside a disk zip archive file) with a
     //! password.
     //!
-    //! \param[in] p_zip_name Path where to create the zip file.
+    //! \p p_zip_name is treated as UTF-8. On Windows the archive is opened
+    //! with the wide file API so characters outside the ANSI code page work.
+    //!
+    //! \param[in] p_zip_name Path where to create the zip file (UTF-8).
     //! \param[in] p_password Optional password (empty for no password
     //! protection).
     //! \param[in] p_open_flags Overwrite (default) or append to existing
@@ -119,7 +129,7 @@ public:
     //! \brief Regular zip compression (inside a disk zip archive file) without
     //! password.
     //!
-    //! \param[in] p_zipname Path where to create the zip file.
+    //! \param[in] p_zipname Path where to create the zip file (UTF-8).
     //! \param[in] p_open_flags Overwrite (default) or append to existing zip
     //! file. \throw std::runtime_error if an error occurs during
     //! initialization.
@@ -127,6 +137,43 @@ public:
     Zipper(const std::string& p_zipname,
            Zipper::OpenFlags p_open_flags = Zipper::OpenFlags::Overwrite)
         : Zipper(p_zipname, std::string(), p_open_flags)
+    {
+    }
+
+    Zipper(const char* p_zip_name,
+           const std::string& p_password,
+           Zipper::OpenFlags p_open_flags = Zipper::OpenFlags::Overwrite)
+        : Zipper(std::string(p_zip_name), p_password, p_open_flags)
+    {
+    }
+
+    Zipper(const char* p_zip_name,
+           Zipper::OpenFlags p_open_flags = Zipper::OpenFlags::Overwrite)
+        : Zipper(std::string(p_zip_name), p_open_flags)
+    {
+    }
+
+    // -------------------------------------------------------------------------
+    //! \brief Regular zip compression from a native filesystem path.
+    //!
+    //! Accepts \c std::filesystem::path, \c std::wstring and \c std::u8string
+    //! (via implicit conversion). On Windows this uses the wide file API.
+    //!
+    //! \param[in] p_zip_name Path where to create the zip file.
+    //! \param[in] p_password Optional password (empty for no password
+    //! protection).
+    //! \param[in] p_open_flags Overwrite (default) or append to existing
+    //! zip file.
+    //! \throw std::runtime_error if an error occurs during
+    //! initialization.
+    // -------------------------------------------------------------------------
+    Zipper(const std::filesystem::path& p_zip_name,
+           const std::string& p_password,
+           Zipper::OpenFlags p_open_flags = Zipper::OpenFlags::Overwrite);
+
+    Zipper(const std::filesystem::path& p_zip_name,
+           Zipper::OpenFlags p_open_flags = Zipper::OpenFlags::Overwrite)
+        : Zipper(p_zip_name, std::string(), p_open_flags)
     {
     }
 
@@ -269,6 +316,9 @@ public:
         return add(std::string(p_file_or_folder_path), p_flags);
     }
 
+    bool add(const std::filesystem::path& p_file_or_folder_path,
+             Zipper::ZipFlags p_flags = Zipper::ZipFlags::Better);
+
     // -------------------------------------------------------------------------
     //! \brief Closes the zip archive.
     //!
@@ -340,7 +390,7 @@ public:
     // -------------------------------------------------------------------------
     //! \brief Open the zip archive from a file.
     //!
-    //! \param[in] p_zipname Path to the zip file.
+    //! \param[in] p_zipname Path to the zip file (UTF-8).
     //! \param[in] p_open_flags Overwrite (default) or append to existing zip
     //! file.
     //! \return true on success, false on failure. Sets internal error code on
@@ -348,6 +398,29 @@ public:
     // -------------------------------------------------------------------------
     bool open(const std::string& p_zipname,
               Zipper::OpenFlags p_open_flags = Zipper::OpenFlags::Overwrite);
+
+    bool open(const char* p_zip_name,
+              const std::string& p_password,
+              Zipper::OpenFlags p_open_flags = Zipper::OpenFlags::Overwrite)
+    {
+        return open(std::string(p_zip_name), p_password, p_open_flags);
+    }
+
+    bool open(const char* p_zip_name,
+              Zipper::OpenFlags p_open_flags = Zipper::OpenFlags::Overwrite)
+    {
+        return open(std::string(p_zip_name), p_open_flags);
+    }
+
+    bool open(const std::filesystem::path& p_zip_name,
+              const std::string& p_password,
+              Zipper::OpenFlags p_open_flags = Zipper::OpenFlags::Overwrite);
+
+    bool open(const std::filesystem::path& p_zip_name,
+              Zipper::OpenFlags p_open_flags = Zipper::OpenFlags::Overwrite)
+    {
+        return open(p_zip_name, std::string(), p_open_flags);
+    }
 
     // -------------------------------------------------------------------------
     //! \brief Open the zip archive from a stream.
@@ -441,7 +514,7 @@ private:
     //! Null otherwise.
     std::vector<unsigned char>* m_output_vector = nullptr;
     //! \brief Name of the zip file, if using file constructor.
-    std::string m_zip_name;
+    std::filesystem::path m_zip_name;
     //! \brief Password for the zip file.
     std::string m_password;
     //! \brief Overwrite or append (default) to existing zip file.

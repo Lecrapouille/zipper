@@ -1,6 +1,6 @@
 ![Zipper](doc/logo.png)
 
-[Zipper](https://github.com/lecrapouille/zipper) is a C++14 wrapper around the minizip compression library. Its goal is to bring the power and simplicity of minizip to a more object-oriented and C++ user-friendly library.
+[Zipper](https://github.com/lecrapouille/zipper) is a C++20 wrapper around the minizip compression library. Its goal is to bring the power and simplicity of minizip to a more object-oriented and C++ user-friendly library.
 
 This project is a continuation of the original [project](https://github.com/sebastiandev/zipper). The original project was created out of the need for a compression library that would be reliable, simple, and flexible. By flexibility, we mean supporting various types of inputs and outputs, specifically the ability to compress into memory instead of being restricted to file compression only, and using data from memory instead of just files.
 
@@ -17,7 +17,7 @@ This current fork repository was created because the original project was no lon
 - [x] Password-protected zip (AES).
 - [x] Preserve Unix file permissions (stored in the ZIP `external_fa` field) and
       strip `setuid`/`setgid` bits on extraction for safety.
-- [x] Multi-platform support.
+- [x] Multi-platform support, including Unicode file paths (`std::filesystem::path`, UTF-8 `std::string`, `std::wstring` on Windows).
 - [x] Project compiles as both static and dynamic libraries.
 - [x] Protection flags against overwriting existing files during extraction.
 - [x] Protection against the [Zip Slip attack](https://security.snyk.io/research/zip-slip-vulnerability), including through `alternative_names` remapping.
@@ -120,7 +120,7 @@ Optional options:
 - To compile your project "as it" against Zipper, the simplest way is to use the `pkg-config` command:
 
 ```shell
-g++ -W -Wall --std=c++14 main.cpp -o prog `pkg-config zipper --cflags --libs`
+g++ -W -Wall --std=c++20 main.cpp -o prog `pkg-config zipper --cflags --libs`
 ```
 
 - For Makefile:
@@ -151,10 +151,11 @@ using namespace zipper;
 
 #### Constructor
 
-- Constructor without password and replace `ziptest.zip` if already present. The new zip archive is empty. The flag `Zipper::OpenFlags::Overwrite` is optional.
+- Constructor without password and replace `ziptest.zip` if already present. The new zip archive is empty. The flag `Zipper::OpenFlags::Overwrite` is optional. `std::string` paths are UTF-8; `std::filesystem::path` and `std::wstring` are also accepted.
 
 ```c++
 Zipper zipper("ziptest.zip", Zipper::OpenFlags::Overwrite);
+Zipper zipper(std::filesystem::path(u8"données/archive.zip"));
 ```
 
 - Constructor without password and preserve `ziptest.zip` if already present. The flag `Zipper::OpenFlags::Append` is mandatory!

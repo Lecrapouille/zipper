@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------------
 
 #include "Zipper/Zipper.hpp"
+#include "utils/FilePath.hpp"
 #include "utils/OS.hpp"
 #include "utils/Path.hpp"
 #include "utils/Timestamp.hpp"
@@ -15,6 +16,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <stdexcept>
 
@@ -270,8 +272,9 @@ static uint32_t ZCALLBACK sink_read(voidpf /*opaque*/,
 
     if (sink->kind == OutputSink::Kind::Vector)
     {
-        std::memcpy(
-            buf, sink->vec->data() + sink->cursor, static_cast<size_t>(to_read));
+        std::memcpy(buf,
+                    sink->vec->data() + sink->cursor,
+                    static_cast<size_t>(to_read));
     }
     else
     {
@@ -301,9 +304,8 @@ static uint32_t ZCALLBACK sink_write(voidpf /*opaque*/,
         {
             sink->vec->resize(static_cast<size_t>(needed));
         }
-        std::memcpy(sink->vec->data() + sink->cursor,
-                    buf,
-                    static_cast<size_t>(size));
+        std::memcpy(
+            sink->vec->data() + sink->cursor, buf, static_cast<size_t>(size));
     }
     else
     {
@@ -416,7 +418,8 @@ struct Zipper::Impl
     }
 
     // -------------------------------------------------------------------------
-    bool initFile(const std::string& p_filename, Zipper::OpenFlags p_flags)
+    bool initFile(const std::filesystem::path& p_filename,
+                  Zipper::OpenFlags p_flags)
     {
         // Set the minizip opening mode
         int mode = 0;
@@ -429,10 +432,11 @@ struct Zipper::Impl
             mode = APPEND_STATUS_ADDINZIP;
         }
 
-        // Open the zip file
+        // Open the zip file. On Windows always use the wide API so Unicode
+        // paths (and UTF-8 std::string converted via utf8ToPath) work.
 #if defined(_WIN32)
         zlib_filefunc64_def ffunc = { 0 };
-        fill_win32_filefunc64A(&ffunc);
+        fill_win32_filefunc64W(&ffunc);
         m_zip_handler = zipOpen2_64(p_filename.c_str(), mode, nullptr, &ffunc);
 #else
         m_zip_handler = zipOpen64(p_filename.c_str(), mode);
@@ -441,22 +445,22 @@ struct Zipper::Impl
         // If the zip file is not opened, return an custom error message
         if (m_zip_handler == nullptr)
         {
+            const std::string name = pathToUtf8(p_filename);
             std::stringstream str;
-            str << "Failed opening zip file '" << p_filename << "'. Reason: ";
+            str << "Failed opening zip file '" << name << "'. Reason: ";
 
-            if (Path::isDir(p_filename))
+            std::error_code fs_ec;
+            if (std::filesystem::is_directory(p_filename, fs_ec))
             {
                 str << "Is a directory";
             }
-            else if ((errno == EINVAL) ||
-                     p_filename.substr(p_filename.find_last_of(".") + 1u) !=
-                         "zip")
+            else if ((errno == EINVAL) || p_filename.extension() != ".zip")
             {
                 str << "Not a zip file";
             }
             else
             {
-                str << OS_STRERROR(errno);
+                str << nativeErrorMessage();
             }
 
             m_error_code =
@@ -478,11 +482,10 @@ struct Zipper::Impl
 
         // Overwrite (or empty stream): create from scratch. Append: minizip
         // reads back the central directory already present in the stream.
-        const int mode =
-            ((existing == 0) ||
-             (m_outer.m_open_flags == Zipper::OpenFlags::Overwrite))
-                ? APPEND_STATUS_CREATE
-                : APPEND_STATUS_ADDINZIP;
+        const int mode = ((existing == 0) || (m_outer.m_open_flags ==
+                                              Zipper::OpenFlags::Overwrite))
+                             ? APPEND_STATUS_CREATE
+                             : APPEND_STATUS_ADDINZIP;
 
         fill_output_sink_filefunc(&m_file_func, &m_sink);
         return initMemory(mode, m_file_func);
@@ -821,6 +824,14 @@ Zipper::Zipper() : m_impl(nullptr) {}
 Zipper::Zipper(const std::string& p_zipname,
                const std::string& p_password,
                Zipper::OpenFlags p_open_flags)
+    : Zipper(utf8ToPath(p_zipname), p_password, p_open_flags)
+{
+}
+
+// -------------------------------------------------------------------------
+Zipper::Zipper(const std::filesystem::path& p_zipname,
+               const std::string& p_password,
+               Zipper::OpenFlags p_open_flags)
     : m_zip_name(p_zipname),
       m_password(p_password),
       m_open_flags(p_open_flags),
@@ -984,6 +995,39 @@ bool Zipper::add(std::istream& p_source,
 bool Zipper::add(const std::string& p_file_or_folder_path,
                  Zipper::ZipFlags p_flags)
 {
+    return add(utf8ToPath(p_file_or_folder_path), p_flags);
+}
+
+// -------------------------------------------------------------------------
+static std::string
+zipEntryNameFromDiskPath(const std::filesystem::path& p_file,
+                         const std::filesystem::path& p_added,
+                         bool p_save_hierarchy)
+{
+    if (!p_save_hierarchy)
+    {
+        const auto u8 = p_file.filename().u8string();
+        return { u8.begin(), u8.end() };
+    }
+
+    // Match the historical string API: "data/somefolder/" + test.txt
+    // becomes "data/somefolder/test.txt" (the added folder is kept).
+    auto folder = p_added.lexically_normal();
+    if (!folder.has_filename())
+    {
+        folder = folder.parent_path();
+    }
+
+    const auto relative = p_file.lexically_relative(folder);
+    const auto entry = (folder / relative).lexically_normal();
+    const auto u8 = entry.generic_u8string();
+    return { u8.begin(), u8.end() };
+}
+
+// -------------------------------------------------------------------------
+bool Zipper::add(const std::filesystem::path& p_file_or_folder_path,
+                 Zipper::ZipFlags p_flags)
+{
     if (!checkValid())
         return false;
 
@@ -991,20 +1035,44 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
     m_error_code = {};
     bool overall_success = true;
 
-    if (Path::isDir(p_file_or_folder_path))
+    std::error_code fs_ec;
+    if (std::filesystem::is_directory(p_file_or_folder_path, fs_ec))
     {
-        // Get all files in the directory
-        std::vector<std::string> files;
+        std::vector<std::filesystem::path> files;
         try
         {
-            files = Path::filesFromDir(p_file_or_folder_path, true);
+            auto it = std::filesystem::recursive_directory_iterator(
+                p_file_or_folder_path,
+                std::filesystem::directory_options::skip_permission_denied,
+                fs_ec);
+            if (fs_ec)
+            {
+                m_error_code = make_error_code(
+                    ZipperError::ADDING_ERROR,
+                    "Permission denied: '" + pathToUtf8(p_file_or_folder_path) +
+                        "'");
+                return false;
+            }
 
-            // Set progress for the directory
+            const auto end = std::filesystem::recursive_directory_iterator();
+            for (; it != end; it.increment(fs_ec))
+            {
+                if (fs_ec)
+                {
+                    fs_ec.clear();
+                    continue;
+                }
+                if (it->is_regular_file(fs_ec) && !fs_ec)
+                {
+                    files.push_back(it->path());
+                }
+            }
+
             m_impl->m_progress.total_files = files.size();
             m_impl->m_progress.total_bytes = 0;
             for (const auto& file : files)
             {
-                std::ifstream input(file.c_str(), std::ios::binary);
+                std::ifstream input(file, std::ios::binary);
                 if (input.is_open())
                 {
                     input.seekg(0, std::ios::end);
@@ -1016,20 +1084,27 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
         }
         catch (const std::exception& e)
         {
+            const std::string what = e.what();
             m_error_code = make_error_code(
-                ZipperError::INTERNAL_ERROR,
-                std::string("Failed listing folder files: ") + e.what());
+                ZipperError::ADDING_ERROR,
+                (what.find("Permission") != std::string::npos)
+                    ? ("Permission denied: '" +
+                       pathToUtf8(p_file_or_folder_path) + "'")
+                    : (std::string("Failed listing folder files: ") + what));
             return false;
         }
 
-        // If the directory is empty, return true if it's readable
         if (files.empty())
         {
-            if (!Path::isReadable(p_file_or_folder_path))
+            std::error_code probe_ec;
+            (void)std::filesystem::directory_iterator(p_file_or_folder_path,
+                                                      probe_ec);
+            if (probe_ec)
             {
-                m_error_code = make_error_code(ZipperError::ADDING_ERROR,
-                                               "Permission denied: '" +
-                                                   p_file_or_folder_path + "'");
+                m_error_code = make_error_code(
+                    ZipperError::ADDING_ERROR,
+                    "Permission denied: '" + pathToUtf8(p_file_or_folder_path) +
+                        "'");
                 return false;
             }
 
@@ -1037,48 +1112,27 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
             return true;
         }
 
+        const bool save_hierarchy =
+            (p_flags & Zipper::SaveHierarchy) == Zipper::SaveHierarchy;
+
         for (const auto& file_path : files)
         {
-            // Open the file
-            std::ifstream input(file_path.c_str(), std::ios::binary);
+            std::ifstream input(file_path, std::ios::binary);
             if (!input.is_open())
             {
-                if (Path::isFile(file_path))
+                if (std::filesystem::is_regular_file(file_path, fs_ec))
                 {
-                    m_error_code = make_error_code(ZipperError::ADDING_ERROR,
-                                                   "Failed opening file: '" +
-                                                       file_path + "'");
+                    m_error_code = make_error_code(
+                        ZipperError::ADDING_ERROR,
+                        "Failed opening file: '" + pathToUtf8(file_path) + "'");
                     overall_success = false;
                 }
 
-                // Continue trying other files
                 continue;
             }
 
-            // Get the name of the file to add to the zip. Assuming filePath is
-            // normalized enough.
-            std::string name_in_zip;
-            std::string canonical_file_path = file_path;
-
-            // Check if hierarchy needs to be saved.
-            if ((p_flags & Zipper::SaveHierarchy) == Zipper::SaveHierarchy)
-            {
-                // Find the base folder path within the canonical file path
-                size_t base_pos =
-                    canonical_file_path.find(p_file_or_folder_path);
-                if (base_pos != std::string::npos)
-                {
-                    name_in_zip = canonical_file_path.substr(base_pos);
-                }
-                else
-                {
-                    name_in_zip = Path::fileName(file_path);
-                }
-            }
-            else
-            {
-                name_in_zip = Path::fileName(file_path);
-            }
+            const std::string name_in_zip = zipEntryNameFromDiskPath(
+                file_path, p_file_or_folder_path, save_hierarchy);
 
 #if !defined(_WIN32)
             uint32_t const unix_zip_attrs =
@@ -1087,15 +1141,13 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
             uint32_t const unix_zip_attrs = 0;
 #endif
 
-            // Call the stream-based add function.
             Timestamp time(file_path);
-            if (!m_impl->add(
-                    input,
-                    time.timestamp,
-                    name_in_zip,
-                    m_password,
-                    p_flags,
-                    unix_zip_attrs))
+            if (!m_impl->add(input,
+                             time.timestamp,
+                             name_in_zip,
+                             m_password,
+                             p_flags,
+                             unix_zip_attrs))
             {
                 overall_success = false;
             }
@@ -1108,40 +1160,20 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
         m_impl->m_progress.bytes_processed = 0;
         m_impl->m_progress.files_compressed = 0;
 
-        // Open the file
-        std::ifstream input(p_file_or_folder_path.c_str(), std::ios::binary);
+        std::ifstream input(p_file_or_folder_path, std::ios::binary);
         if (!input.is_open())
         {
             m_impl->m_progress.total_bytes =
                 static_cast<uint64_t>(input.tellg());
-            m_error_code = make_error_code(ZipperError::ADDING_ERROR,
-                                           "Failed opening file: '" +
-                                               p_file_or_folder_path + "'");
+            m_error_code =
+                make_error_code(ZipperError::ADDING_ERROR,
+                                "Failed opening file: '" +
+                                    pathToUtf8(p_file_or_folder_path) + "'");
             return false;
         }
 
-        // Get the name of the file to add to the zip. Assuming
-        // p_file_or_folder_path is normalized enough.
-        std::string name_in_zip;
-        std::string canonical_file_path = p_file_or_folder_path;
-
-        // Check if hierarchy needs to be saved
-        if ((p_flags & Zipper::SaveHierarchy) == Zipper::SaveHierarchy)
-        {
-            // For a single file, "saving hierarchy" might mean including
-            // its path components relative to the current working
-            // directory, or just the filename depending on interpretation.
-            // Current behavior uses Path::fileName even with SaveHierarchy
-            // for single file. To include path components, use: nameInZip =
-            // canonicalFilePath; Or adjust based on desired behavior
-            // relative to zip root. Let's keep it simple: use filename only
-            // unless it's in a dir add.
-            name_in_zip = Path::fileName(p_file_or_folder_path);
-        }
-        else
-        {
-            name_in_zip = Path::fileName(p_file_or_folder_path);
-        }
+        const auto u8 = p_file_or_folder_path.filename().u8string();
+        const std::string name_in_zip(u8.begin(), u8.end());
 
 #if !defined(_WIN32)
         uint32_t const unix_zip_attrs =
@@ -1150,15 +1182,13 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
         uint32_t const unix_zip_attrs = 0;
 #endif
 
-        // Call the stream-based add function
         Timestamp time(p_file_or_folder_path);
-        overall_success = m_impl->add(
-            input,
-            time.timestamp,
-            name_in_zip,
-            m_password,
-            p_flags,
-            unix_zip_attrs);
+        overall_success = m_impl->add(input,
+                                      time.timestamp,
+                                      name_in_zip,
+                                      m_password,
+                                      p_flags,
+                                      unix_zip_attrs);
     }
 
     m_impl->m_progress.status =
@@ -1174,6 +1204,14 @@ bool Zipper::add(const std::string& p_file_or_folder_path,
 
 // -------------------------------------------------------------------------
 bool Zipper::open(const std::string& p_zip_name,
+                  const std::string& p_password,
+                  Zipper::OpenFlags p_open_flags)
+{
+    return open(utf8ToPath(p_zip_name), p_password, p_open_flags);
+}
+
+// -------------------------------------------------------------------------
+bool Zipper::open(const std::filesystem::path& p_zip_name,
                   const std::string& p_password,
                   Zipper::OpenFlags p_open_flags)
 {

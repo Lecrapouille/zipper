@@ -120,7 +120,7 @@ TEST(ZipperFileOps, OpenAndClose)
     }
     catch (const std::runtime_error& e)
     {
-        ASSERT_THAT(e.what(), testing::HasSubstr("No such file or directory"));
+        ASSERT_TRUE(helper::mentionsMissingFile(e.what())) << e.what();
     }
 
     // Clean up.
@@ -372,7 +372,7 @@ TEST(ZipperFileOps, TryOpeningBadZipFiles)
         std::cout << "Testing Zipper with " << zip_poc0 << std::endl;
         Zipper zipper(zip_poc0, Zipper::OpenFlags::Append);
     }
-    catch (const std::runtime_error& e)
+    catch (const std::runtime_error&)
     {
         FAIL() << "Did not expect std::runtime_error";
     }
@@ -383,7 +383,7 @@ TEST(ZipperFileOps, TryOpeningBadZipFiles)
         std::cout << "Testing Unzipper with " << zip_poc0 << std::endl;
         Unzipper unzipper(zip_poc0);
     }
-    catch (const std::runtime_error& e)
+    catch (const std::runtime_error&)
     {
         FAIL() << "Did not expect std::runtime_error";
     }
@@ -493,7 +493,7 @@ TEST(ZipperFileOps, TryOpeningNonExistentFile)
     }
     catch (const std::runtime_error& e)
     {
-        ASSERT_THAT(e.what(), testing::HasSubstr("No such file or directory"));
+        ASSERT_TRUE(helper::mentionsMissingFile(e.what())) << e.what();
     }
 
     // Try opening the non-existent file with the Append flag.
@@ -503,7 +503,7 @@ TEST(ZipperFileOps, TryOpeningNonExistentFile)
         Zipper zipper(nonExistentFile);
         ASSERT_FALSE(helper::checkFileDoesNotExist(nonExistentFile));
     }
-    catch (const std::runtime_error& e)
+    catch (const std::runtime_error&)
     {
         FAIL() << "Did not expect std::runtime_error";
     }
@@ -517,7 +517,7 @@ TEST(ZipperFileOps, TryOpeningNonExistentFile)
     }
     catch (const std::runtime_error& e)
     {
-        ASSERT_THAT(e.what(), testing::HasSubstr("No such file or directory"));
+        ASSERT_TRUE(helper::mentionsMissingFile(e.what())) << e.what();
     }
 
     // Clean up.
@@ -877,7 +877,7 @@ TEST(ZipTests, LargeFileWithPassword)
         while (bytes_written < file_size)
         {
             size_t to_write =
-                std::min(buffer.size(), file_size - bytes_written);
+                (std::min)(buffer.size(), file_size - bytes_written);
             ofs.write(buffer.data(), std::streamsize(to_write));
             ASSERT_TRUE(ofs.good());
             bytes_written += to_write;

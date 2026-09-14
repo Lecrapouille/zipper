@@ -10,7 +10,7 @@ M := $(P)/.makefile
 include $(P)/Makefile.common
 TARGET_NAME := $(PROJECT_NAME)
 TARGET_DESCRIPTION := Zipper is a C++ library for creating and reading zip archives.
-CXX_STANDARD := --std=c++14
+CXX_STANDARD := --std=c++20
 include $(M)/project/Makefile
 
 ###################################################

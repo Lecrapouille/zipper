@@ -14,6 +14,7 @@
 #    include <sys/stat.h>
 #endif
 
+#include <filesystem>
 #include <string>
 #include <time.h>
 
@@ -33,6 +34,7 @@ struct Timestamp
 {
     Timestamp();
     Timestamp(const std::string& filepath);
+    Timestamp(const std::filesystem::path& filepath);
 
     tm timestamp;
 };

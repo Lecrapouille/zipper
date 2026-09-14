@@ -83,26 +83,21 @@ public:
     //! \return bool True if path is a root
     static bool isRoot(const std::string& path);
 
-    //! \brief Returns the current working directory path.
-    //! \details This function returns the current working directory path with
-    //! the following features:
-    //! - Uses dynamic buffer allocation to handle long paths
-    //! - Normalizes path separators to the native format
-    //! - Handles errors gracefully
-    //! - Supports paths up to 32KB in length
-    //! \return std::string Current working directory path, or empty string on
-    //! error
+    //! \brief Returns the current working directory as a UTF-8 string.
+    //! \details Uses std::filesystem::current_path and normalizes separators
+    //! to the native format.
+    //! \return UTF-8 current working directory, or empty string on error
     static std::string currentPath();
 
     //! \brief Check whether the directory entry specified by 'path' is
     //! a file.
-    //! \param[in] path: file path.
+    //! \param[in] path UTF-8 file path (std::filesystem on disk).
     //! \return bool isFile
     static bool isFile(const std::string& path);
 
     //! \brief Check whether the directory entry specified by 'path' is
     //! is a directory.
-    //! \param[in] path: file path.
+    //! \param[in] path UTF-8 file path (std::filesystem on disk).
     //! \return bool isDir
     static bool isDir(const std::string& path);
 
@@ -112,19 +107,19 @@ public:
     static std::string folderNameWithSeparator(const std::string& folder_path);
 
     //! \brief Check whether the directory entry specified by 'path' exists.
-    //! \param[in] path: file path.
+    //! \param[in] path UTF-8 file path (std::filesystem on disk).
     //! \return bool exist
     static bool exist(const std::string& path);
 
     //! \brief Check whether the directory entry specified by 'path' is
     //! is readable.
-    //! \param[in] path: file path.
+    //! \param[in] path UTF-8 file path (native access via std::filesystem).
     //! \return bool isReadable
     static bool isReadable(const std::string& path);
 
     //! \brief Check whether the directory entry specified by 'path' is
     //! writable.
-    //! \param[in] path: file path.
+    //! \param[in] path UTF-8 file path (native access via std::filesystem).
     //! \return bool isWritable
     static bool isWritable(const std::string& path);
 
@@ -151,21 +146,24 @@ public:
     static std::string extension(const std::string& path);
 
     //! \brief Create the directory 'dir' in the parent directory 'parent'.
+    //! \details Uses std::filesystem::create_directories. UTF-8 paths.
     //! \param[in] dir: folder path.
     //! \param[in] parent (Default: current working directory)
     //! \return bool success
     static bool createDir(const std::string& dir,
                           const std::string& parent = "");
 
+    //! \brief Recursively remove a directory (UTF-8 path).
     static void removeDir(const std::string& foldername);
 
-    //! \brief Return the list of the folder. If recurse == false then stay
-    //! inside the first depth.
+    //! \brief List directory entries (UTF-8 paths via std::filesystem).
+    //! \details If recurse is false, returns files and directories of the first
+    //! level. If recurse is true, returns regular files only.
     static std::vector<std::string> filesFromDir(const std::string& path,
                                                  const bool recurse);
 
-    //! \brief Return the temporary directory for the current OS
-    //! \return std::string Temporary directory
+    //! \brief Return the temporary directory for the current OS (UTF-8, with
+    //! a trailing separator).
     static std::string getTempDirectory();
 
     //! \brief Create a name for a temporary directory entry. The directory
@@ -174,10 +172,11 @@ public:
     static std::string createTempName(const std::string& dir,
                                       const std::string& suffix);
 
-    //! \brief Removes a file or directory specified by path.
+    //! \brief Removes a file or directory specified by a UTF-8 path.
+    //! \details Directories are removed recursively and this function returns
+    //! true even if the directory could not be fully deleted (legacy behavior).
     //! \param[in] path: file path.
     //! \return bool success
-
     static bool remove(const std::string& path);
 
     //! \brief Checks whether the given path is relative
@@ -198,10 +197,10 @@ public:
     //! \biref Check if the file name ends with a backslash or slash char
     static bool hasTrailingSlash(const std::string& path);
 
-    //! \brief Get the size of a file in bytes.
+    //! \brief Get the size of a file in bytes (UTF-8 path).
     //! \param[in] path Path to the file.
-    //! \return size_t File size in bytes, or 0 if the file does not exist or is
-    //! not a file.
+    //! \return File size in bytes, or 0 if the file does not exist or is not a
+    //! file.
     static size_t getFileSize(const std::string& path);
 
     //! \brief Checks if a ZIP entry could be used for a zip slip attack

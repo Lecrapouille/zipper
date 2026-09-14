@@ -3,7 +3,7 @@
 ##############################################################################
 
 # Needed for GoogleTest
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 20)
 
 # Force Google Test to use shared CRT on Windows (/MD or /MDd)
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
@@ -34,6 +34,7 @@ target_include_directories(zipper-tests PRIVATE
 target_compile_definitions(zipper-tests PRIVATE
     PWD="${CMAKE_CURRENT_SOURCE_DIR}"
     HAVE_AES
+    NOMINMAX
 )
 
 # Link with the main library and Google Test
@@ -43,6 +44,10 @@ target_link_libraries(zipper-tests PRIVATE
     gtest_main
     gmock
 )
+
+if(MSVC)
+    target_compile_options(zipper-tests PRIVATE /utf-8)
+endif()
 
 # Add the test to the CTest list
 add_test(NAME zipper-tests COMMAND zipper-tests)

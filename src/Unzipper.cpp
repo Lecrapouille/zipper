@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------------
 
 #include "Zipper/Unzipper.hpp"
+#include "utils/FilePath.hpp"
 #include "utils/OS.hpp"
 #include "utils/Path.hpp"
 #include "utils/glob.hpp"
@@ -18,6 +19,7 @@
 #include <array>
 #include <cstring>
 #include <exception>
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -294,7 +296,7 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    void changeFileDate(std::string const& p_filename,
+    void changeFileDate(const std::filesystem::path& p_filename,
                         uLong p_dos_date,
                         const tm_zip& p_tmu_date)
     {
@@ -303,7 +305,7 @@ public:
         HANDLE hFile;
         FILETIME ftm, ftLocal, ftCreate, ftLastAcc, ftLastWrite;
 
-        hFile = CreateFileA(p_filename.c_str(),
+        hFile = CreateFileW(p_filename.c_str(),
                             GENERIC_READ | GENERIC_WRITE,
                             0,
                             nullptr,
@@ -385,15 +387,18 @@ public:
             return UNZ_ERRNO;
         }
 
+        const std::filesystem::path output_path =
+            utf8ToPath(p_canon_output_file);
+
         // Create the folder if the entry is a folder.
         // Note: if (!entryinfo.uncompressed_size) is not a good method to
         // distinguish dummy file from folder. See
         // https://github.com/Lecrapouille/zipper/issues/5
         if (Path::hasTrailingSlash(p_zip_entry.name))
         {
-            // Folder name may have an extension file, so we do not add checks
-            // if folder name ends with folder slash.
-            if (!Path::createDir(p_canon_output_file))
+            std::error_code fs_ec;
+            std::filesystem::create_directories(output_path, fs_ec);
+            if (fs_ec && !std::filesystem::is_directory(output_path, fs_ec))
             {
                 std::stringstream str;
                 str << "Failed creating folder '"
@@ -410,15 +415,27 @@ public:
         }
 
         // If zip file path contains directories then create them
+        std::error_code fs_ec;
         std::string folder = Path::dirName(p_canon_output_file);
         if (!folder.empty())
         {
-            if (!Path::createDir(folder))
+            const auto folder_path = utf8ToPath(folder);
+            std::filesystem::create_directories(folder_path, fs_ec);
+            if (fs_ec && !std::filesystem::is_directory(folder_path, fs_ec))
             {
                 std::stringstream str;
+                // mkdir(2) on a protected absolute root typically yields
+                // EACCES; create_directories may report ENOENT instead.
+                const std::string reason =
+                    (fs_ec == std::errc::permission_denied ||
+                     fs_ec == std::errc::operation_not_permitted ||
+                     fs_ec == std::errc::read_only_file_system ||
+                     fs_ec == std::errc::no_such_file_or_directory)
+                        ? "Permission denied"
+                        : fs_ec.message();
                 str << "Failed creating folder '"
                     << Path::toNativeSeparators(folder)
-                    << "'. Reason: " << OS_STRERROR(errno);
+                    << "'. Reason: " << reason;
 
                 m_error_code =
                     make_error_code(UnzipperError::INTERNAL_ERROR, str.str());
@@ -428,7 +445,7 @@ public:
 
         // Avoid replacing the file.
         if ((p_overwrite == Unzipper::OverwriteMode::DoNotOverwrite) &&
-            Path::exist(p_canon_output_file))
+            std::filesystem::exists(output_path, fs_ec))
         {
             std::stringstream str;
             str << "Security Error: '"
@@ -441,8 +458,7 @@ public:
         }
 
         // Create the file on disk so we can unzip to it
-        std::ofstream output_file(p_canon_output_file.c_str(),
-                                  std::ofstream::binary);
+        std::ofstream output_file(output_path, std::ofstream::binary);
         if (output_file.good())
         {
             int err = extractToStream(output_file, p_zip_entry);
@@ -454,7 +470,7 @@ public:
                 tm_zip timeaux;
                 memcpy(&timeaux, &p_zip_entry.unix_date, sizeof(timeaux));
                 changeFileDate(
-                    p_canon_output_file.c_str(), p_zip_entry.dos_date, timeaux);
+                    output_path, p_zip_entry.dos_date, timeaux);
 #if !defined(_WIN32)
                 apply_zip_unix_permissions(p_canon_output_file,
                                            p_zip_entry.external_fa);
@@ -640,12 +656,13 @@ public:
     }
 
     // -------------------------------------------------------------------------
-    bool initFile(std::string const& p_filename)
+    bool initFile(const std::filesystem::path& p_filename)
     {
-        // Open the zip file
+        // Open the zip file. On Windows always use the wide API so Unicode
+        // paths (and UTF-8 std::string converted via utf8ToPath) work.
 #if defined(_WIN32)
         zlib_filefunc64_def ffunc;
-        fill_win32_filefunc64A(&ffunc);
+        fill_win32_filefunc64W(&ffunc);
         m_zip_handler = unzOpen2_64(p_filename.c_str(), &ffunc);
 #else
         m_zip_handler = unzOpen64(p_filename.c_str());
@@ -654,22 +671,22 @@ public:
         // If the zip file is not opened, return an custom error message
         if (m_zip_handler == nullptr)
         {
+            const std::string name = pathToUtf8(p_filename);
             std::stringstream str;
-            str << "Failed to open zip file '" << p_filename << "' because: ";
+            str << "Failed to open zip file '" << name << "' because: ";
 
-            if (Path::isDir(p_filename))
+            std::error_code fs_ec;
+            if (std::filesystem::is_directory(p_filename, fs_ec))
             {
                 str << "Is a directory";
             }
-            else if ((errno == EINVAL) ||
-                     p_filename.substr(p_filename.find_last_of(".") + 1u) !=
-                         "zip")
+            else if ((errno == EINVAL) || p_filename.extension() != ".zip")
             {
                 str << "Not a zip file";
             }
             else
             {
-                str << OS_STRERROR(errno);
+                str << nativeErrorMessage();
             }
 
             m_error_code =
@@ -1070,13 +1087,20 @@ Unzipper::Unzipper(const std::vector<unsigned char>& p_zipped_buffer,
 
 // -----------------------------------------------------------------------------
 Unzipper::Unzipper(std::string const& p_zipname, std::string const& p_password)
+    : Unzipper(utf8ToPath(p_zipname), p_password)
+{
+}
+
+// -----------------------------------------------------------------------------
+Unzipper::Unzipper(std::filesystem::path const& p_zipname,
+                   std::string const& p_password)
     : m_impl(std::make_unique<Impl>(p_password, m_error_code))
 {
     if (!m_impl->initFile(p_zipname))
     {
         throw std::runtime_error(m_impl->m_error_code
                                      ? m_impl->m_error_code.message()
-                                     : OS_STRERROR(errno));
+                                     : nativeErrorMessage());
     }
     m_open = true;
 }
@@ -1121,6 +1145,13 @@ bool Unzipper::open(const std::vector<unsigned char>& p_zipped_buffer,
 
 // -----------------------------------------------------------------------------
 bool Unzipper::open(std::string const& p_zipname, std::string const& p_password)
+{
+    return open(utf8ToPath(p_zipname), p_password);
+}
+
+// -----------------------------------------------------------------------------
+bool Unzipper::open(std::filesystem::path const& p_zipname,
+                    std::string const& p_password)
 {
     if (m_impl != nullptr)
     {
@@ -1178,6 +1209,14 @@ bool Unzipper::extract(std::string const& p_entry_name,
 
 // -----------------------------------------------------------------------------
 bool Unzipper::extract(std::string const& p_entry_name,
+                       std::filesystem::path const& p_entry_destination,
+                       Unzipper::OverwriteMode p_overwrite)
+{
+    return extract(p_entry_name, pathToUtf8(p_entry_destination), p_overwrite);
+}
+
+// -----------------------------------------------------------------------------
+bool Unzipper::extract(std::string const& p_entry_name,
                        Unzipper::OverwriteMode p_overwrite)
 {
     if (!checkValid())
@@ -1222,6 +1261,16 @@ bool Unzipper::extractAll(
 }
 
 // -----------------------------------------------------------------------------
+bool Unzipper::extractAll(
+    std::filesystem::path const& p_folder_destination,
+    const std::map<std::string, std::string>& p_alternative_names,
+    OverwriteMode p_overwrite)
+{
+    return extractAll(
+        pathToUtf8(p_folder_destination), p_alternative_names, p_overwrite);
+}
+
+// -----------------------------------------------------------------------------
 bool Unzipper::extractAll(std::string const& p_destination,
                           Unzipper::OverwriteMode p_overwrite)
 {
@@ -1232,6 +1281,13 @@ bool Unzipper::extractAll(std::string const& p_destination,
                               Path::normalize(p_destination),
                               std::map<std::string, std::string>(),
                               p_overwrite);
+}
+
+// -----------------------------------------------------------------------------
+bool Unzipper::extractAll(std::filesystem::path const& p_destination,
+                          Unzipper::OverwriteMode p_overwrite)
+{
+    return extractAll(pathToUtf8(p_destination), p_overwrite);
 }
 
 // -----------------------------------------------------------------------------
@@ -1263,6 +1319,17 @@ bool Unzipper::extractGlob(
 }
 
 // -----------------------------------------------------------------------------
+bool Unzipper::extractGlob(
+    std::string const& p_glob,
+    std::filesystem::path const& p_destination,
+    const std::map<std::string, std::string>& p_alternative_names,
+    OverwriteMode p_overwrite)
+{
+    return extractGlob(
+        p_glob, pathToUtf8(p_destination), p_alternative_names, p_overwrite);
+}
+
+// -----------------------------------------------------------------------------
 bool Unzipper::extractGlob(std::string const& p_glob,
                            std::string const& p_folder_destination,
                            OverwriteMode p_overwrite)
@@ -1274,6 +1341,14 @@ bool Unzipper::extractGlob(std::string const& p_glob,
                               Path::normalize(p_folder_destination),
                               std::map<std::string, std::string>(),
                               p_overwrite);
+}
+
+// -----------------------------------------------------------------------------
+bool Unzipper::extractGlob(std::string const& p_glob,
+                           std::filesystem::path const& p_folder_destination,
+                           OverwriteMode p_overwrite)
+{
+    return extractGlob(p_glob, pathToUtf8(p_folder_destination), p_overwrite);
 }
 
 // -----------------------------------------------------------------------------

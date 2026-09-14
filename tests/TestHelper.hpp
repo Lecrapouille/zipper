@@ -2,6 +2,7 @@
 #define UNIT_TESTS_HELPER_HPP
 
 #include "Zipper/Zipper.hpp"
+#include "utils/FilePath.hpp"
 #include "utils/Path.hpp"
 
 #include <filesystem>
@@ -15,6 +16,27 @@
 namespace helper
 {
 
+inline std::string utf8(const char8_t* p_text)
+{
+    return { reinterpret_cast<const char*>(p_text) };
+}
+
+inline std::string utf8(const std::filesystem::path& p_path)
+{
+    const auto u8 = p_path.u8string();
+    return { u8.begin(), u8.end() };
+}
+
+inline bool mentionsMissingFile(const char* p_message)
+{
+    const std::string message(p_message != nullptr ? p_message : "");
+    return (message.find("No such file or directory") != std::string::npos) ||
+           (message.find("The system cannot find the file specified") !=
+            std::string::npos) ||
+           (message.find("The system cannot find the path specified") !=
+            std::string::npos);
+}
+
 /**
  * @brief Reads and returns the content of a file.
  * @param[in] p_file Path to the file to read.
@@ -22,7 +44,7 @@ namespace helper
  */
 inline std::string readFileContent(const std::string& p_file)
 {
-    std::ifstream ifs(p_file);
+    std::ifstream ifs(zipper::utf8ToPath(p_file), std::ios::binary);
     std::string str((std::istreambuf_iterator<char>(ifs)),
                     std::istreambuf_iterator<char>());
     return str.c_str();
@@ -87,7 +109,7 @@ inline bool createFile(const std::string& p_file, const std::string& p_content)
 {
     zipper::Path::remove(p_file);
 
-    std::ofstream ofs(p_file);
+    std::ofstream ofs(zipper::utf8ToPath(p_file), std::ios::binary);
     ofs << p_content;
     ofs.flush();
     ofs.close();
@@ -158,7 +180,7 @@ inline bool zipAddFile(zipper::Zipper& p_zipper,
         return false;
     }
 
-    std::ifstream ifs(p_file_path);
+    std::ifstream ifs(zipper::utf8ToPath(p_file_path), std::ios::binary);
     bool res = p_zipper.add(ifs, p_entry_path, zipper::Zipper::SaveHierarchy);
     ifs.close();
 

@@ -1,3 +1,10 @@
+Version :
+    * Require C++20. File paths accept std::filesystem::path / std::wstring / UTF-8
+      std::string; on Windows archives and files are opened with the wide API.
+    * Path disk helpers (exist, createDir, remove, filesFromDir, getTempDirectory,
+      getFileSize, currentPath) now use std::filesystem; ZIP-entry path logic is
+      unchanged.
+
 Version 4.0.0:
     * Allow to pass "auto flush" flag and add flush() for finalizing + reopening-append the archive: this will update the vector/stream passed as reference to constructor.
     * Preserve Unix file permissions
