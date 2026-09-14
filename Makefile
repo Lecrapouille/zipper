@@ -44,7 +44,7 @@ include $(M)/rules/Makefile
 ###################################################
 # Extra rules
 #
-all:: demos
+post-build:: demos
 
 .PHONY: demos
 demos: $(TARGET_STATIC_LIB_NAME)
