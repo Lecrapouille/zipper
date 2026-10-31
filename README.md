@@ -42,24 +42,20 @@ This is the official way to download the project and compile it:
 ```shell
 git clone https://github.com/lecrapouille/zipper.git --recursive
 cd zipper
-make download-external-libs
-make compile-external-libs
-make -j8
+make
 ```
 
 Explanations of compilation commands:
 
-- Git cloning requires the recursive option to install the Makefile helper and third-party libs (`zlib` and `minizip`) in the `external` folder. They are based on fixed SHA1. They are installed in the folder `external`.
-- Optionally `make download-external-libs` will git clone HEADs of third-party libs (`zlib` and `minizip`) in the `external` folder. It is optional since it was initially used instead of git submodule.
-- `make compile-external-libs` will compile third-party libs (`zlib` and `minizip`) but not install them on your operating system. They are compiled as static libraries and merged into this library inside the `build` folder.
-- `make` will compile this library against the third-party libs (`zlib` and `minizip`). A `build` folder is created with two demos inside. Note: `-j8` should be adapted to your number of CPU cores.
+- Git cloning requires the recursive option to install the Makefile helper ([MyMakefile](https://github.com/Lecrapouille/MyMakefile)) and the third-party libs (`zlib-ng` and `minizip`) in the `external` folder. They are based on fixed SHA1.
+- `make` compiles the third-party libs with their CMake (without installing them on your operating system), merges them into this library, and compiles the two demos, in `build/linux-gcc-release/` (`build/darwin-clang-release/` on macOS). It uses all the CPU cores.
+- `make check` compiles and runs the unit tests (Google Test is needed).
 
 See the [README](doc/demos/README.md) file for using the demos. To run demos, you can run them:
 
 ```shell
-cd build
-./unzipper-demo -h
-./zipper-demo -h
+make run-unzipper-demo ARGS=-h
+make run-zipper-demo ARGS=-h
 ```
 
 To install C++ header files, shared and static libraries on your operating system, type:
@@ -68,15 +64,7 @@ To install C++ header files, shared and static libraries on your operating syste
 sudo make install
 ```
 
-You will see a message like:
-
-```shell
-*** Installing: doc => /usr/share/Zipper/4.0.0/doc
-*** Installing: libs => /usr/lib
-*** Installing: pkg-config => /usr/lib/pkgconfig
-*** Installing: headers => /usr/include/Zipper-4.0.0
-*** Installing: Zipper => /usr/include/Zipper-4.0.0
-```
+It installs the libraries in `/usr/local/lib`, the headers in `/usr/local/include/zipper/4.0.0/`, the pkg-config file `zipper.pc`, and the demos in `/usr/local/bin`. `sudo make uninstall` removes them; `make uninstall-dry-run` lists them.
 
 For developers, you can run non regression tests. They depend on:
 
@@ -84,7 +72,8 @@ For developers, you can run non regression tests. They depend on:
 - lcov for code coverage
 
 ```shell
-make tests -j8
+make check
+make coverage
 ```
 
 ### Compiling / Installing with CMake (Linux, MacOs, Windows)
@@ -725,7 +714,7 @@ Same idea for Zipper.
 ## FAQ
 
 - Q: I used a password when zipping with the Zipper lib, but now when I want to extract data with my operating system's zip tool, I get an error.
-- A: By default, Zipper uses the AES encryption algorithm, which is not the default encryption method for zip files. Your operating system's zip tools may not support AES. You can extract it using the 7-Zip tool: `7za e your.zip`. If you want to use the default zip encryption (at your own risk since the password can be cracked), you can remove the AES option in the following files: [Make](Make) and [external/compile-external-libs.sh](external/compile-external-libs.sh) and recompile the Zipper project.
+- A: By default, Zipper uses the AES encryption algorithm, which is not the default encryption method for zip files. Your operating system's zip tools may not support AES. You can extract it using the 7-Zip tool: `7za e your.zip`. If you want to use the default zip encryption (at your own risk since the password can be cracked), you can remove the AES option in the following files: [Makefile](Makefile) (`HAVE_AES`) and [external/external.mk](external/external.mk) (`-DUSE_AES=ON`) and recompile the Zipper project.
 
 - Q: Why are there two classes: one for zipping and one for unzipping? Couldn't we have made a single class to handle both operations?
 - A: AFAIK this is a constraint imposed by the minizip API: No simultaneous operations are allowed - you cannot read from and write to a ZIP archive at the same time.

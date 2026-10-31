@@ -2,10 +2,10 @@
 
 To compile the standalone unzipper demo:
 
+From the root of the project:
+
 ```
-cd Unzipper
-make -j8
-./build/demo_unzip -p -f -o /tmp ../../../tests/issues/issue_05_password.zip
+make run-unzipper-demo ARGS="-p -f -o /tmp tests/issues/issue_05_password.zip"
 ```
 
 Type `1234` as password in the prompt and for this given example.

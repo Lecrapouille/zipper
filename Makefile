@@ -1,60 +1,35 @@
 ###################################################
-# Location of the project directory and Makefiles
-#
-P := .
-M := $(P)/.makefile
+# Zipper: a C++ library for creating and reading zip archives, built by
+# MyMakefile 3. CMake users: see CMakeLists.txt.
+###################################################
+
+PROJECT_NAME := zipper
+PROJECT_VERSION := 4.0.0
+LICENSE := MIT
+CXX_STANDARD := c++20
+COMPILATION_MODE ?= release
+# Headers in include/zipper/<version>/, as MyMakefile 2 installed them.
+INSTALL_VERSIONED ?= 1
+PROJECT_LOGO := doc/doxygen-logo.png
 
 ###################################################
-# Project definition
+# The library, holding minizip and zlib-ng.
 #
-include $(P)/Makefile.common
-TARGET_NAME := $(PROJECT_NAME)
-TARGET_DESCRIPTION := Zipper is a C++ library for creating and reading zip archives.
-CXX_STANDARD := --std=c++20
-include $(M)/project/Makefile
+TARGETS := zipper
+zipper.TYPE := library
+zipper.DESCRIPTION := Zipper is a C++ library for creating and reading zip archives.
+zipper.SOURCES = src/**/*.cpp $(if $(filter Windows,$(TARGET_OS)),src/utils/dirent.c)
+zipper.PUBLIC_INCLUDES := include
+zipper.INCLUDES := src .
+zipper.DEFINES := HAVE_AES
+zipper.DEPENDS := minizip zlib-ng
+zipper.MERGE := minizip zlib-ng
 
 ###################################################
-# Compile shared and static libraries
+# The other targets, each declared in the directory of its sources.
 #
-LIB_FILES := $(call rwildcard,src,*.cpp)
-ifeq ($(OS),Windows)
-    LIB_FILES += src/utils/dirent.c
-endif
-INCLUDES := $(P)/include $(P)/src $(P)
-VPATH := $(P)/src $(P)/src/utils $(THIRD_PARTIES_DIR)
-DEFINES += -DHAVE_AES
+SUBMAKEFILES := external/external.mk tests/tests.mk \
+    doc/demos/Unzipper/Unzipper.mk doc/demos/Zipper/Zipper.mk
 
-###################################################
-# Third party libraries (compiled with make compile-external-libs)
-#
-THIRD_PARTIES_LIBS := $(abspath $(THIRD_PARTIES_DIR)/minizip/build/libminizip.a)
-THIRD_PARTIES_LIBS += $(abspath $(THIRD_PARTIES_DIR)/minizip/build/libaes.a)
-THIRD_PARTIES_LIBS += $(abspath $(THIRD_PARTIES_DIR)/zlib-ng/build/libz.a)
-
-###################################################
-# Documentation
-#
-PATH_PROJECT_LOGO := $(PROJECT_DOC_DIR)/doxygen-logo.png
-
-###################################################
-# Generic Makefile rules
-#
-include $(M)/rules/Makefile
-
-###################################################
-# Extra rules
-#
-post-build:: demos
-
-.PHONY: demos
-demos: $(TARGET_STATIC_LIB_NAME)
-	$(Q)$(MAKE) --no-print-directory --directory=doc/demos/Unzipper all
-	$(Q)$(MAKE) --no-print-directory --directory=doc/demos/Zipper all
-
-clean::
-	$(Q)$(MAKE) --no-print-directory --directory=doc/demos/Unzipper clean
-	$(Q)$(MAKE) --no-print-directory --directory=doc/demos/Zipper clean
-
-install::
-	$(Q)$(MAKE) --no-print-directory --directory=doc/demos/Unzipper install
-	$(Q)$(MAKE) --no-print-directory --directory=doc/demos/Zipper install
+M ?= .makefile
+include $(M)/MyMakefile.mk

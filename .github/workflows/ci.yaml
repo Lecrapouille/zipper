@@ -20,14 +20,8 @@ jobs:
       - name: Checkout Zipper
         uses: actions/checkout@v3
         with:
-          # Only MyMakefile: download-external-libs clones zlib-ng / minizip
-          # itself and refuses a submodule working tree (no .git directory).
-          submodules: false
-      - name: Init MyMakefile
-        run: |
-          git submodule update --init .makefile
-          # Empty submodule placeholders: the downloader needs a real git clone.
-          rm -rf external/zlib-ng external/minizip
+          # MyMakefile, zlib-ng and minizip.
+          submodules: recursive
       - name: Install system packages
         run: |
           sudo apt-get update
@@ -41,15 +35,11 @@ jobs:
           sudo make install
       - name: Build Zipper
         run: |
-          V=1 make download-external-libs
-          V=1 make compile-external-libs
-          V=1 make -j`nproc --all`
-          V=1 make demos -j`nproc --all`
+          V=1 make
       - name: Verify installed files
         run: |
-          sudo make install
-          # Read version from VERSION.txt
-          VERSION=$(make project-version)
+          sudo make install MYMAKEFILE_CACHE="$HOME/.cache/mymakefile"
+          VERSION=$(make -s print-PROJECT_VERSION)
           MAJOR=$(echo $VERSION | cut -d. -f1)
           MINOR=$(echo $VERSION | cut -d. -f2)
           PATCH=$(echo $VERSION | cut -d. -f3)
@@ -66,20 +56,18 @@ jobs:
           test ! -f /usr/local/include/zipper/$VERSION/zipper_export.h
       - name: Non regression
         run: |
-          cd tests
-          V=1 make -j`nproc --all`
-          ../build/zipper-tests
+          V=1 make check
       - name: Check the unzipper demo
         run: |
-          echo "1234" | ./build/unzipper-demo -p -f -o /tmp ./tests/issues/issue_05_password.zip
+          echo "1234" | $(make -s print-BUILD)/bin/unzipper-demo -p -f -o /tmp ./tests/issues/issue_05_password.zip
           ls /tmp/issue_05/foo/bar /tmp/issue_05/Nouveau\ dossier/ /tmp/issue_05/Nouveau\ fichier\ vide
       - name: Check if the library can be linked against a project
         run: |
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
           git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recurse-submodules --depth=1
           cd LinkAgainstMyLibs/Zipper
-          V=1 make -j`nproc --all` CXX_STANDARD=--std=c++20
-          ../build/Zipper
+          V=1 make
+          $(make -s print-BUILD)/bin/Zipper
           ls ziptest.zip /tmp/somefile.txt
           cat /tmp/somefile.txt
 
@@ -131,8 +119,8 @@ jobs:
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
           git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recurse-submodules --depth=1
           cd LinkAgainstMyLibs/Zipper
-          V=1 make -j`nproc --all` CXX_STANDARD=--std=c++20
-          ../build/Zipper
+          V=1 make
+          $(make -s print-BUILD)/bin/Zipper
           ls ziptest.zip /tmp/somefile.txt
           cat /tmp/somefile.txt
       - name: Check if the library can be linked against a project using CMake
@@ -152,17 +140,11 @@ jobs:
       - name: Checkout Zipper
         uses: actions/checkout@v3
         with:
-          # Only MyMakefile: download-external-libs clones zlib-ng / minizip
-          # itself and refuses a submodule working tree (no .git directory).
-          submodules: false
-      - name: Init MyMakefile
-        run: |
-          git submodule update --init .makefile
-          # Empty submodule placeholders: the downloader needs a real git clone.
-          rm -rf external/zlib-ng external/minizip
+          # MyMakefile, zlib-ng and minizip.
+          submodules: recursive
       - name: Install system packages
         run: |
-          brew install pkg-config ninja
+          brew install make pkg-config ninja
       - name: Download, configure and install Google test
         run: |
           wget https://github.com/google/googletest/releases/download/v1.18.0/googletest-1.18.0.tar.gz
@@ -172,14 +154,11 @@ jobs:
           sudo make install
       - name: Build Zipper
         run: |
-          V=1 make download-external-libs
-          V=1 make compile-external-libs
-          V=1 make -j`sysctl -n hw.logicalcpu`
+          V=1 gmake
       - name: Verify installed files
         run: |
-          sudo make install
-          # Read version from VERSION.txt
-          VERSION=$(make project-version)
+          sudo gmake install MYMAKEFILE_CACHE="$HOME/.cache/mymakefile"
+          VERSION=$(gmake -s print-PROJECT_VERSION)
           # Check static and shared libraries
           test -f /usr/local/lib/libzipper.a
           test -f /usr/local/lib/libzipper.dylib
@@ -191,19 +170,18 @@ jobs:
           test ! -f /usr/local/include/zipper/$VERSION/zipper_export.h
       - name: Non regression
         run: |
-          cd tests
-          V=1 make -j`sysctl -n hw.logicalcpu`
-          ../build/zipper-tests
+          V=1 gmake check
       - name: Check the unzipper demo
         run: |
-          echo "1234" | ./build/unzipper-demo -p -f -o /tmp ./tests/issues/issue_05_password.zip
+          echo "1234" | $(gmake -s print-BUILD)/bin/unzipper-demo -p -f -o /tmp ./tests/issues/issue_05_password.zip
           ls /tmp/issue_05/foo/bar /tmp/issue_05/Nouveau\ dossier/ /tmp/issue_05/Nouveau\ fichier\ vide
       - name: Check if the library can be linked against a project
         run: |
           git clone https://github.com/Lecrapouille/LinkAgainstMyLibs.git --recurse-submodules --depth=1
           cd LinkAgainstMyLibs/Zipper
-          V=1 make -j`sysctl -n hw.logicalcpu` CXX_STANDARD=--std=c++20
-          ../build/Zipper
+          brew install make
+          V=1 gmake
+          $(gmake -s print-BUILD)/bin/Zipper
           ls ziptest.zip /tmp/somefile.txt
           cat /tmp/somefile.txt
 
